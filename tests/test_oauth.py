@@ -2,6 +2,7 @@ import asyncio
 import base64
 import hashlib
 import json
+import sys
 import time
 from urllib.parse import parse_qs, urlencode, urlsplit
 import httpx
@@ -343,6 +344,7 @@ def test_example_persistence_is_atomic_and_private(tmp_path):
     path = tmp_path / "credentials.json"
     save_private(path, {"token": "first"})
     save_private(path, {"token": "rotated"})
-    assert json.loads(path.read_text()) == {"token": "rotated"}
-    assert path.stat().st_mode & 0o777 == 0o600
+    assert json.loads(path.read_text(encoding="utf-8")) == {"token": "rotated"}
+    if sys.platform != "win32":  # Windows has no POSIX permission bits
+        assert path.stat().st_mode & 0o777 == 0o600
     assert list(tmp_path.iterdir()) == [path]

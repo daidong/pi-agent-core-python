@@ -10,8 +10,10 @@ from pi_python import (
     is_retryable_error,
 )
 
-CASES = json.loads(Path("compat/recovery-cases.json").read_text())
-UPSTREAM = json.loads(Path("compat/results/recovery-conformance.upstream.json").read_text())
+CASES = json.loads(Path("compat/recovery-cases.json").read_text(encoding="utf-8"))
+UPSTREAM = json.loads(
+    Path("compat/results/recovery-conformance.upstream.json").read_text(encoding="utf-8")
+)
 
 
 def classify(case):

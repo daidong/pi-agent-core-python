@@ -6,7 +6,9 @@ from pi_python import CandidateValidationError
 
 
 def example():
-    c = json.loads(Path("compat/contracts/release-candidate.example.json").read_text())
+    c = json.loads(
+        Path("compat/contracts/release-candidate.example.json").read_text(encoding="utf-8")
+    )
     release = {
         "tag_name": c["target"]["tag"],
         "draft": False,

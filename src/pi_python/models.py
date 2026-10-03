@@ -130,7 +130,9 @@ class ModelCatalog:
 
     @classmethod
     def bundled(cls) -> ModelCatalog:
-        data = json.loads(files("pi_python").joinpath("data/models.json").read_text())
+        data = json.loads(
+            files("pi_python").joinpath("data/models.json").read_text(encoding="utf-8")
+        )
         models = [
             ModelInfo(
                 id=m["id"],

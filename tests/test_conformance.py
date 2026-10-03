@@ -10,7 +10,9 @@ FIXTURES = sorted(Path("compat/fixtures").glob("*.json"))
 
 @pytest.mark.parametrize("path", FIXTURES, ids=lambda p: p.stem)
 async def test_shared_upstream_trace(path):
-    fixture = json.loads(path.read_text())
-    upstream = json.loads(Path(f"compat/results/{path.stem}.upstream.json").read_text())
+    fixture = json.loads(path.read_text(encoding="utf-8"))
+    upstream = json.loads(
+        Path(f"compat/results/{path.stem}.upstream.json").read_text(encoding="utf-8")
+    )
     actual = await run_fixture(fixture)
     assert map_errors(actual) == map_errors(upstream)

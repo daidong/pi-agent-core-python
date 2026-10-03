@@ -35,7 +35,7 @@ TEST_CATALOG = ModelCatalog(
 
 
 def events(name):
-    return json.loads((FIXTURES / f"{name}.json").read_text())["events"]
+    return json.loads((FIXTURES / f"{name}.json").read_text(encoding="utf-8"))["events"]
 
 
 def sse(values):

@@ -59,7 +59,7 @@ def validate_candidate(
     """
     try:
         Draft202012Validator(
-            json.loads(SCHEMA.read_text()), format_checker=FormatChecker()
+            json.loads(SCHEMA.read_text(encoding="utf-8")), format_checker=FormatChecker()
         ).validate(candidate)
     except Exception as exc:
         raise CandidateValidationError(f"Candidate schema: {exc}") from exc

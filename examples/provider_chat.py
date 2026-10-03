@@ -32,7 +32,7 @@ def save_private(path, record):
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     fd, temporary = tempfile.mkstemp(prefix=".pi-oauth-", dir=path.parent)
     try:
-        with os.fdopen(fd, "w") as file:
+        with os.fdopen(fd, "w", encoding="utf-8") as file:
             json.dump(record, file)
             file.flush()
             os.fsync(file.fileno())
@@ -84,7 +84,7 @@ async def main():
     if args.credential_file:
         path = args.credential_file.expanduser()
         record = (
-            json.loads(path.read_text())
+            json.loads(path.read_text(encoding="utf-8"))
             if path.exists()
             else {"host_id": "urn:uuid:" + str(uuid.uuid4())}
         )

@@ -51,7 +51,7 @@ def main() -> None:
     result = second.prompt_sync("When is the deadline?")
     print("answer after restore:", result.messages[-1].content[0].text)
     print("roles:", [m.role for m in second.state.messages])
-    print("schema version:", json.loads(path.read_text())["schema_version"])
+    print("schema version:", json.loads(path.read_text(encoding="utf-8"))["schema_version"])
 
 
 if __name__ == "__main__":
