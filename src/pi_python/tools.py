@@ -128,8 +128,34 @@ def _resolve(schema: dict[str, Any], ref: str) -> None:
         raise ConfigurationError(f"Unresolved local schema reference: {ref}") from exc
 
 
+# Counted without recursion before anything recursive walks the schema. Relying on
+# RecursionError alone gave interpreter-dependent limits, and PyPy can crash first.
+_MAX_SCHEMA_DEPTH = 100
+
+
+def _deeper_than(value: Any, limit: int) -> bool:
+    """Whether objects and arrays nest more than `limit` levels; also ends on cycles."""
+    stack = [(value, 1)]
+    while stack:
+        node, depth = stack.pop()
+        if isinstance(node, dict):
+            children: Any = node.values()
+        elif isinstance(node, list):
+            children = node
+        else:
+            continue
+        if depth > limit:
+            return True
+        stack.extend((child, depth + 1) for child in children)
+    return False
+
+
 def validate_schema(schema: dict[str, Any]) -> None:
     """Accept standard JSON Schema; reject what cannot be checked without leaving the schema."""
+    if _deeper_than(schema, _MAX_SCHEMA_DEPTH):
+        raise ConfigurationError(
+            f"Tool schema is nested too deeply (more than {_MAX_SCHEMA_DEPTH} levels)"
+        )
     try:
         validate_json(schema)
     except RecursionError as exc:

@@ -110,3 +110,10 @@ Python 新增，上游核心没有对应：
 - Python 和 JavaScript 的正则方言有细微差别，个别 `pattern` 的判断可能不同。
 
 验证（0.7.0 发布时）：Python 测试 308 项；核心差分 25 组、Provider 差分 50 组、WebSocket 差分 2 组、出错判断 44 条，全部与上游一致。Docker 内 Python 3.11–3.14 断网安装 wheel，各 304 项通过（4 项 MCP 测试因锁文件不含 MCP SDK 而跳过）；本机安装后 3.14t 308 项、PyPy 3.11 304 项通过。依赖取最低版本（jsonschema 4.18、httpx 0.27、websockets 14.2、PyJWT 2.8）和最新版本都通过；MCP 适配在 SDK 1.10（它要求 jsonschema 4.20 以上）和 2.3 上都测过。macOS 和 Windows 只写进了 CI 配置，还没有实际运行；本机也没有运行中的本地模型服务，Chat Completions 接入尚未连接真实服务器。
+
+## 0.8.0 之后的跨平台修复
+
+CI 第一次在 GitHub 上运行，Linux 和 macOS 全部通过，另外发现两处只在特定平台出现的问题：
+
+- **Windows 读错文本文件。** Windows 默认按 cp1252 读文本，含中文的测试数据被读坏。库、compat、测试和示例里的文本读写现在都明确使用 UTF-8；库读取内置模型表时也一样（该文件目前全是 ASCII，以前没有出错）。凭据文件 `0o600` 权限的检查只在 POSIX 上进行，Windows 没有这种权限位。
+- **PyPy 在极深的 schema 上崩溃。** 以前靠 `RecursionError` 拒绝嵌套过深的工具 schema。CPython 上实际上限随 schema 写法变化（`anyOf` 嵌套 81 层，`items` 嵌套 122 层），PyPy 的 JIT 偶尔在报错之前就撑爆底层栈，进程段错误退出。现在注册时先用非递归方式计数，对象和数组嵌套超过 100 层就报 `ConfigurationError`，在所有解释器上相同。上游 Pi 没有这项限制，属于本库新增的差异。代价是：嵌套超过 100 层、以前在 CPython 上能通过的 schema 现在被拒绝。以前子 schema 的嵌套最多能到 197 层，`default`、`const` 等数据值里的嵌套能到约 1000 层。

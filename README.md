@@ -84,4 +84,4 @@ uv run pytest -q
 uv run python scripts/verify.py      # 全部检查，含与上游的差分（需要 Node）
 ```
 
-CI 配置在 `.github/workflows/ci.yml`，覆盖 Linux 上的各个 Python 版本以及 macOS 和 Windows。此目录还没有远程仓库，CI 尚未实际运行过；现有验证证据来自本机和 Docker 中的实际检查。
+CI 配置在 `.github/workflows/ci.yml`，每次推送都在 GitHub Actions 上运行，覆盖 Linux 上的各个 Python 版本（含 3.14t 和 PyPy）以及 macOS 和 Windows。

@@ -377,6 +377,32 @@ def test_deep_schema_and_long_validation_errors_are_reported_compactly():
     assert "$.field0: 1 is not of type 'string'" in text and "description" not in text
 
 
+def test_schema_nesting_limit_is_counted_before_any_recursion():
+    def nested(levels):  # objects nest exactly `levels` deep, counting the schema itself
+        value = {}
+        for _ in range(levels - 2):
+            value = {"a": value}
+        return {"type": "object", "default": value}
+
+    validate_schema(nested(100))
+    with pytest.raises(ConfigurationError, match="more than 100 levels"):
+        validate_schema(nested(101))
+    # The deepest common shapes under the limit validate on every interpreter.
+    for wrap, times in [
+        (lambda s: {"type": "array", "items": s}, 99),
+        (lambda s: {"anyOf": [s, {"type": "null"}]}, 49),
+        (lambda s: {"type": "object", "properties": {"x": s}}, 49),
+    ]:
+        schema = {"type": "string"}
+        for _ in range(times):
+            schema = wrap(schema)
+        validate_schema(schema)
+    cyclic = {"type": "object", "properties": {}}
+    cyclic["properties"]["self"] = cyclic
+    with pytest.raises(ConfigurationError, match="nested too deeply"):
+        validate_schema(cyclic)
+
+
 async def test_common_return_values_and_failed_conversion_keep_the_execution_fact():
     import datetime
     import uuid

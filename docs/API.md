@@ -56,7 +56,7 @@ class MyProvider:
 
 `ToolResult.text(text, details=None, structured_content=None, is_error=False, terminate=False)` 创建文本结果。`details` 和 `structured_content` 不自动发给模型。内容接受 `TextContent` 和 `ImageContent`。输入默认严格验证，不转换类型、不删除 null。`prepare_arguments(args)` 可同步或异步返回新参数，随后统一验证；原始和转换后参数均保留。
 
-接受标准 JSON Schema：按 `$schema` 选择 draft-04、06、07、2019-09 或 2020-12，未写时按 2020-12。pydantic 生成的 schema 和常见 MCP 工具的 schema 都可以直接用。与 Pi 相同，校验参数时检查 `pattern` 和 `format`。`format` 在 jsonschema 有对应检查器时才检查：`email`、`date`、`ipv4` 等直接可用，`uri`、`date-time` 等需要另装 `jsonschema[format-nongpl]`。只允许指向 schema 内部的 `$ref`，引用网络或文件会在注册时被拒绝。
+接受标准 JSON Schema：按 `$schema` 选择 draft-04、06、07、2019-09 或 2020-12，未写时按 2020-12。pydantic 生成的 schema 和常见 MCP 工具的 schema 都可以直接用。与 Pi 相同，校验参数时检查 `pattern` 和 `format`。`format` 在 jsonschema 有对应检查器时才检查：`email`、`date`、`ipv4` 等直接可用，`uri`、`date-time` 等需要另装 `jsonschema[format-nongpl]`。只允许指向 schema 内部的 `$ref`，引用网络或文件会在注册时被拒绝。schema 中的对象和数组最多嵌套 100 层（每个对象或数组算一层，所以一层 `properties` 嵌套占两层），更深的在注册时报 `ConfigurationError`。
 
 ### 从函数生成工具
 
