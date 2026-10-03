@@ -1,0 +1,342 @@
+{
+  "requests": [
+    [
+      {
+        "role": "system",
+        "content": "",
+        "tools_added": [
+          {
+            "name": "t",
+            "description": "",
+            "input_schema": {
+              "type": "object",
+              "properties": {
+                "n": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "n"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "go"
+          }
+        ]
+      }
+    ],
+    [
+      {
+        "role": "system",
+        "content": "",
+        "tools_added": [
+          {
+            "name": "t",
+            "description": "",
+            "input_schema": {
+              "type": "object",
+              "properties": {
+                "n": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "n"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "go"
+          }
+        ]
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_call",
+            "id": "x",
+            "name": "t",
+            "arguments": {
+              "n": "3"
+            }
+          }
+        ],
+        "stop_reason": "tool_use"
+      },
+      {
+        "role": "tool_result",
+        "call_id": "x",
+        "name": "t",
+        "content": [
+          {
+            "type": "text",
+            "text": "t-result"
+          }
+        ],
+        "is_error": false
+      }
+    ]
+  ],
+  "request_models": [
+    "mock",
+    "mock"
+  ],
+  "effects": [
+    {
+      "name": "t",
+      "arguments": {
+        "n": 3
+      }
+    }
+  ],
+  "events": [
+    {
+      "type": "agent_start"
+    },
+    {
+      "type": "turn_start"
+    },
+    {
+      "type": "message_start",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "go"
+          }
+        ]
+      }
+    },
+    {
+      "type": "message_end",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "go"
+          }
+        ]
+      }
+    },
+    {
+      "type": "message_start",
+      "message": {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_call",
+            "id": "x",
+            "name": "t",
+            "arguments": {
+              "n": "3"
+            }
+          }
+        ],
+        "stop_reason": "tool_use"
+      }
+    },
+    {
+      "type": "message_end",
+      "message": {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_call",
+            "id": "x",
+            "name": "t",
+            "arguments": {
+              "n": "3"
+            }
+          }
+        ],
+        "stop_reason": "tool_use"
+      }
+    },
+    {
+      "type": "tool_execution_start",
+      "call_id": "x"
+    },
+    {
+      "type": "tool_execution_end",
+      "call_id": "x"
+    },
+    {
+      "type": "message_start",
+      "message": {
+        "role": "tool_result",
+        "call_id": "x",
+        "name": "t",
+        "content": [
+          {
+            "type": "text",
+            "text": "t-result"
+          }
+        ],
+        "is_error": false
+      }
+    },
+    {
+      "type": "message_end",
+      "message": {
+        "role": "tool_result",
+        "call_id": "x",
+        "name": "t",
+        "content": [
+          {
+            "type": "text",
+            "text": "t-result"
+          }
+        ],
+        "is_error": false
+      }
+    },
+    {
+      "type": "turn_end",
+      "message": {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_call",
+            "id": "x",
+            "name": "t",
+            "arguments": {
+              "n": "3"
+            }
+          }
+        ],
+        "stop_reason": "tool_use"
+      }
+    },
+    {
+      "type": "turn_start"
+    },
+    {
+      "type": "message_start",
+      "message": {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "done"
+          }
+        ],
+        "stop_reason": "stop"
+      }
+    },
+    {
+      "type": "message_end",
+      "message": {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "done"
+          }
+        ],
+        "stop_reason": "stop"
+      }
+    },
+    {
+      "type": "turn_end",
+      "message": {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "done"
+          }
+        ],
+        "stop_reason": "stop"
+      }
+    },
+    {
+      "type": "agent_end"
+    }
+  ],
+  "messages": [
+    {
+      "role": "system",
+      "content": "",
+      "tools_added": [
+        {
+          "name": "t",
+          "description": "",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "n": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "n"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "go"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_call",
+          "id": "x",
+          "name": "t",
+          "arguments": {
+            "n": "3"
+          }
+        }
+      ],
+      "stop_reason": "tool_use"
+    },
+    {
+      "role": "tool_result",
+      "call_id": "x",
+      "name": "t",
+      "content": [
+        {
+          "type": "text",
+          "text": "t-result"
+        }
+      ],
+      "is_error": false
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "done"
+        }
+      ],
+      "stop_reason": "stop"
+    }
+  ],
+  "hooks": [],
+  "status": "completed"
+}

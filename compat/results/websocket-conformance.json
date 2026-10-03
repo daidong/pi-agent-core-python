@@ -1,0 +1,784 @@
+{
+  "source_revision": "a13d35a742c6ef8462812a28fbe1d8c8b7431c32",
+  "scope": "cached Codex WebSocket frames, connection use and stop reasons over several turns; scripted socket, not a live service; the `stream` field is excluded and reported",
+  "results": [
+    {
+      "fixture": "codex-continuation-lost-state.json",
+      "python": {
+        "sent": [
+          {
+            "connection": 1,
+            "body": {
+              "type": "response.create",
+              "model": "gpt-5.5",
+              "input": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "type": "input_text",
+                      "text": "one"
+                    }
+                  ]
+                }
+              ],
+              "store": false,
+              "prompt_cache_key": "ws-session",
+              "instructions": "Be brief.",
+              "text": {
+                "verbosity": "low"
+              },
+              "include": [
+                "reasoning.encrypted_content"
+              ],
+              "tool_choice": "auto",
+              "parallel_tool_calls": true,
+              "reasoning": {
+                "effort": "medium",
+                "summary": "auto"
+              }
+            }
+          },
+          {
+            "connection": 1,
+            "body": {
+              "type": "response.create",
+              "model": "gpt-5.5",
+              "input": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "type": "input_text",
+                      "text": "two"
+                    }
+                  ]
+                }
+              ],
+              "store": false,
+              "prompt_cache_key": "ws-session",
+              "instructions": "Be brief.",
+              "text": {
+                "verbosity": "low"
+              },
+              "include": [
+                "reasoning.encrypted_content"
+              ],
+              "tool_choice": "auto",
+              "parallel_tool_calls": true,
+              "reasoning": {
+                "effort": "medium",
+                "summary": "auto"
+              },
+              "previous_response_id": "resp_1"
+            }
+          },
+          {
+            "connection": 2,
+            "body": {
+              "type": "response.create",
+              "model": "gpt-5.5",
+              "input": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "type": "input_text",
+                      "text": "one"
+                    }
+                  ]
+                },
+                {
+                  "type": "message",
+                  "role": "assistant",
+                  "content": [
+                    {
+                      "type": "output_text",
+                      "text": "5",
+                      "annotations": []
+                    }
+                  ],
+                  "status": "completed",
+                  "id": "msg_resp_1"
+                },
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "type": "input_text",
+                      "text": "two"
+                    }
+                  ]
+                }
+              ],
+              "store": false,
+              "prompt_cache_key": "ws-session",
+              "instructions": "Be brief.",
+              "text": {
+                "verbosity": "low"
+              },
+              "include": [
+                "reasoning.encrypted_content"
+              ],
+              "tool_choice": "auto",
+              "parallel_tool_calls": true,
+              "reasoning": {
+                "effort": "medium",
+                "summary": "auto"
+              }
+            }
+          },
+          {
+            "connection": 2,
+            "body": {
+              "type": "response.create",
+              "model": "gpt-5.5",
+              "input": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "type": "input_text",
+                      "text": "three"
+                    }
+                  ]
+                }
+              ],
+              "store": false,
+              "prompt_cache_key": "ws-session",
+              "instructions": "Be brief.",
+              "text": {
+                "verbosity": "low"
+              },
+              "include": [
+                "reasoning.encrypted_content"
+              ],
+              "tool_choice": "auto",
+              "parallel_tool_calls": true,
+              "reasoning": {
+                "effort": "medium",
+                "summary": "auto"
+              },
+              "previous_response_id": "resp_3"
+            }
+          }
+        ],
+        "stops": [
+          "stop",
+          "stop",
+          "stop"
+        ]
+      },
+      "upstream": {
+        "sent": [
+          {
+            "connection": 1,
+            "body": {
+              "type": "response.create",
+              "model": "gpt-5.5",
+              "store": false,
+              "stream": true,
+              "instructions": "Be brief.",
+              "input": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "type": "input_text",
+                      "text": "one"
+                    }
+                  ]
+                }
+              ],
+              "text": {
+                "verbosity": "low"
+              },
+              "include": [
+                "reasoning.encrypted_content"
+              ],
+              "prompt_cache_key": "ws-session",
+              "tool_choice": "auto",
+              "parallel_tool_calls": true,
+              "reasoning": {
+                "effort": "medium",
+                "summary": "auto"
+              }
+            }
+          },
+          {
+            "connection": 1,
+            "body": {
+              "type": "response.create",
+              "model": "gpt-5.5",
+              "store": false,
+              "stream": true,
+              "instructions": "Be brief.",
+              "input": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "type": "input_text",
+                      "text": "two"
+                    }
+                  ]
+                }
+              ],
+              "text": {
+                "verbosity": "low"
+              },
+              "include": [
+                "reasoning.encrypted_content"
+              ],
+              "prompt_cache_key": "ws-session",
+              "tool_choice": "auto",
+              "parallel_tool_calls": true,
+              "reasoning": {
+                "effort": "medium",
+                "summary": "auto"
+              },
+              "previous_response_id": "resp_1"
+            }
+          },
+          {
+            "connection": 2,
+            "body": {
+              "type": "response.create",
+              "model": "gpt-5.5",
+              "store": false,
+              "stream": true,
+              "instructions": "Be brief.",
+              "input": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "type": "input_text",
+                      "text": "one"
+                    }
+                  ]
+                },
+                {
+                  "type": "message",
+                  "role": "assistant",
+                  "content": [
+                    {
+                      "type": "output_text",
+                      "text": "5",
+                      "annotations": []
+                    }
+                  ],
+                  "status": "completed",
+                  "id": "msg_resp_1"
+                },
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "type": "input_text",
+                      "text": "two"
+                    }
+                  ]
+                }
+              ],
+              "text": {
+                "verbosity": "low"
+              },
+              "include": [
+                "reasoning.encrypted_content"
+              ],
+              "prompt_cache_key": "ws-session",
+              "tool_choice": "auto",
+              "parallel_tool_calls": true,
+              "reasoning": {
+                "effort": "medium",
+                "summary": "auto"
+              }
+            }
+          },
+          {
+            "connection": 2,
+            "body": {
+              "type": "response.create",
+              "model": "gpt-5.5",
+              "store": false,
+              "stream": true,
+              "instructions": "Be brief.",
+              "input": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "type": "input_text",
+                      "text": "three"
+                    }
+                  ]
+                }
+              ],
+              "text": {
+                "verbosity": "low"
+              },
+              "include": [
+                "reasoning.encrypted_content"
+              ],
+              "prompt_cache_key": "ws-session",
+              "tool_choice": "auto",
+              "parallel_tool_calls": true,
+              "reasoning": {
+                "effort": "medium",
+                "summary": "auto"
+              },
+              "previous_response_id": "resp_3"
+            }
+          }
+        ],
+        "stops": [
+          "stop",
+          "stop",
+          "stop"
+        ]
+      },
+      "stream_field_sent_by": [
+        "upstream"
+      ],
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "codex-continuation-tool-loop.json",
+      "python": {
+        "sent": [
+          {
+            "connection": 1,
+            "body": {
+              "type": "response.create",
+              "model": "gpt-5.5",
+              "input": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "type": "input_text",
+                      "text": "add 2 and 3"
+                    }
+                  ]
+                }
+              ],
+              "store": false,
+              "prompt_cache_key": "ws-session",
+              "instructions": "Use the tool.",
+              "text": {
+                "verbosity": "low"
+              },
+              "include": [
+                "reasoning.encrypted_content"
+              ],
+              "tool_choice": "auto",
+              "parallel_tool_calls": true,
+              "reasoning": {
+                "effort": "medium",
+                "summary": "auto"
+              },
+              "tools": [
+                {
+                  "type": "function",
+                  "name": "add",
+                  "description": "Add",
+                  "parameters": {
+                    "type": "object",
+                    "properties": {
+                      "a": {
+                        "type": "integer"
+                      },
+                      "b": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "a",
+                      "b"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "strict": null
+                }
+              ]
+            }
+          },
+          {
+            "connection": 1,
+            "body": {
+              "type": "response.create",
+              "model": "gpt-5.5",
+              "input": [
+                {
+                  "type": "function_call_output",
+                  "call_id": "call_1",
+                  "output": "5"
+                }
+              ],
+              "store": false,
+              "prompt_cache_key": "ws-session",
+              "instructions": "Use the tool.",
+              "text": {
+                "verbosity": "low"
+              },
+              "include": [
+                "reasoning.encrypted_content"
+              ],
+              "tool_choice": "auto",
+              "parallel_tool_calls": true,
+              "reasoning": {
+                "effort": "medium",
+                "summary": "auto"
+              },
+              "tools": [
+                {
+                  "type": "function",
+                  "name": "add",
+                  "description": "Add",
+                  "parameters": {
+                    "type": "object",
+                    "properties": {
+                      "a": {
+                        "type": "integer"
+                      },
+                      "b": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "a",
+                      "b"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "strict": null
+                }
+              ],
+              "previous_response_id": "resp_1"
+            }
+          },
+          {
+            "connection": 1,
+            "body": {
+              "type": "response.create",
+              "model": "gpt-5.5",
+              "input": [
+                {
+                  "type": "tool_search_call",
+                  "call_id": "pi_tool_load_imoiyb16l4y7x",
+                  "execution": "client",
+                  "status": "completed",
+                  "arguments": {
+                    "query": "late_tool",
+                    "limit": 1
+                  }
+                },
+                {
+                  "type": "tool_search_output",
+                  "call_id": "pi_tool_load_imoiyb16l4y7x",
+                  "execution": "client",
+                  "status": "completed",
+                  "tools": [
+                    {
+                      "type": "function",
+                      "name": "late_tool",
+                      "description": "late_tool tool",
+                      "parameters": {
+                        "type": "object",
+                        "properties": {},
+                        "additionalProperties": false
+                      },
+                      "strict": null,
+                      "defer_loading": true
+                    }
+                  ]
+                },
+                {
+                  "role": "developer",
+                  "content": "updated guidance"
+                },
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "type": "input_text",
+                      "text": "again"
+                    }
+                  ]
+                }
+              ],
+              "store": false,
+              "prompt_cache_key": "ws-session",
+              "instructions": "Use the tool.",
+              "text": {
+                "verbosity": "low"
+              },
+              "include": [
+                "reasoning.encrypted_content"
+              ],
+              "tool_choice": "auto",
+              "parallel_tool_calls": true,
+              "reasoning": {
+                "effort": "medium",
+                "summary": "auto"
+              },
+              "tools": [
+                {
+                  "type": "function",
+                  "name": "add",
+                  "description": "Add",
+                  "parameters": {
+                    "type": "object",
+                    "properties": {
+                      "a": {
+                        "type": "integer"
+                      },
+                      "b": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "a",
+                      "b"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "strict": null
+                }
+              ],
+              "previous_response_id": "resp_2"
+            }
+          }
+        ],
+        "stops": [
+          "tool_use",
+          "stop",
+          "stop"
+        ]
+      },
+      "upstream": {
+        "sent": [
+          {
+            "connection": 1,
+            "body": {
+              "type": "response.create",
+              "model": "gpt-5.5",
+              "store": false,
+              "stream": true,
+              "instructions": "Use the tool.",
+              "input": [
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "type": "input_text",
+                      "text": "add 2 and 3"
+                    }
+                  ]
+                }
+              ],
+              "text": {
+                "verbosity": "low"
+              },
+              "include": [
+                "reasoning.encrypted_content"
+              ],
+              "prompt_cache_key": "ws-session",
+              "tool_choice": "auto",
+              "parallel_tool_calls": true,
+              "tools": [
+                {
+                  "type": "function",
+                  "name": "add",
+                  "description": "Add",
+                  "parameters": {
+                    "type": "object",
+                    "properties": {
+                      "a": {
+                        "type": "integer"
+                      },
+                      "b": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "a",
+                      "b"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "strict": null
+                }
+              ],
+              "reasoning": {
+                "effort": "medium",
+                "summary": "auto"
+              }
+            }
+          },
+          {
+            "connection": 1,
+            "body": {
+              "type": "response.create",
+              "model": "gpt-5.5",
+              "store": false,
+              "stream": true,
+              "instructions": "Use the tool.",
+              "input": [
+                {
+                  "type": "function_call_output",
+                  "call_id": "call_1",
+                  "output": "5"
+                }
+              ],
+              "text": {
+                "verbosity": "low"
+              },
+              "include": [
+                "reasoning.encrypted_content"
+              ],
+              "prompt_cache_key": "ws-session",
+              "tool_choice": "auto",
+              "parallel_tool_calls": true,
+              "tools": [
+                {
+                  "type": "function",
+                  "name": "add",
+                  "description": "Add",
+                  "parameters": {
+                    "type": "object",
+                    "properties": {
+                      "a": {
+                        "type": "integer"
+                      },
+                      "b": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "a",
+                      "b"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "strict": null
+                }
+              ],
+              "reasoning": {
+                "effort": "medium",
+                "summary": "auto"
+              },
+              "previous_response_id": "resp_1"
+            }
+          },
+          {
+            "connection": 1,
+            "body": {
+              "type": "response.create",
+              "model": "gpt-5.5",
+              "store": false,
+              "stream": true,
+              "instructions": "Use the tool.",
+              "input": [
+                {
+                  "type": "tool_search_call",
+                  "call_id": "pi_tool_load_imoiyb16l4y7x",
+                  "execution": "client",
+                  "status": "completed",
+                  "arguments": {
+                    "query": "late_tool",
+                    "limit": 1
+                  }
+                },
+                {
+                  "type": "tool_search_output",
+                  "call_id": "pi_tool_load_imoiyb16l4y7x",
+                  "execution": "client",
+                  "status": "completed",
+                  "tools": [
+                    {
+                      "type": "function",
+                      "name": "late_tool",
+                      "description": "late_tool tool",
+                      "parameters": {
+                        "type": "object",
+                        "properties": {},
+                        "additionalProperties": false
+                      },
+                      "defer_loading": true,
+                      "strict": null
+                    }
+                  ]
+                },
+                {
+                  "role": "developer",
+                  "content": "updated guidance"
+                },
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "type": "input_text",
+                      "text": "again"
+                    }
+                  ]
+                }
+              ],
+              "text": {
+                "verbosity": "low"
+              },
+              "include": [
+                "reasoning.encrypted_content"
+              ],
+              "prompt_cache_key": "ws-session",
+              "tool_choice": "auto",
+              "parallel_tool_calls": true,
+              "tools": [
+                {
+                  "type": "function",
+                  "name": "add",
+                  "description": "Add",
+                  "parameters": {
+                    "type": "object",
+                    "properties": {
+                      "a": {
+                        "type": "integer"
+                      },
+                      "b": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "a",
+                      "b"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "strict": null
+                }
+              ],
+              "reasoning": {
+                "effort": "medium",
+                "summary": "auto"
+              },
+              "previous_response_id": "resp_2"
+            }
+          }
+        ],
+        "stops": [
+          "tool_use",
+          "stop",
+          "stop"
+        ]
+      },
+      "stream_field_sent_by": [
+        "upstream"
+      ],
+      "passed": true,
+      "upstream_exit_code": 0
+    }
+  ],
+  "status": "passed"
+}

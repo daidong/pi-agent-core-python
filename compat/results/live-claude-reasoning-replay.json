@@ -1,0 +1,70 @@
+{
+  "scope": "Live synthetic prompts; in-memory tool only; no credentials recorded",
+  "results": [
+    {
+      "provider": "claude",
+      "case": "thinking",
+      "live": true,
+      "transport": "sse",
+      "started_at": 1790995120.219498,
+      "model": "claude-sonnet-4-6",
+      "status": "completed",
+      "passed": true,
+      "answer_matches": true,
+      "exact_format": false,
+      "final_numeric_answer": "19",
+      "thinking_observed": true,
+      "tool_executions": 0,
+      "usage": {
+        "input": 68,
+        "output": 1314,
+        "cache_read": 0,
+        "cache_write": 0,
+        "reasoning": 0,
+        "total_tokens": 1382
+      },
+      "event_counts": {
+        "agent_start": 1,
+        "turn_start": 1,
+        "message_start": 2,
+        "message_end": 2,
+        "thinking_start": 1,
+        "thinking_delta": 86,
+        "thinking_end": 1,
+        "text_start": 1,
+        "text_delta": 104,
+        "text_end": 1,
+        "turn_end": 1,
+        "agent_end": 1
+      },
+      "wire_event_counts": {
+        "message_start": 1,
+        "content_block_start": 2,
+        "ping": 1,
+        "content_block_delta": 191,
+        "content_block_stop": 2,
+        "message_delta": 1,
+        "message_stop": 1
+      },
+      "http_statuses": [
+        200,
+        200
+      ],
+      "stop_reasons": [
+        "stop"
+      ],
+      "signed_history_replay_passed": true,
+      "replay_usage": {
+        "input": 3,
+        "output": 9,
+        "cache_read": 0,
+        "cache_write": 1393,
+        "reasoning": 0,
+        "total_tokens": 1405
+      },
+      "error_types": [],
+      "diagnostic": null,
+      "seconds": 15.95
+    }
+  ]
+}

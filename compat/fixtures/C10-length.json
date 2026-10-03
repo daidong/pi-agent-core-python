@@ -1,0 +1,42 @@
+{
+  "id": "C10-length",
+  "classification": "mapped",
+  "source": "packages/agent/test/agent-loop.test.ts; packages/agent/test/agent.test.ts",
+  "prompt": "go",
+  "tools": [
+    {
+      "name": "t",
+      "result": "t-result"
+    }
+  ],
+  "responses": [
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_call",
+          "id": "a",
+          "name": "t",
+          "arguments": {}
+        },
+        {
+          "type": "tool_call",
+          "id": "b",
+          "name": "t",
+          "arguments": {}
+        }
+      ],
+      "stop_reason": "length"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "done"
+        }
+      ],
+      "stop_reason": "stop"
+    }
+  ]
+}

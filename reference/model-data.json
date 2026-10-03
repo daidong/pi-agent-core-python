@@ -1,0 +1,7 @@
+{
+  "sha256": "f9b6faee86c94f2a6c1eb82ccc7ab49945752ae7fb8e04e77f3da53543b9cd1f",
+  "bytes": 52138,
+  "command": "npm run hydrate-model-data --prefix reference/pi/packages/ai",
+  "purpose": "Captured generated model catalog for upstream unit tests only; mocked differential fixtures do not use a real model",
+  "upstream_commit": "a13d35a742c6ef8462812a28fbe1d8c8b7431c32"
+}

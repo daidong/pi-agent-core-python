@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Pi release 候选接口",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "candidate_id",
+    "repository",
+    "detected_at",
+    "base",
+    "target",
+    "changed_files",
+    "affected_areas"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "candidate_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "repository": {
+      "const": "https://github.com/earendil-works/pi"
+    },
+    "detected_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "base": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "commit"
+      ],
+      "properties": {
+        "tag": {
+          "type": "string",
+          "minLength": 1
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        }
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "commit",
+        "published_at",
+        "release_url",
+        "draft",
+        "prerelease"
+      ],
+      "properties": {
+        "tag": {
+          "type": "string",
+          "minLength": 1
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "published_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "release_url": {
+          "type": "string",
+          "pattern": "^https://github\\.com/earendil-works/pi/releases/tag/[^/]+$"
+        },
+        "draft": {
+          "const": false
+        },
+        "prerelease": {
+          "const": false
+        }
+      }
+    },
+    "changed_files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "change",
+          "sha256_before",
+          "sha256_after"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+          },
+          "previous_path": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+          },
+          "change": {
+            "enum": [
+              "added",
+              "modified",
+              "deleted",
+              "renamed"
+            ]
+          },
+          "sha256_before": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sha256_after": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "affected_areas": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "agent_core",
+          "message_types",
+          "transcript",
+          "validation",
+          "dependencies",
+          "out_of_scope",
+          "unknown"
+        ]
+      }
+    },
+    "release_notes": {
+      "type": "string"
+    },
+    "producer": {
+      "type": "string"
+    }
+  }
+}

@@ -1,0 +1,618 @@
+{
+  "scope": "Live synthetic prompts; in-memory tool only; no credentials recorded",
+  "results": [
+    {
+      "provider": "deepseek",
+      "case": "text",
+      "live": true,
+      "transport": "sse",
+      "started_at": 1790995232.590941,
+      "model": "deepseek-flash",
+      "status": "completed",
+      "passed": true,
+      "answer_matches": true,
+      "exact_format": true,
+      "final_numeric_answer": null,
+      "thinking_observed": false,
+      "tool_executions": 0,
+      "usage": {
+        "input": 31,
+        "output": 6,
+        "cache_read": 0,
+        "cache_write": 0,
+        "reasoning": 0,
+        "total_tokens": 37
+      },
+      "event_counts": {
+        "agent_start": 1,
+        "turn_start": 1,
+        "message_start": 2,
+        "message_end": 2,
+        "text_start": 1,
+        "text_delta": 6,
+        "text_end": 1,
+        "turn_end": 1,
+        "agent_end": 1
+      },
+      "wire_event_counts": {
+        "response.created": 1,
+        "response.in_progress": 1,
+        "response.output_item.added": 1,
+        "response.content_part.added": 1,
+        "response.output_text.delta": 6,
+        "response.output_text.done": 1,
+        "response.content_part.done": 1,
+        "response.output_item.done": 1,
+        "response.completed": 1
+      },
+      "http_statuses": [
+        200
+      ],
+      "stop_reasons": [
+        "stop"
+      ],
+      "network": {
+        "http_attempts": 1,
+        "http_retries": 0,
+        "websocket_connects": 0,
+        "websocket_reuses": 0,
+        "websocket_fallbacks": 0
+      },
+      "error_types": [],
+      "diagnostic": null,
+      "seconds": 0.72
+    },
+    {
+      "provider": "deepseek",
+      "case": "tool",
+      "live": true,
+      "transport": "sse",
+      "started_at": 1790995233.312269,
+      "model": "deepseek-flash",
+      "status": "completed",
+      "passed": true,
+      "answer_matches": true,
+      "exact_format": true,
+      "final_numeric_answer": null,
+      "thinking_observed": false,
+      "tool_executions": 1,
+      "usage": {
+        "input": 571,
+        "output": 53,
+        "cache_read": 128,
+        "cache_write": 0,
+        "reasoning": 0,
+        "total_tokens": 752
+      },
+      "event_counts": {
+        "agent_start": 1,
+        "turn_start": 2,
+        "message_start": 4,
+        "message_end": 4,
+        "toolcall_start": 1,
+        "toolcall_delta": 13,
+        "toolcall_end": 1,
+        "tool_execution_start": 1,
+        "tool_execution_end": 1,
+        "turn_end": 2,
+        "text_start": 1,
+        "text_delta": 1,
+        "text_end": 1,
+        "agent_end": 1
+      },
+      "wire_event_counts": {
+        "response.created": 2,
+        "response.in_progress": 2,
+        "response.output_item.added": 2,
+        "response.function_call_arguments.delta": 13,
+        "response.function_call_arguments.done": 1,
+        "response.output_item.done": 2,
+        "response.completed": 2,
+        "response.content_part.added": 1,
+        "response.output_text.delta": 1,
+        "response.output_text.done": 1,
+        "response.content_part.done": 1
+      },
+      "http_statuses": [
+        200,
+        200
+      ],
+      "stop_reasons": [
+        "tool_use",
+        "stop"
+      ],
+      "network": {
+        "http_attempts": 2,
+        "http_retries": 0,
+        "websocket_connects": 0,
+        "websocket_reuses": 0,
+        "websocket_fallbacks": 0
+      },
+      "error_types": [],
+      "diagnostic": null,
+      "seconds": 2.34
+    },
+    {
+      "provider": "deepseek",
+      "case": "thinking",
+      "live": true,
+      "transport": "sse",
+      "started_at": 1790995235.6518478,
+      "model": "deepseek-flash",
+      "status": "completed",
+      "passed": true,
+      "answer_matches": true,
+      "exact_format": true,
+      "final_numeric_answer": "19",
+      "thinking_observed": true,
+      "tool_executions": 0,
+      "usage": {
+        "input": 72,
+        "output": 412,
+        "cache_read": 0,
+        "cache_write": 0,
+        "reasoning": 410,
+        "total_tokens": 484
+      },
+      "event_counts": {
+        "agent_start": 1,
+        "turn_start": 1,
+        "message_start": 2,
+        "message_end": 2,
+        "thinking_start": 1,
+        "thinking_delta": 410,
+        "thinking_end": 1,
+        "text_start": 1,
+        "text_delta": 1,
+        "text_end": 1,
+        "turn_end": 1,
+        "agent_end": 1
+      },
+      "wire_event_counts": {
+        "response.created": 1,
+        "response.in_progress": 1,
+        "response.output_item.added": 2,
+        "response.content_part.added": 2,
+        "response.reasoning_text.delta": 410,
+        "response.reasoning_text.done": 1,
+        "response.content_part.done": 2,
+        "response.output_item.done": 2,
+        "response.output_text.delta": 1,
+        "response.output_text.done": 1,
+        "response.completed": 1
+      },
+      "http_statuses": [
+        200,
+        200
+      ],
+      "stop_reasons": [
+        "stop"
+      ],
+      "signed_history_replay_passed": true,
+      "replay_usage": {
+        "input": 88,
+        "output": 228,
+        "cache_read": 0,
+        "cache_write": 0,
+        "reasoning": 221,
+        "total_tokens": 316
+      },
+      "network": {
+        "http_attempts": 2,
+        "http_retries": 0,
+        "websocket_connects": 0,
+        "websocket_reuses": 0,
+        "websocket_fallbacks": 0
+      },
+      "error_types": [],
+      "diagnostic": null,
+      "seconds": 4.57
+    },
+    {
+      "provider": "claude",
+      "case": "text",
+      "live": true,
+      "transport": "sse",
+      "started_at": 1790995240.2264802,
+      "model": "claude-sonnet-4-6",
+      "status": "completed",
+      "passed": true,
+      "answer_matches": true,
+      "exact_format": true,
+      "final_numeric_answer": null,
+      "thinking_observed": false,
+      "tool_executions": 0,
+      "usage": {
+        "input": 48,
+        "output": 9,
+        "cache_read": 0,
+        "cache_write": 0,
+        "reasoning": 0,
+        "total_tokens": 57
+      },
+      "event_counts": {
+        "agent_start": 1,
+        "turn_start": 1,
+        "message_start": 2,
+        "message_end": 2,
+        "text_start": 1,
+        "text_delta": 2,
+        "text_end": 1,
+        "turn_end": 1,
+        "agent_end": 1
+      },
+      "wire_event_counts": {
+        "message_start": 1,
+        "content_block_start": 1,
+        "ping": 1,
+        "content_block_delta": 2,
+        "content_block_stop": 1,
+        "message_delta": 1,
+        "message_stop": 1
+      },
+      "http_statuses": [
+        200
+      ],
+      "stop_reasons": [
+        "stop"
+      ],
+      "network": {
+        "http_attempts": 1,
+        "http_retries": 0,
+        "websocket_connects": 0,
+        "websocket_reuses": 0,
+        "websocket_fallbacks": 0
+      },
+      "error_types": [],
+      "diagnostic": null,
+      "seconds": 1.04
+    },
+    {
+      "provider": "claude",
+      "case": "tool",
+      "live": true,
+      "transport": "sse",
+      "started_at": 1790995241.2669451,
+      "model": "claude-sonnet-4-6",
+      "status": "completed",
+      "passed": true,
+      "answer_matches": true,
+      "exact_format": true,
+      "final_numeric_answer": null,
+      "thinking_observed": false,
+      "tool_executions": 1,
+      "usage": {
+        "input": 1328,
+        "output": 73,
+        "cache_read": 0,
+        "cache_write": 0,
+        "reasoning": 0,
+        "total_tokens": 1401
+      },
+      "event_counts": {
+        "agent_start": 1,
+        "turn_start": 2,
+        "message_start": 4,
+        "message_end": 4,
+        "toolcall_start": 1,
+        "toolcall_delta": 4,
+        "toolcall_end": 1,
+        "tool_execution_start": 1,
+        "tool_execution_end": 1,
+        "turn_end": 2,
+        "text_start": 1,
+        "text_delta": 1,
+        "text_end": 1,
+        "agent_end": 1
+      },
+      "wire_event_counts": {
+        "message_start": 2,
+        "content_block_start": 2,
+        "ping": 2,
+        "content_block_delta": 5,
+        "content_block_stop": 2,
+        "message_delta": 2,
+        "message_stop": 2
+      },
+      "http_statuses": [
+        200,
+        200
+      ],
+      "stop_reasons": [
+        "tool_use",
+        "stop"
+      ],
+      "network": {
+        "http_attempts": 2,
+        "http_retries": 0,
+        "websocket_connects": 0,
+        "websocket_reuses": 0,
+        "websocket_fallbacks": 0
+      },
+      "error_types": [],
+      "diagnostic": null,
+      "seconds": 2.63
+    },
+    {
+      "provider": "claude",
+      "case": "thinking",
+      "live": true,
+      "transport": "sse",
+      "started_at": 1790995243.897324,
+      "model": "claude-sonnet-4-6",
+      "status": "completed",
+      "passed": true,
+      "answer_matches": true,
+      "exact_format": false,
+      "final_numeric_answer": "19",
+      "thinking_observed": true,
+      "tool_executions": 0,
+      "usage": {
+        "input": 68,
+        "output": 1389,
+        "cache_read": 0,
+        "cache_write": 0,
+        "reasoning": 0,
+        "total_tokens": 1457
+      },
+      "event_counts": {
+        "agent_start": 1,
+        "turn_start": 1,
+        "message_start": 2,
+        "message_end": 2,
+        "thinking_start": 1,
+        "thinking_delta": 82,
+        "thinking_end": 1,
+        "text_start": 1,
+        "text_delta": 99,
+        "text_end": 1,
+        "turn_end": 1,
+        "agent_end": 1
+      },
+      "wire_event_counts": {
+        "message_start": 1,
+        "content_block_start": 2,
+        "ping": 1,
+        "content_block_delta": 182,
+        "content_block_stop": 2,
+        "message_delta": 1,
+        "message_stop": 1
+      },
+      "http_statuses": [
+        200,
+        200
+      ],
+      "stop_reasons": [
+        "stop"
+      ],
+      "signed_history_replay_passed": true,
+      "replay_usage": {
+        "input": 3,
+        "output": 9,
+        "cache_read": 0,
+        "cache_write": 1468,
+        "reasoning": 0,
+        "total_tokens": 1480
+      },
+      "network": {
+        "http_attempts": 2,
+        "http_retries": 0,
+        "websocket_connects": 0,
+        "websocket_reuses": 0,
+        "websocket_fallbacks": 0
+      },
+      "error_types": [],
+      "diagnostic": null,
+      "seconds": 16.32
+    },
+    {
+      "provider": "codex",
+      "case": "text",
+      "live": true,
+      "transport": "sse",
+      "started_at": 1790995260.223288,
+      "model": "gpt-6-luna",
+      "status": "completed",
+      "passed": true,
+      "answer_matches": true,
+      "exact_format": true,
+      "final_numeric_answer": null,
+      "thinking_observed": false,
+      "tool_executions": 0,
+      "usage": {
+        "input": 34,
+        "output": 8,
+        "cache_read": 0,
+        "cache_write": 0,
+        "reasoning": 0,
+        "total_tokens": 42
+      },
+      "event_counts": {
+        "agent_start": 1,
+        "turn_start": 1,
+        "message_start": 2,
+        "message_end": 2,
+        "text_start": 1,
+        "text_delta": 4,
+        "text_end": 1,
+        "turn_end": 1,
+        "agent_end": 1
+      },
+      "wire_event_counts": {
+        "response.created": 1,
+        "response.in_progress": 1,
+        "response.output_item.added": 1,
+        "response.content_part.added": 1,
+        "response.output_text.delta": 4,
+        "response.output_text.done": 1,
+        "response.content_part.done": 1,
+        "response.output_item.done": 1,
+        "response.completed": 1
+      },
+      "http_statuses": [
+        200
+      ],
+      "stop_reasons": [
+        "stop"
+      ],
+      "network": {
+        "http_attempts": 1,
+        "http_retries": 0,
+        "websocket_connects": 0,
+        "websocket_reuses": 0,
+        "websocket_fallbacks": 0
+      },
+      "error_types": [],
+      "diagnostic": null,
+      "seconds": 1.24
+    },
+    {
+      "provider": "codex",
+      "case": "tool",
+      "live": true,
+      "transport": "sse",
+      "started_at": 1790995261.4652438,
+      "model": "gpt-6-luna",
+      "status": "completed",
+      "passed": true,
+      "answer_matches": true,
+      "exact_format": true,
+      "final_numeric_answer": null,
+      "thinking_observed": false,
+      "tool_executions": 1,
+      "usage": {
+        "input": 208,
+        "output": 26,
+        "cache_read": 0,
+        "cache_write": 0,
+        "reasoning": 0,
+        "total_tokens": 234
+      },
+      "event_counts": {
+        "agent_start": 1,
+        "turn_start": 2,
+        "message_start": 4,
+        "message_end": 4,
+        "toolcall_start": 1,
+        "toolcall_delta": 9,
+        "toolcall_end": 1,
+        "tool_execution_start": 1,
+        "tool_execution_end": 1,
+        "turn_end": 2,
+        "text_start": 1,
+        "text_delta": 1,
+        "text_end": 1,
+        "agent_end": 1
+      },
+      "wire_event_counts": {
+        "response.created": 2,
+        "response.in_progress": 2,
+        "response.output_item.added": 2,
+        "response.function_call_arguments.delta": 9,
+        "response.function_call_arguments.done": 1,
+        "response.output_item.done": 2,
+        "response.completed": 2,
+        "response.content_part.added": 1,
+        "response.output_text.delta": 1,
+        "response.output_text.done": 1,
+        "response.content_part.done": 1
+      },
+      "http_statuses": [
+        200,
+        200
+      ],
+      "stop_reasons": [
+        "tool_use",
+        "stop"
+      ],
+      "network": {
+        "http_attempts": 2,
+        "http_retries": 0,
+        "websocket_connects": 0,
+        "websocket_reuses": 0,
+        "websocket_fallbacks": 0
+      },
+      "error_types": [],
+      "diagnostic": null,
+      "seconds": 2.93
+    },
+    {
+      "provider": "codex",
+      "case": "thinking",
+      "live": true,
+      "transport": "sse",
+      "started_at": 1790995264.396424,
+      "model": "gpt-6-luna",
+      "status": "completed",
+      "passed": true,
+      "answer_matches": true,
+      "exact_format": true,
+      "final_numeric_answer": "19",
+      "thinking_observed": true,
+      "tool_executions": 0,
+      "usage": {
+        "input": 52,
+        "output": 192,
+        "cache_read": 0,
+        "cache_write": 0,
+        "reasoning": 185,
+        "total_tokens": 244
+      },
+      "event_counts": {
+        "agent_start": 1,
+        "turn_start": 1,
+        "message_start": 2,
+        "message_end": 2,
+        "thinking_start": 1,
+        "thinking_delta": 1,
+        "thinking_end": 1,
+        "text_start": 1,
+        "text_delta": 1,
+        "text_end": 1,
+        "turn_end": 1,
+        "agent_end": 1
+      },
+      "wire_event_counts": {
+        "response.created": 1,
+        "response.in_progress": 1,
+        "response.output_item.added": 2,
+        "response.reasoning_summary_part.added": 1,
+        "response.reasoning_summary_text.delta": 1,
+        "response.reasoning_summary_text.done": 1,
+        "response.reasoning_summary_part.done": 1,
+        "response.output_item.done": 2,
+        "response.content_part.added": 1,
+        "response.output_text.delta": 1,
+        "response.output_text.done": 1,
+        "response.content_part.done": 1,
+        "response.completed": 1
+      },
+      "http_statuses": [
+        200,
+        200
+      ],
+      "stop_reasons": [
+        "stop"
+      ],
+      "signed_history_replay_passed": true,
+      "replay_usage": {
+        "input": 259,
+        "output": 8,
+        "cache_read": 0,
+        "cache_write": 0,
+        "reasoning": 0,
+        "total_tokens": 267
+      },
+      "network": {
+        "http_attempts": 2,
+        "http_retries": 0,
+        "websocket_connects": 0,
+        "websocket_reuses": 0,
+        "websocket_fallbacks": 0
+      },
+      "error_types": [],
+      "diagnostic": null,
+      "seconds": 11.0
+    }
+  ]
+}

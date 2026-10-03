@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "candidate_id": "2729621761edb139a0fe2a185cb05b7e524e20338d759a79cd1c4404d995b271",
+  "repository": "https://github.com/earendil-works/pi",
+  "detected_at": "2026-10-02T00:00:00Z",
+  "base": {
+    "tag": "v1.0.0",
+    "commit": "a13d35a742c6ef8462812a28fbe1d8c8b7431c32"
+  },
+  "target": {
+    "tag": "v1.0.0",
+    "commit": "a13d35a742c6ef8462812a28fbe1d8c8b7431c32",
+    "published_at": "2026-10-01T19:20:55Z",
+    "release_url": "https://github.com/earendil-works/pi/releases/tag/v1.0.0",
+    "draft": false,
+    "prerelease": false
+  },
+  "changed_files": [],
+  "affected_areas": [],
+  "producer": "接口形状示例；目标等于基线，接收后应判为无需操作"
+}

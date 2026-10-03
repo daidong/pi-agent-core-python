@@ -1,0 +1,169 @@
+{
+  "schema_version": 1,
+  "status": "reference_only",
+  "checked_on": "2026-10-02",
+  "scope": "core-text-tools-v1",
+  "repository": "https://github.com/earendil-works/pi",
+  "release": {
+    "tag": "v1.0.0",
+    "commit": "a13d35a742c6ef8462812a28fbe1d8c8b7431c32",
+    "published_at": "2026-10-01T19:20:55Z",
+    "url": "https://github.com/earendil-works/pi/releases/tag/v1.0.0",
+    "draft": false,
+    "prerelease": false
+  },
+  "package": {
+    "name": "@earendil-works/pi-agent-core",
+    "version": "1.0.0",
+    "node_requirement_for_reference": ">=22.19.0"
+  },
+  "watch_paths": [
+    "packages/agent/**",
+    "packages/ai/src/types.ts",
+    "packages/ai/src/utils/transcript.ts",
+    "packages/ai/src/utils/validation.ts",
+    "packages/ai/package.json",
+    "package.json",
+    "package-lock.json"
+  ],
+  "verification": {
+    "source_downloaded": true,
+    "upstream_tests_executed": false,
+    "python_implementation_exists": false,
+    "conformance_executed": false,
+    "hpc_deployment_executed": false
+  },
+  "notes": [
+    "本文件固定参照身份，不声明 Python 兼容性。",
+    "源码 hash 是下载内容的 SHA-256，不是 Git blob ID。",
+    "watch_paths 是初始影响范围；依赖关系变化时须重新检查。"
+  ],
+  "source_files": [
+    {
+      "path": "LICENSE",
+      "sha256": "0457f5bcec3b3b211605dfb5d1a49042fd638f3686a410fe099c24a25af13c48",
+      "bytes": 1069,
+      "source_url": "https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/LICENSE"
+    },
+    {
+      "path": "README.md",
+      "sha256": "fe13915e217f905739b64124cbb03b72758fa2081b7198cabeefaee4914a6f14",
+      "bytes": 6895,
+      "source_url": "https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/README.md"
+    },
+    {
+      "path": "packages/agent/README.md",
+      "sha256": "37da6831566eb0385a59da2ee055e7a7efe3e8e7a4b50aab8745ce43559197fe",
+      "bytes": 21127,
+      "source_url": "https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/agent/README.md"
+    },
+    {
+      "path": "packages/agent/package.json",
+      "sha256": "1764bf34dd87eac46013c31a843e30fc118c525bf079d3c9ad95c39e399fca17",
+      "bytes": 1033,
+      "source_url": "https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/agent/package.json"
+    },
+    {
+      "path": "packages/agent/src/agent-loop.ts",
+      "sha256": "e773e822a2587caf314e6bb66ea6370fce3468b7eecd26d6a67afe673f81eabc",
+      "bytes": 29088,
+      "source_url": "https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/agent/src/agent-loop.ts"
+    },
+    {
+      "path": "packages/agent/src/agent.ts",
+      "sha256": "7024a3145a6ebc951a0f030164adb1dfb12d33d6e0dbbac15ef0efda49c87457",
+      "bytes": 19748,
+      "source_url": "https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/agent/src/agent.ts"
+    },
+    {
+      "path": "packages/agent/src/index.ts",
+      "sha256": "8bec36d174aee7e4326b1bfa61b4d7c6ac19dd659439e70f91d2d448794cc892",
+      "bytes": 170,
+      "source_url": "https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/agent/src/index.ts"
+    },
+    {
+      "path": "packages/agent/src/types.ts",
+      "sha256": "347efd535342c1d5fbd6b731168c57fcbb201a6652707f8e22e1b66fe3b69c2d",
+      "bytes": 20955,
+      "source_url": "https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/agent/src/types.ts"
+    },
+    {
+      "path": "packages/agent/test/agent-loop.test.ts",
+      "sha256": "00e7841355c29ec7c673c6ca992302361db6e5fad248363c53210061e3f80c16",
+      "bytes": 65244,
+      "source_url": "https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/agent/test/agent-loop.test.ts"
+    },
+    {
+      "path": "packages/agent/test/agent.test.ts",
+      "sha256": "42bfc9e557d64266a168da8c25460fddfcc9fdfbe74822bcce90bcfef634b7bd",
+      "bytes": 37719,
+      "source_url": "https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/agent/test/agent.test.ts"
+    },
+    {
+      "path": "packages/agent/test/e2e.test.ts",
+      "sha256": "186286d01bd377797e15452da264cb55902462199ee0d10bfa5ff191292810a9",
+      "bytes": 12875,
+      "source_url": "https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/agent/test/e2e.test.ts"
+    },
+    {
+      "path": "packages/agent/test/proxy.test.ts",
+      "sha256": "d38ade78d744fa0dc22a6167a60a54ceb202ff0ba44be18bdf49b3a01388ca73",
+      "bytes": 3997,
+      "source_url": "https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/agent/test/proxy.test.ts"
+    },
+    {
+      "path": "packages/agent/test/utils/calculate.ts",
+      "sha256": "93e332014f57e14d1131b66791bcd865a2db9647aa87ad2e0e86a79414591a8f",
+      "bytes": 1354,
+      "source_url": "https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/agent/test/utils/calculate.ts"
+    },
+    {
+      "path": "packages/agent/test/utils/get-current-time.ts",
+      "sha256": "0192fa9720f3713c7ca6be54968c49f681eef6d01ea944cf418863b9c56d027b",
+      "bytes": 1497,
+      "source_url": "https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/agent/test/utils/get-current-time.ts"
+    },
+    {
+      "path": "packages/agent/test/utils/wait-for-tick.ts",
+      "sha256": "d4f3cda1a6449f918d8ee569d310eb9d07af3c4a5931ce60b5b4111e2e689bb6",
+      "bytes": 107,
+      "source_url": "https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/agent/test/utils/wait-for-tick.ts"
+    },
+    {
+      "path": "packages/ai/README.md",
+      "sha256": "88624d1b69c80b3ce16882c4e7149289052e9b3db9500be61fd95ecce8f85b99",
+      "bytes": 99723,
+      "source_url": "https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/ai/README.md"
+    },
+    {
+      "path": "packages/ai/package.json",
+      "sha256": "62c8159c939f1f9fae53a9b003e7bd9136979bcceeca61bd1f2cf41082763736",
+      "bytes": 2721,
+      "source_url": "https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/ai/package.json"
+    },
+    {
+      "path": "packages/ai/src/types.ts",
+      "sha256": "7ac401b31a7679a77469037091093c4c25d3719d7c9e9078378fece509fa8e8d",
+      "bytes": 48466,
+      "source_url": "https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/ai/src/types.ts"
+    },
+    {
+      "path": "packages/ai/src/utils/transcript.ts",
+      "sha256": "cad0c126cdfadc1b4f430cc5a95b1c9285ecd1ee9957642d7773b1357bbc9ac5",
+      "bytes": 9403,
+      "source_url": "https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/ai/src/utils/transcript.ts"
+    },
+    {
+      "path": "packages/ai/src/utils/validation.ts",
+      "sha256": "460786b57dead200e411b9afec916a5049c96ebcff4da082096456ac06d44fb7",
+      "bytes": 9902,
+      "source_url": "https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/ai/src/utils/validation.ts"
+    },
+    {
+      "path": "packages/coding-agent/docs/rpc.md",
+      "sha256": "37a03d180115460a0a275022f4aeabef1e5345458df6a9b6e8a6de18474de720",
+      "bytes": 8897,
+      "source_url": "https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/coding-agent/docs/rpc.md"
+    }
+  ]
+}

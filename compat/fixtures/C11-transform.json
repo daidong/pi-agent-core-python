@@ -1,0 +1,19 @@
+{
+  "id": "C11-transform",
+  "classification": "mapped",
+  "source": "packages/agent/test/agent-loop.test.ts; packages/agent/test/agent.test.ts",
+  "prompt": "go",
+  "transform": true,
+  "responses": [
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "done"
+        }
+      ],
+      "stop_reason": "stop"
+    }
+  ]
+}

@@ -1,0 +1,281 @@
+{
+  "model": {
+    "id": "gpt-5.5",
+    "name": "GPT-5.5",
+    "api": "openai-codex-responses",
+    "reasoning": true,
+    "input": [
+      "text",
+      "image"
+    ],
+    "maxTokens": 128000,
+    "contextWindow": 272000,
+    "cost": {
+      "input": 5,
+      "output": 30,
+      "cacheRead": 0.5,
+      "cacheWrite": 0,
+      "tiers": [
+        {
+          "inputTokensAbove": 272000,
+          "input": 10,
+          "output": 45,
+          "cacheRead": 1,
+          "cacheWrite": 0
+        }
+      ]
+    },
+    "thinkingLevelMap": {
+      "xhigh": "xhigh",
+      "minimal": "low"
+    },
+    "compat": {
+      "supportsOpenAIGrammarTools": true,
+      "supportsToolSearch": true,
+      "supportsMidConvoSystemMessages": true
+    }
+  },
+  "api_key": "fixture.eyJodHRwczovL2FwaS5vcGVuYWkuY29tL2F1dGgiOiB7ImNoYXRncHRfYWNjb3VudF9pZCI6ICJmaXh0dXJlLWFjY291bnQifX0.fixture",
+  "options": {
+    "sessionId": "ws-session",
+    "reasoning": "medium"
+  },
+  "turns": [
+    [
+      {
+        "role": "system",
+        "content": "Use the tool.",
+        "timestamp": 0,
+        "toolsAdded": [
+          {
+            "name": "add",
+            "description": "Add",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "a": {
+                  "type": "integer"
+                },
+                "b": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "a",
+                "b"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "add 2 and 3",
+        "timestamp": 1
+      }
+    ],
+    [
+      {
+        "role": "toolResult",
+        "toolCallId": "call_1|fc_1",
+        "toolName": "add",
+        "content": [
+          {
+            "type": "text",
+            "text": "5"
+          }
+        ],
+        "isError": false,
+        "timestamp": 3
+      }
+    ],
+    [
+      {
+        "role": "system",
+        "content": "updated guidance",
+        "timestamp": 5,
+        "toolsAdded": [
+          {
+            "name": "late_tool",
+            "description": "late_tool tool",
+            "parameters": {
+              "type": "object",
+              "properties": {},
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "again",
+        "timestamp": 6
+      }
+    ]
+  ],
+  "responses": [
+    [
+      {
+        "type": "response.created",
+        "response": {
+          "id": "resp_1"
+        }
+      },
+      {
+        "type": "response.output_item.added",
+        "output_index": 0,
+        "item": {
+          "type": "function_call",
+          "id": "fc_1",
+          "call_id": "call_1",
+          "name": "add",
+          "arguments": ""
+        }
+      },
+      {
+        "type": "response.function_call_arguments.delta",
+        "output_index": 0,
+        "delta": "{\"a\":2,\"b\":3}"
+      },
+      {
+        "type": "response.output_item.done",
+        "output_index": 0,
+        "item": {
+          "type": "function_call",
+          "id": "fc_1",
+          "call_id": "call_1",
+          "name": "add",
+          "arguments": "{\"a\":2,\"b\":3}"
+        }
+      },
+      {
+        "type": "response.completed",
+        "response": {
+          "id": "resp_1",
+          "status": "completed",
+          "output": [
+            {
+              "type": "function_call",
+              "id": "fc_1",
+              "call_id": "call_1",
+              "name": "add",
+              "arguments": "{\"a\":2,\"b\":3}"
+            }
+          ],
+          "usage": {}
+        }
+      }
+    ],
+    [
+      {
+        "type": "response.output_item.added",
+        "output_index": 0,
+        "item": {
+          "type": "message",
+          "id": "msg_resp_2",
+          "role": "assistant",
+          "content": []
+        }
+      },
+      {
+        "type": "response.output_text.delta",
+        "output_index": 0,
+        "delta": "5"
+      },
+      {
+        "type": "response.output_item.done",
+        "output_index": 0,
+        "item": {
+          "type": "message",
+          "id": "msg_resp_2",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "5",
+              "annotations": []
+            }
+          ]
+        }
+      },
+      {
+        "type": "response.completed",
+        "response": {
+          "id": "resp_2",
+          "status": "completed",
+          "output": [
+            {
+              "type": "message",
+              "id": "msg_resp_2",
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "output_text",
+                  "text": "5",
+                  "annotations": []
+                }
+              ]
+            }
+          ],
+          "usage": {}
+        }
+      }
+    ],
+    [
+      {
+        "type": "response.output_item.added",
+        "output_index": 0,
+        "item": {
+          "type": "message",
+          "id": "msg_resp_3",
+          "role": "assistant",
+          "content": []
+        }
+      },
+      {
+        "type": "response.output_text.delta",
+        "output_index": 0,
+        "delta": "5"
+      },
+      {
+        "type": "response.output_item.done",
+        "output_index": 0,
+        "item": {
+          "type": "message",
+          "id": "msg_resp_3",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "5",
+              "annotations": []
+            }
+          ]
+        }
+      },
+      {
+        "type": "response.completed",
+        "response": {
+          "id": "resp_3",
+          "status": "completed",
+          "output": [
+            {
+              "type": "message",
+              "id": "msg_resp_3",
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "output_text",
+                  "text": "5",
+                  "annotations": []
+                }
+              ]
+            }
+          ],
+          "usage": {}
+        }
+      }
+    ]
+  ]
+}

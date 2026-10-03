@@ -1,0 +1,99 @@
+{
+  "requests": [
+    [
+      {
+        "content": "go",
+        "role": "user"
+      }
+    ]
+  ],
+  "request_models": [
+    "mock"
+  ],
+  "effects": [],
+  "events": [
+    {
+      "type": "agent_start"
+    },
+    {
+      "type": "turn_start"
+    },
+    {
+      "type": "message_start",
+      "message": {
+        "content": "go",
+        "role": "user"
+      }
+    },
+    {
+      "type": "message_end",
+      "message": {
+        "content": "go",
+        "role": "user"
+      }
+    },
+    {
+      "type": "message_start",
+      "message": {
+        "content": [],
+        "stop_reason": "pending",
+        "role": "assistant"
+      }
+    },
+    {
+      "type": "message_update"
+    },
+    {
+      "type": "message_update"
+    },
+    {
+      "type": "message_end",
+      "message": {
+        "content": [
+          {
+            "text": "partial answer",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "error",
+        "role": "assistant"
+      }
+    },
+    {
+      "type": "turn_end",
+      "message": {
+        "content": [
+          {
+            "text": "partial answer",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "error",
+        "role": "assistant"
+      }
+    },
+    {
+      "type": "agent_end"
+    }
+  ],
+  "messages": [
+    {
+      "content": "go",
+      "role": "user"
+    },
+    {
+      "content": [
+        {
+          "text": "partial answer",
+          "type": "text"
+        }
+      ],
+      "stop_reason": "error",
+      "role": "assistant"
+    }
+  ],
+  "hooks": [
+    "finish_turn"
+  ],
+  "status": "failed"
+}

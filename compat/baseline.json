@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "status": "accepted",
+  "scope": "core-text-tools-v1",
+  "repository": "https://github.com/earendil-works/pi",
+  "release": {
+    "tag": "v1.0.0",
+    "commit": "a13d35a742c6ef8462812a28fbe1d8c8b7431c32"
+  },
+  "python_package_version": "0.1.0",
+  "qualification": "Acceptance covers declared fixtures and Python contracts; not complete Pi API compatibility.",
+  "evidence": {
+    "source": "results/source-verification.json",
+    "conformance": "results/conformance.json",
+    "checks": "results/verification.json",
+    "linux": [
+      "results/linux-3.11.json",
+      "results/linux-3.12.json",
+      "results/linux-3.13.json"
+    ]
+  },
+  "intentional_differences": [
+    "D1",
+    "D2",
+    "D3",
+    "D4",
+    "D5",
+    "D6",
+    "D7",
+    "D8"
+  ]
+}

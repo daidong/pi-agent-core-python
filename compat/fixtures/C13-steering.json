@@ -1,0 +1,64 @@
+{
+  "id": "C13-steering",
+  "classification": "mapped",
+  "source": "packages/agent/test/agent-loop.test.ts; packages/agent/test/agent.test.ts",
+  "prompt": "go",
+  "tools": [
+    {
+      "name": "t",
+      "result": "t-result"
+    }
+  ],
+  "operations": [
+    {
+      "event": "tool_execution_end",
+      "method": "steer",
+      "message": {
+        "role": "user",
+        "content": "guide1"
+      }
+    },
+    {
+      "event": "tool_execution_end",
+      "method": "steer",
+      "message": {
+        "role": "user",
+        "content": "guide2"
+      }
+    }
+  ],
+  "responses": [
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_call",
+          "id": "x",
+          "name": "t",
+          "arguments": {}
+        }
+      ],
+      "stop_reason": "tool_use"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "1"
+        }
+      ],
+      "stop_reason": "stop"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "2"
+        }
+      ],
+      "stop_reason": "stop"
+    }
+  ]
+}

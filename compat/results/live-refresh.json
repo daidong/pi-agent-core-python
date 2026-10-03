@@ -1,0 +1,49 @@
+{
+  "scope": "Live OAuth refresh on library-owned credential files; no tokens recorded",
+  "results": [
+    {
+      "provider": "anthropic",
+      "started_at": 1791000851.1314251,
+      "concurrent_callers": 3,
+      "network_refreshes": 3,
+      "callers_got_same_token": true,
+      "access_token_changed": true,
+      "refresh_token_rotated": true,
+      "minutes_valid_after_refresh": 480,
+      "file_matches_memory": true,
+      "file_mode": "0o600",
+      "same_account": true,
+      "request_after_refresh": true,
+      "refreshed_inside_request": true,
+      "request_errors": [],
+      "second_refresh_from_file": true,
+      "second_refresh_saved": true,
+      "example_reuse_exit_code": 0,
+      "example_reuse_answer_ok": true,
+      "passed": true,
+      "seconds": 4.13
+    },
+    {
+      "provider": "openai-codex",
+      "started_at": 1791000855.261618,
+      "concurrent_callers": 3,
+      "network_refreshes": 3,
+      "callers_got_same_token": true,
+      "access_token_changed": true,
+      "refresh_token_rotated": true,
+      "minutes_valid_after_refresh": 14400,
+      "file_matches_memory": true,
+      "file_mode": "0o600",
+      "same_account": true,
+      "request_after_refresh": true,
+      "refreshed_inside_request": true,
+      "request_errors": [],
+      "second_refresh_from_file": true,
+      "second_refresh_saved": true,
+      "example_reuse_exit_code": 0,
+      "example_reuse_answer_ok": true,
+      "passed": true,
+      "seconds": 5.11
+    }
+  ]
+}

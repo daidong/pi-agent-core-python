@@ -1,0 +1,28 @@
+{
+  "id": "C19-abort-stream",
+  "classification": "mapped",
+  "source": "packages/agent/src/agent-loop.ts; packages/agent/src/agent.ts",
+  "prompt": "go",
+  "finish": [],
+  "operations": [
+    {
+      "event": "message_update",
+      "method": "abort",
+      "delta_type": "text_delta"
+    }
+  ],
+  "responses": [
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "partial answer"
+        }
+      ],
+      "stop_reason": "aborted",
+      "error": "Request aborted",
+      "stream": true
+    }
+  ]
+}

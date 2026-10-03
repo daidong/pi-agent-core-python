@@ -1,0 +1,332 @@
+{
+  "requests": [
+    [
+      {
+        "content": "",
+        "tools_added": [
+          {
+            "name": "a",
+            "description": "",
+            "input_schema": {
+              "type": "object"
+            }
+          },
+          {
+            "name": "b",
+            "description": "",
+            "input_schema": {
+              "type": "object"
+            }
+          }
+        ],
+        "role": "system"
+      },
+      {
+        "content": "go",
+        "role": "user"
+      }
+    ]
+  ],
+  "request_models": [
+    "mock"
+  ],
+  "effects": [
+    {
+      "name": "a",
+      "arguments": {}
+    },
+    {
+      "name": "b",
+      "arguments": {}
+    }
+  ],
+  "events": [
+    {
+      "type": "agent_start"
+    },
+    {
+      "type": "turn_start"
+    },
+    {
+      "type": "message_start",
+      "message": {
+        "content": "go",
+        "role": "user"
+      }
+    },
+    {
+      "type": "message_end",
+      "message": {
+        "content": "go",
+        "role": "user"
+      }
+    },
+    {
+      "type": "message_start",
+      "message": {
+        "content": [
+          {
+            "id": "a",
+            "name": "a",
+            "arguments": {},
+            "type": "tool_call"
+          },
+          {
+            "id": "b",
+            "name": "b",
+            "arguments": {},
+            "type": "tool_call"
+          }
+        ],
+        "stop_reason": "tool_use",
+        "role": "assistant"
+      }
+    },
+    {
+      "type": "message_end",
+      "message": {
+        "content": [
+          {
+            "id": "a",
+            "name": "a",
+            "arguments": {},
+            "type": "tool_call"
+          },
+          {
+            "id": "b",
+            "name": "b",
+            "arguments": {},
+            "type": "tool_call"
+          }
+        ],
+        "stop_reason": "tool_use",
+        "role": "assistant"
+      }
+    },
+    {
+      "type": "tool_execution_start",
+      "call_id": "a"
+    },
+    {
+      "type": "tool_execution_start",
+      "call_id": "b"
+    },
+    {
+      "type": "tool_execution_end",
+      "call_id": "b"
+    },
+    {
+      "type": "tool_execution_end",
+      "call_id": "a"
+    },
+    {
+      "type": "message_start",
+      "message": {
+        "call_id": "a",
+        "name": "a",
+        "content": [
+          {
+            "text": "Operation aborted",
+            "type": "text"
+          }
+        ],
+        "is_error": true,
+        "role": "tool_result"
+      }
+    },
+    {
+      "type": "message_end",
+      "message": {
+        "call_id": "a",
+        "name": "a",
+        "content": [
+          {
+            "text": "Operation aborted",
+            "type": "text"
+          }
+        ],
+        "is_error": true,
+        "role": "tool_result"
+      }
+    },
+    {
+      "type": "message_start",
+      "message": {
+        "call_id": "b",
+        "name": "b",
+        "content": [
+          {
+            "text": "b-result",
+            "type": "text"
+          }
+        ],
+        "is_error": false,
+        "role": "tool_result"
+      }
+    },
+    {
+      "type": "message_end",
+      "message": {
+        "call_id": "b",
+        "name": "b",
+        "content": [
+          {
+            "text": "b-result",
+            "type": "text"
+          }
+        ],
+        "is_error": false,
+        "role": "tool_result"
+      }
+    },
+    {
+      "type": "turn_end",
+      "message": {
+        "content": [
+          {
+            "id": "a",
+            "name": "a",
+            "arguments": {},
+            "type": "tool_call"
+          },
+          {
+            "id": "b",
+            "name": "b",
+            "arguments": {},
+            "type": "tool_call"
+          }
+        ],
+        "stop_reason": "tool_use",
+        "role": "assistant"
+      }
+    },
+    {
+      "type": "turn_start"
+    },
+    {
+      "type": "message_start",
+      "message": {
+        "content": [
+          {
+            "text": "",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "aborted",
+        "role": "assistant"
+      }
+    },
+    {
+      "type": "message_end",
+      "message": {
+        "content": [
+          {
+            "text": "",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "aborted",
+        "role": "assistant"
+      }
+    },
+    {
+      "type": "turn_end",
+      "message": {
+        "content": [
+          {
+            "text": "",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "aborted",
+        "role": "assistant"
+      }
+    },
+    {
+      "type": "agent_end"
+    }
+  ],
+  "messages": [
+    {
+      "content": "",
+      "tools_added": [
+        {
+          "name": "a",
+          "description": "",
+          "input_schema": {
+            "type": "object"
+          }
+        },
+        {
+          "name": "b",
+          "description": "",
+          "input_schema": {
+            "type": "object"
+          }
+        }
+      ],
+      "role": "system"
+    },
+    {
+      "content": "go",
+      "role": "user"
+    },
+    {
+      "content": [
+        {
+          "id": "a",
+          "name": "a",
+          "arguments": {},
+          "type": "tool_call"
+        },
+        {
+          "id": "b",
+          "name": "b",
+          "arguments": {},
+          "type": "tool_call"
+        }
+      ],
+      "stop_reason": "tool_use",
+      "role": "assistant"
+    },
+    {
+      "call_id": "a",
+      "name": "a",
+      "content": [
+        {
+          "text": "Operation aborted",
+          "type": "text"
+        }
+      ],
+      "is_error": true,
+      "role": "tool_result"
+    },
+    {
+      "call_id": "b",
+      "name": "b",
+      "content": [
+        {
+          "text": "b-result",
+          "type": "text"
+        }
+      ],
+      "is_error": false,
+      "role": "tool_result"
+    },
+    {
+      "content": [
+        {
+          "text": "",
+          "type": "text"
+        }
+      ],
+      "stop_reason": "aborted",
+      "role": "assistant"
+    }
+  ],
+  "hooks": [
+    "finish_turn",
+    "finish_turn"
+  ],
+  "status": "cancelled"
+}

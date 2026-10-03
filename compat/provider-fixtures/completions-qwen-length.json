@@ -1,0 +1,103 @@
+{
+  "provider": "openai-completions",
+  "entry": "simple",
+  "base_url": "http://localhost:8000/v1",
+  "model": {
+    "id": "Qwen/Qwen3-32B",
+    "name": "Qwen/Qwen3-32B",
+    "api": "openai-completions",
+    "provider": "vllm",
+    "reasoning": true,
+    "input": [
+      "text"
+    ],
+    "contextWindow": 40960,
+    "maxTokens": 8192,
+    "cost": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0
+    },
+    "compat": {
+      "supportsDeveloperRole": false,
+      "supportsReasoningEffort": false,
+      "thinkingFormat": "qwen-chat-template",
+      "supportsThinkingTokenBudget": true,
+      "vllmPriority": 5
+    }
+  },
+  "options": {
+    "reasoning": "low",
+    "maxTokens": 3000
+  },
+  "context": {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Write a long story",
+        "timestamp": 0
+      }
+    ]
+  },
+  "events": [
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "Qwen/Qwen3-32B",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "reasoning": "Plot"
+          },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "Qwen/Qwen3-32B",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "content": "Once upon"
+          },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "Qwen/Qwen3-32B",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "content": " a time"
+          },
+          "finish_reason": "length"
+        }
+      ]
+    },
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "Qwen/Qwen3-32B",
+      "choices": [],
+      "usage": {
+        "prompt_tokens": 12,
+        "completion_tokens": 3000,
+        "total_tokens": 3012
+      }
+    }
+  ]
+}

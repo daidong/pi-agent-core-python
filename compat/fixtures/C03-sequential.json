@@ -1,0 +1,47 @@
+{
+  "id": "C03-sequential",
+  "classification": "mapped",
+  "source": "packages/agent/test/agent-loop.test.ts; packages/agent/test/agent.test.ts",
+  "prompt": "go",
+  "tools": [
+    {
+      "name": "a",
+      "result": "a-result"
+    },
+    {
+      "name": "b",
+      "result": "b-result"
+    }
+  ],
+  "execution_mode": "sequential",
+  "responses": [
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_call",
+          "id": "a",
+          "name": "a",
+          "arguments": {}
+        },
+        {
+          "type": "tool_call",
+          "id": "b",
+          "name": "b",
+          "arguments": {}
+        }
+      ],
+      "stop_reason": "tool_use"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "done"
+        }
+      ],
+      "stop_reason": "stop"
+    }
+  ]
+}

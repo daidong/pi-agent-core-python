@@ -1,0 +1,99 @@
+{
+  "provider": "openai-completions",
+  "entry": "simple",
+  "model": {
+    "id": "ling-1t",
+    "name": "ling-1t",
+    "api": "openai-completions",
+    "provider": "ant-ling",
+    "reasoning": true,
+    "input": [
+      "text"
+    ],
+    "contextWindow": 64000,
+    "maxTokens": 8192,
+    "cost": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0
+    },
+    "thinkingLevelMap": {
+      "low": "low"
+    }
+  },
+  "options": {
+    "reasoning": "minimal"
+  },
+  "context": {
+    "messages": [
+      {
+        "role": "system",
+        "content": "sys",
+        "timestamp": 0
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 1
+      }
+    ]
+  },
+  "events": [
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "ling-1t",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": ""
+          },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "ling-1t",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "content": "ok"
+          },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "ling-1t",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {},
+          "finish_reason": "stop"
+        }
+      ]
+    },
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "ling-1t",
+      "choices": [],
+      "usage": {
+        "prompt_tokens": 5,
+        "completion_tokens": 1
+      }
+    }
+  ]
+}

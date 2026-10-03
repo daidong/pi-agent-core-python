@@ -1,0 +1,18 @@
+{
+  "id": "C01-text",
+  "classification": "mapped",
+  "source": "packages/agent/test/agent-loop.test.ts; packages/agent/test/agent.test.ts",
+  "prompt": "Hello",
+  "responses": [
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "Hello back"
+        }
+      ],
+      "stop_reason": "stop"
+    }
+  ]
+}

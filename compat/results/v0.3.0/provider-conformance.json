@@ -1,0 +1,3551 @@
+{
+  "source_revision": "a13d35a742c6ef8462812a28fbe1d8c8b7431c32",
+  "scope": "final content, signatures, stop reason, canonical event order/payload, complete request body and selected semantic headers; synthetic fixtures, not live service; runtime IDs and SDK fingerprint headers excluded",
+  "results": [
+    {
+      "fixture": "anthropic-oauth.json",
+      "python": {
+        "content": [
+          {
+            "text": "你好",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/v1/messages?beta=true",
+          "body": {
+            "model": "test-model",
+            "stream": true,
+            "max_tokens": 4096,
+            "messages": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "go",
+                    "cache_control": {
+                      "type": "ephemeral"
+                    }
+                  }
+                ]
+              }
+            ],
+            "system": [
+              {
+                "type": "text",
+                "text": "You are Claude Code, Anthropic's official CLI for Claude.",
+                "cache_control": {
+                  "type": "ephemeral"
+                }
+              }
+            ]
+          },
+          "headers": {
+            "anthropic-version": "2023-06-01",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "content-type": "application/json",
+            "authorization": "Bearer sk-ant-oat-fixture",
+            "anthropic-beta": "claude-code-20250219,oauth-2025-04-20",
+            "x-app": "cli"
+          }
+        }
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "text",
+            "text": "你好"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/v1/messages?beta=true",
+          "body": {
+            "model": "test-model",
+            "messages": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "go",
+                    "cache_control": {
+                      "type": "ephemeral"
+                    }
+                  }
+                ]
+              }
+            ],
+            "max_tokens": 4096,
+            "stream": true,
+            "system": [
+              {
+                "type": "text",
+                "text": "You are Claude Code, Anthropic's official CLI for Claude.",
+                "cache_control": {
+                  "type": "ephemeral"
+                }
+              }
+            ]
+          },
+          "headers": {
+            "authorization": "Bearer sk-ant-oat-fixture",
+            "anthropic-version": "2023-06-01",
+            "anthropic-beta": "claude-code-20250219,oauth-2025-04-20",
+            "content-type": "application/json",
+            "x-app": "cli",
+            "anthropic-dangerous-direct-browser-access": "true"
+          }
+        }
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "anthropic-request-cache-long.json",
+      "python": {
+        "content": [
+          {
+            "text": "你好",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/v1/messages?beta=true",
+          "body": {
+            "model": "test-model",
+            "stream": true,
+            "max_tokens": 4096,
+            "messages": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "go"
+                  },
+                  {
+                    "type": "image",
+                    "source": {
+                      "type": "base64",
+                      "media_type": "image/png",
+                      "data": "aGVsbG8="
+                    },
+                    "cache_control": {
+                      "type": "ephemeral",
+                      "ttl": "1h"
+                    }
+                  }
+                ]
+              }
+            ],
+            "system": [
+              {
+                "type": "text",
+                "text": "Be concise.",
+                "cache_control": {
+                  "type": "ephemeral",
+                  "ttl": "1h"
+                }
+              }
+            ]
+          },
+          "headers": {
+            "anthropic-version": "2023-06-01",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "content-type": "application/json",
+            "x-api-key": "fixture"
+          }
+        }
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "text",
+            "text": "你好"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/v1/messages?beta=true",
+          "body": {
+            "model": "test-model",
+            "messages": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "go"
+                  },
+                  {
+                    "type": "image",
+                    "source": {
+                      "type": "base64",
+                      "media_type": "image/png",
+                      "data": "aGVsbG8="
+                    },
+                    "cache_control": {
+                      "type": "ephemeral",
+                      "ttl": "1h"
+                    }
+                  }
+                ]
+              }
+            ],
+            "max_tokens": 4096,
+            "stream": true,
+            "system": [
+              {
+                "type": "text",
+                "text": "Be concise.",
+                "cache_control": {
+                  "type": "ephemeral",
+                  "ttl": "1h"
+                }
+              }
+            ]
+          },
+          "headers": {
+            "x-api-key": "fixture",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true"
+          }
+        }
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "anthropic-request-cache-none.json",
+      "python": {
+        "content": [
+          {
+            "text": "你好",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/v1/messages?beta=true",
+          "body": {
+            "model": "test-model",
+            "stream": true,
+            "max_tokens": 4096,
+            "messages": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "go"
+                  },
+                  {
+                    "type": "image",
+                    "source": {
+                      "type": "base64",
+                      "media_type": "image/png",
+                      "data": "aGVsbG8="
+                    }
+                  }
+                ]
+              }
+            ],
+            "system": [
+              {
+                "type": "text",
+                "text": "Be concise."
+              }
+            ]
+          },
+          "headers": {
+            "anthropic-version": "2023-06-01",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "content-type": "application/json",
+            "x-api-key": "fixture"
+          }
+        }
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "text",
+            "text": "你好"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/v1/messages?beta=true",
+          "body": {
+            "model": "test-model",
+            "messages": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "go"
+                  },
+                  {
+                    "type": "image",
+                    "source": {
+                      "type": "base64",
+                      "media_type": "image/png",
+                      "data": "aGVsbG8="
+                    }
+                  }
+                ]
+              }
+            ],
+            "max_tokens": 4096,
+            "stream": true,
+            "system": [
+              {
+                "type": "text",
+                "text": "Be concise."
+              }
+            ]
+          },
+          "headers": {
+            "x-api-key": "fixture",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true"
+          }
+        }
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "anthropic-request-replay.json",
+      "python": {
+        "content": [
+          {
+            "text": "你好",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/v1/messages?beta=true",
+          "body": {
+            "model": "test-model",
+            "stream": true,
+            "max_tokens": 4096,
+            "messages": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "go"
+                  },
+                  {
+                    "type": "image",
+                    "source": {
+                      "type": "base64",
+                      "media_type": "image/png",
+                      "data": "aGVsbG8="
+                    }
+                  }
+                ]
+              },
+              {
+                "role": "assistant",
+                "content": [
+                  {
+                    "type": "thinking",
+                    "thinking": "thinking",
+                    "signature": "opaque"
+                  },
+                  {
+                    "type": "tool_use",
+                    "id": "call",
+                    "name": "add",
+                    "input": {
+                      "a": 2
+                    }
+                  }
+                ]
+              },
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "tool_result",
+                    "tool_use_id": "call",
+                    "content": "2",
+                    "is_error": false
+                  }
+                ]
+              }
+            ],
+            "system": [
+              {
+                "type": "text",
+                "text": "Be concise."
+              }
+            ],
+            "tools": [
+              {
+                "name": "add",
+                "description": "Add",
+                "eager_input_streaming": true,
+                "input_schema": {
+                  "type": "object",
+                  "properties": {
+                    "a": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "a"
+                  ]
+                }
+              }
+            ]
+          },
+          "headers": {
+            "anthropic-version": "2023-06-01",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "content-type": "application/json",
+            "x-api-key": "fixture"
+          }
+        }
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "text",
+            "text": "你好"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/v1/messages?beta=true",
+          "body": {
+            "model": "test-model",
+            "messages": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "go"
+                  },
+                  {
+                    "type": "image",
+                    "source": {
+                      "type": "base64",
+                      "media_type": "image/png",
+                      "data": "aGVsbG8="
+                    }
+                  }
+                ]
+              },
+              {
+                "role": "assistant",
+                "content": [
+                  {
+                    "type": "thinking",
+                    "thinking": "thinking",
+                    "signature": "opaque"
+                  },
+                  {
+                    "type": "tool_use",
+                    "id": "call",
+                    "name": "add",
+                    "input": {
+                      "a": 2
+                    }
+                  }
+                ]
+              },
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "tool_result",
+                    "tool_use_id": "call",
+                    "content": "2",
+                    "is_error": false
+                  }
+                ]
+              }
+            ],
+            "max_tokens": 4096,
+            "stream": true,
+            "system": [
+              {
+                "type": "text",
+                "text": "Be concise."
+              }
+            ],
+            "tools": [
+              {
+                "name": "add",
+                "description": "Add",
+                "eager_input_streaming": true,
+                "input_schema": {
+                  "type": "object",
+                  "properties": {
+                    "a": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "a"
+                  ]
+                }
+              }
+            ]
+          },
+          "headers": {
+            "x-api-key": "fixture",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true"
+          }
+        }
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "anthropic-request-tools-image.json",
+      "python": {
+        "content": [
+          {
+            "text": "你好",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/v1/messages?beta=true",
+          "body": {
+            "model": "test-model",
+            "stream": true,
+            "max_tokens": 512,
+            "messages": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "go"
+                  },
+                  {
+                    "type": "image",
+                    "source": {
+                      "type": "base64",
+                      "media_type": "image/png",
+                      "data": "aGVsbG8="
+                    }
+                  }
+                ]
+              }
+            ],
+            "system": [
+              {
+                "type": "text",
+                "text": "Be concise."
+              }
+            ],
+            "tools": [
+              {
+                "name": "add",
+                "description": "Add",
+                "eager_input_streaming": true,
+                "input_schema": {
+                  "type": "object",
+                  "properties": {
+                    "a": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "a"
+                  ]
+                }
+              }
+            ]
+          },
+          "headers": {
+            "anthropic-version": "2023-06-01",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "content-type": "application/json",
+            "x-api-key": "fixture"
+          }
+        }
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "text",
+            "text": "你好"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/v1/messages?beta=true",
+          "body": {
+            "model": "test-model",
+            "messages": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "go"
+                  },
+                  {
+                    "type": "image",
+                    "source": {
+                      "type": "base64",
+                      "media_type": "image/png",
+                      "data": "aGVsbG8="
+                    }
+                  }
+                ]
+              }
+            ],
+            "max_tokens": 512,
+            "stream": true,
+            "system": [
+              {
+                "type": "text",
+                "text": "Be concise."
+              }
+            ],
+            "tools": [
+              {
+                "name": "add",
+                "description": "Add",
+                "eager_input_streaming": true,
+                "input_schema": {
+                  "type": "object",
+                  "properties": {
+                    "a": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "a"
+                  ]
+                }
+              }
+            ]
+          },
+          "headers": {
+            "x-api-key": "fixture",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true"
+          }
+        }
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "anthropic-text.json",
+      "python": {
+        "content": [
+          {
+            "text": "你好",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/v1/messages?beta=true",
+          "body": {
+            "model": "test-model",
+            "stream": true,
+            "max_tokens": 4096,
+            "messages": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "go",
+                    "cache_control": {
+                      "type": "ephemeral"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "headers": {
+            "anthropic-version": "2023-06-01",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "content-type": "application/json",
+            "x-api-key": "fixture"
+          }
+        }
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "text",
+            "text": "你好"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/v1/messages?beta=true",
+          "body": {
+            "model": "test-model",
+            "messages": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "go",
+                    "cache_control": {
+                      "type": "ephemeral"
+                    }
+                  }
+                ]
+              }
+            ],
+            "max_tokens": 4096,
+            "stream": true
+          },
+          "headers": {
+            "x-api-key": "fixture",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true"
+          }
+        }
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "anthropic-thinking.json",
+      "python": {
+        "content": [
+          {
+            "thinking": "检查输入",
+            "thinking_signature": "opaque-signature",
+            "redacted": false,
+            "type": "thinking"
+          },
+          {
+            "thinking": "[Reasoning redacted]",
+            "thinking_signature": "opaque-redacted",
+            "redacted": true,
+            "type": "thinking"
+          },
+          {
+            "text": "答案",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "thinking_start",
+            "index": 0
+          },
+          {
+            "type": "thinking_delta",
+            "index": 0,
+            "delta": "检查输入"
+          },
+          {
+            "type": "thinking_end",
+            "index": 0,
+            "content": "检查输入"
+          },
+          {
+            "type": "thinking_start",
+            "index": 1
+          },
+          {
+            "type": "thinking_end",
+            "index": 1,
+            "content": "[Reasoning redacted]"
+          },
+          {
+            "type": "text_start",
+            "index": 2
+          },
+          {
+            "type": "text_delta",
+            "index": 2,
+            "delta": "答案"
+          },
+          {
+            "type": "text_end",
+            "index": 2,
+            "content": "答案"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/v1/messages?beta=true",
+          "body": {
+            "model": "test-model",
+            "stream": true,
+            "max_tokens": 4096,
+            "messages": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "go",
+                    "cache_control": {
+                      "type": "ephemeral"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "headers": {
+            "anthropic-version": "2023-06-01",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "content-type": "application/json",
+            "x-api-key": "fixture"
+          }
+        }
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "thinking",
+            "thinking": "检查输入",
+            "thinking_signature": "opaque-signature",
+            "redacted": false
+          },
+          {
+            "type": "thinking",
+            "thinking": "[Reasoning redacted]",
+            "thinking_signature": "opaque-redacted",
+            "redacted": true
+          },
+          {
+            "type": "text",
+            "text": "答案"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "thinking_start",
+            "index": 0
+          },
+          {
+            "type": "thinking_delta",
+            "index": 0,
+            "delta": "检查输入"
+          },
+          {
+            "type": "thinking_end",
+            "index": 0,
+            "content": "检查输入"
+          },
+          {
+            "type": "thinking_start",
+            "index": 1
+          },
+          {
+            "type": "thinking_end",
+            "index": 1,
+            "content": "[Reasoning redacted]"
+          },
+          {
+            "type": "text_start",
+            "index": 2
+          },
+          {
+            "type": "text_delta",
+            "index": 2,
+            "delta": "答案"
+          },
+          {
+            "type": "text_end",
+            "index": 2,
+            "content": "答案"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/v1/messages?beta=true",
+          "body": {
+            "model": "test-model",
+            "messages": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "go",
+                    "cache_control": {
+                      "type": "ephemeral"
+                    }
+                  }
+                ]
+              }
+            ],
+            "max_tokens": 4096,
+            "stream": true
+          },
+          "headers": {
+            "x-api-key": "fixture",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true"
+          }
+        }
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "anthropic-tool.json",
+      "python": {
+        "content": [
+          {
+            "id": "tool_1",
+            "name": "echo",
+            "arguments": {
+              "value": "hello"
+            },
+            "type": "tool_call"
+          }
+        ],
+        "stop_reason": "tool_use",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "toolcall_start",
+            "index": 0
+          },
+          {
+            "type": "toolcall_delta",
+            "index": 0,
+            "delta": "{\"value\":"
+          },
+          {
+            "type": "toolcall_delta",
+            "index": 0,
+            "delta": "\"hello\"}"
+          },
+          {
+            "type": "toolcall_end",
+            "index": 0,
+            "block": {
+              "id": "tool_1",
+              "name": "echo",
+              "arguments": {
+                "value": "hello"
+              },
+              "type": "tool_call"
+            }
+          },
+          {
+            "type": "done",
+            "reason": "tool_use"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/v1/messages?beta=true",
+          "body": {
+            "model": "test-model",
+            "stream": true,
+            "max_tokens": 4096,
+            "messages": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "go",
+                    "cache_control": {
+                      "type": "ephemeral"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "headers": {
+            "anthropic-version": "2023-06-01",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "content-type": "application/json",
+            "x-api-key": "fixture"
+          }
+        }
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "tool_call",
+            "id": "tool_1",
+            "name": "echo",
+            "arguments": {
+              "value": "hello"
+            }
+          }
+        ],
+        "stop_reason": "tool_use",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "toolcall_start",
+            "index": 0
+          },
+          {
+            "type": "toolcall_delta",
+            "index": 0,
+            "delta": "{\"value\":"
+          },
+          {
+            "type": "toolcall_delta",
+            "index": 0,
+            "delta": "\"hello\"}"
+          },
+          {
+            "type": "toolcall_end",
+            "index": 0,
+            "block": {
+              "type": "tool_call",
+              "id": "tool_1",
+              "name": "echo",
+              "arguments": {
+                "value": "hello"
+              }
+            }
+          },
+          {
+            "type": "done",
+            "reason": "tool_use"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/v1/messages?beta=true",
+          "body": {
+            "model": "test-model",
+            "messages": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "go",
+                    "cache_control": {
+                      "type": "ephemeral"
+                    }
+                  }
+                ]
+              }
+            ],
+            "max_tokens": 4096,
+            "stream": true
+          },
+          "headers": {
+            "x-api-key": "fixture",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true"
+          }
+        }
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "codex-request-tools-image.json",
+      "python": {
+        "content": [
+          {
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你"
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/codex/responses",
+          "body": {
+            "model": "test-model",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "go"
+                  },
+                  {
+                    "type": "input_image",
+                    "image_url": "data:image/png;base64,aGVsbG8=",
+                    "detail": "auto"
+                  }
+                ]
+              }
+            ],
+            "stream": true,
+            "store": false,
+            "tools": [
+              {
+                "type": "function",
+                "name": "add",
+                "description": "Add",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "a": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "a"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": null
+              }
+            ],
+            "reasoning": {
+              "effort": "none"
+            },
+            "instructions": "Be concise.",
+            "include": [
+              "reasoning.encrypted_content"
+            ],
+            "tool_choice": "auto",
+            "parallel_tool_calls": true,
+            "text": {
+              "verbosity": "low"
+            }
+          },
+          "headers": {
+            "authorization": "Bearer fixture.eyJodHRwczovL2FwaS5vcGVuYWkuY29tL2F1dGgiOiB7ImNoYXRncHRfYWNjb3VudF9pZCI6ICJmaXh0dXJlLWFjY291bnQifX0.fixture",
+            "content-type": "application/json",
+            "chatgpt-account-id": "fixture-account",
+            "originator": "pi",
+            "openai-beta": "responses=experimental"
+          }
+        }
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "text",
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你"
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/codex/responses",
+          "body": {
+            "model": "test-model",
+            "store": false,
+            "stream": true,
+            "instructions": "Be concise.",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "go"
+                  },
+                  {
+                    "type": "input_image",
+                    "detail": "auto",
+                    "image_url": "data:image/png;base64,aGVsbG8="
+                  }
+                ]
+              }
+            ],
+            "text": {
+              "verbosity": "low"
+            },
+            "include": [
+              "reasoning.encrypted_content"
+            ],
+            "tool_choice": "auto",
+            "parallel_tool_calls": true,
+            "tools": [
+              {
+                "type": "function",
+                "name": "add",
+                "description": "Add",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "a": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "a"
+                  ],
+                  "additionalProperties": false
+                },
+                "strict": null
+              }
+            ],
+            "reasoning": {
+              "effort": "none"
+            }
+          },
+          "headers": {
+            "authorization": "Bearer fixture.eyJodHRwczovL2FwaS5vcGVuYWkuY29tL2F1dGgiOiB7ImNoYXRncHRfYWNjb3VudF9pZCI6ICJmaXh0dXJlLWFjY291bnQifX0.fixture",
+            "content-type": "application/json",
+            "chatgpt-account-id": "fixture-account",
+            "originator": "pi",
+            "openai-beta": "responses=experimental"
+          }
+        }
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "codex-text.json",
+      "python": {
+        "content": [
+          {
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你"
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/codex/responses",
+          "body": {
+            "model": "test-model",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "go"
+                  }
+                ]
+              }
+            ],
+            "stream": true,
+            "store": false,
+            "reasoning": {
+              "effort": "none"
+            },
+            "prompt_cache_key": "fixture-session",
+            "instructions": "You are a helpful assistant.",
+            "include": [
+              "reasoning.encrypted_content"
+            ],
+            "tool_choice": "auto",
+            "parallel_tool_calls": true,
+            "text": {
+              "verbosity": "low"
+            }
+          },
+          "headers": {
+            "authorization": "Bearer fixture.eyJodHRwczovL2FwaS5vcGVuYWkuY29tL2F1dGgiOiB7ImNoYXRncHRfYWNjb3VudF9pZCI6ICJmaXh0dXJlLWFjY291bnQifX0.fixture",
+            "content-type": "application/json",
+            "chatgpt-account-id": "fixture-account",
+            "originator": "pi",
+            "openai-beta": "responses=experimental",
+            "session-id": "fixture-session",
+            "x-client-request-id": "fixture-session"
+          }
+        }
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "text",
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你"
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/codex/responses",
+          "body": {
+            "model": "test-model",
+            "store": false,
+            "stream": true,
+            "instructions": "You are a helpful assistant.",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "go"
+                  }
+                ]
+              }
+            ],
+            "text": {
+              "verbosity": "low"
+            },
+            "include": [
+              "reasoning.encrypted_content"
+            ],
+            "prompt_cache_key": "fixture-session",
+            "tool_choice": "auto",
+            "parallel_tool_calls": true,
+            "reasoning": {
+              "effort": "none"
+            }
+          },
+          "headers": {
+            "authorization": "Bearer fixture.eyJodHRwczovL2FwaS5vcGVuYWkuY29tL2F1dGgiOiB7ImNoYXRncHRfYWNjb3VudF9pZCI6ICJmaXh0dXJlLWFjY291bnQifX0.fixture",
+            "content-type": "application/json",
+            "chatgpt-account-id": "fixture-account",
+            "originator": "pi",
+            "openai-beta": "responses=experimental",
+            "session-id": "fixture-session",
+            "x-client-request-id": "fixture-session"
+          }
+        }
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "openai-incomplete.json",
+      "python": {
+        "content": [
+          {
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "length",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你"
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "length"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/responses",
+          "body": {
+            "model": "test-model",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "go"
+                  }
+                ]
+              }
+            ],
+            "stream": true,
+            "store": false,
+            "reasoning": {
+              "effort": "none"
+            }
+          },
+          "headers": {
+            "authorization": "Bearer fixture",
+            "content-type": "application/json"
+          }
+        }
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "text",
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}"
+          }
+        ],
+        "stop_reason": "length",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你"
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "length"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/responses",
+          "body": {
+            "model": "test-model",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "go"
+                  }
+                ]
+              }
+            ],
+            "stream": true,
+            "store": false,
+            "reasoning": {
+              "effort": "none"
+            }
+          },
+          "headers": {
+            "authorization": "Bearer fixture",
+            "content-type": "application/json"
+          }
+        }
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "openai-request-cache-long.json",
+      "python": {
+        "content": [
+          {
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你"
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/responses",
+          "body": {
+            "model": "test-model",
+            "input": [
+              {
+                "role": "developer",
+                "content": "Be concise."
+              },
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "go"
+                  },
+                  {
+                    "type": "input_image",
+                    "image_url": "data:image/png;base64,aGVsbG8=",
+                    "detail": "auto"
+                  }
+                ]
+              }
+            ],
+            "stream": true,
+            "store": false,
+            "reasoning": {
+              "effort": "none"
+            },
+            "prompt_cache_retention": "24h",
+            "prompt_cache_key": "fixture-session"
+          },
+          "headers": {
+            "authorization": "Bearer fixture",
+            "content-type": "application/json",
+            "x-client-request-id": "fixture-session"
+          }
+        }
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "text",
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你"
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/responses",
+          "body": {
+            "model": "test-model",
+            "input": [
+              {
+                "role": "developer",
+                "content": "Be concise."
+              },
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "go"
+                  },
+                  {
+                    "type": "input_image",
+                    "detail": "auto",
+                    "image_url": "data:image/png;base64,aGVsbG8="
+                  }
+                ]
+              }
+            ],
+            "stream": true,
+            "prompt_cache_key": "fixture-session",
+            "prompt_cache_retention": "24h",
+            "store": false,
+            "reasoning": {
+              "effort": "none"
+            }
+          },
+          "headers": {
+            "authorization": "Bearer fixture",
+            "content-type": "application/json",
+            "x-client-request-id": "fixture-session"
+          }
+        }
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "openai-request-cache-none.json",
+      "python": {
+        "content": [
+          {
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你"
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/responses",
+          "body": {
+            "model": "test-model",
+            "input": [
+              {
+                "role": "developer",
+                "content": "Be concise."
+              },
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "go"
+                  },
+                  {
+                    "type": "input_image",
+                    "image_url": "data:image/png;base64,aGVsbG8=",
+                    "detail": "auto"
+                  }
+                ]
+              }
+            ],
+            "stream": true,
+            "store": false,
+            "reasoning": {
+              "effort": "none"
+            }
+          },
+          "headers": {
+            "authorization": "Bearer fixture",
+            "content-type": "application/json"
+          }
+        }
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "text",
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你"
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/responses",
+          "body": {
+            "model": "test-model",
+            "input": [
+              {
+                "role": "developer",
+                "content": "Be concise."
+              },
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "go"
+                  },
+                  {
+                    "type": "input_image",
+                    "detail": "auto",
+                    "image_url": "data:image/png;base64,aGVsbG8="
+                  }
+                ]
+              }
+            ],
+            "stream": true,
+            "store": false,
+            "reasoning": {
+              "effort": "none"
+            }
+          },
+          "headers": {
+            "authorization": "Bearer fixture",
+            "content-type": "application/json"
+          }
+        }
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "openai-request-reasoning.json",
+      "python": {
+        "content": [
+          {
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你"
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/responses",
+          "body": {
+            "model": "test-model",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "go"
+                  }
+                ]
+              }
+            ],
+            "stream": true,
+            "store": false,
+            "reasoning": {
+              "effort": "high",
+              "summary": "auto"
+            },
+            "include": [
+              "reasoning.encrypted_content"
+            ],
+            "prompt_cache_key": "fixture-session"
+          },
+          "headers": {
+            "authorization": "Bearer fixture",
+            "content-type": "application/json",
+            "x-client-request-id": "fixture-session"
+          }
+        }
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "text",
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你"
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/responses",
+          "body": {
+            "model": "test-model",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "go"
+                  }
+                ]
+              }
+            ],
+            "stream": true,
+            "prompt_cache_key": "fixture-session",
+            "store": false,
+            "reasoning": {
+              "effort": "high",
+              "summary": "auto"
+            },
+            "include": [
+              "reasoning.encrypted_content"
+            ]
+          },
+          "headers": {
+            "authorization": "Bearer fixture",
+            "content-type": "application/json",
+            "x-client-request-id": "fixture-session"
+          }
+        }
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "openai-request-replay.json",
+      "python": {
+        "content": [
+          {
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你"
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/responses",
+          "body": {
+            "model": "test-model",
+            "input": [
+              {
+                "role": "developer",
+                "content": "Be concise."
+              },
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "go"
+                  },
+                  {
+                    "type": "input_image",
+                    "image_url": "data:image/png;base64,aGVsbG8=",
+                    "detail": "auto"
+                  }
+                ]
+              },
+              {
+                "id": "rs_fixture",
+                "type": "reasoning",
+                "summary": [
+                  {
+                    "type": "summary_text",
+                    "text": "thinking"
+                  }
+                ],
+                "encrypted_content": "opaque"
+              },
+              {
+                "type": "function_call",
+                "call_id": "call",
+                "name": "add",
+                "arguments": "{\"a\":2}",
+                "id": "fc_fixture"
+              },
+              {
+                "type": "function_call_output",
+                "call_id": "call",
+                "output": "2"
+              }
+            ],
+            "stream": true,
+            "store": false,
+            "tools": [
+              {
+                "type": "function",
+                "name": "add",
+                "description": "Add",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "a": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "a"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            ],
+            "reasoning": {
+              "effort": "none"
+            }
+          },
+          "headers": {
+            "authorization": "Bearer fixture",
+            "content-type": "application/json"
+          }
+        }
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "text",
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你"
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/responses",
+          "body": {
+            "model": "test-model",
+            "input": [
+              {
+                "role": "developer",
+                "content": "Be concise."
+              },
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "go"
+                  },
+                  {
+                    "type": "input_image",
+                    "detail": "auto",
+                    "image_url": "data:image/png;base64,aGVsbG8="
+                  }
+                ]
+              },
+              {
+                "id": "rs_fixture",
+                "type": "reasoning",
+                "summary": [
+                  {
+                    "type": "summary_text",
+                    "text": "thinking"
+                  }
+                ],
+                "encrypted_content": "opaque"
+              },
+              {
+                "type": "function_call",
+                "id": "fc_fixture",
+                "call_id": "call",
+                "name": "add",
+                "arguments": "{\"a\":2}"
+              },
+              {
+                "type": "function_call_output",
+                "call_id": "call",
+                "output": "2"
+              }
+            ],
+            "stream": true,
+            "store": false,
+            "tools": [
+              {
+                "type": "function",
+                "name": "add",
+                "description": "Add",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "a": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "a"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            ],
+            "reasoning": {
+              "effort": "none"
+            }
+          },
+          "headers": {
+            "authorization": "Bearer fixture",
+            "content-type": "application/json"
+          }
+        }
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "openai-request-tools-image.json",
+      "python": {
+        "content": [
+          {
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你"
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/responses",
+          "body": {
+            "model": "test-model",
+            "input": [
+              {
+                "role": "developer",
+                "content": "Be concise."
+              },
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "go"
+                  },
+                  {
+                    "type": "input_image",
+                    "image_url": "data:image/png;base64,aGVsbG8=",
+                    "detail": "auto"
+                  }
+                ]
+              }
+            ],
+            "stream": true,
+            "store": false,
+            "tools": [
+              {
+                "type": "function",
+                "name": "add",
+                "description": "Add",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "a": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "a"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            ],
+            "reasoning": {
+              "effort": "none"
+            },
+            "max_output_tokens": 512
+          },
+          "headers": {
+            "authorization": "Bearer fixture",
+            "content-type": "application/json"
+          }
+        }
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "text",
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你"
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/responses",
+          "body": {
+            "model": "test-model",
+            "input": [
+              {
+                "role": "developer",
+                "content": "Be concise."
+              },
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "go"
+                  },
+                  {
+                    "type": "input_image",
+                    "detail": "auto",
+                    "image_url": "data:image/png;base64,aGVsbG8="
+                  }
+                ]
+              }
+            ],
+            "stream": true,
+            "store": false,
+            "max_output_tokens": 512,
+            "tools": [
+              {
+                "type": "function",
+                "name": "add",
+                "description": "Add",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "a": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "a"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            ],
+            "reasoning": {
+              "effort": "none"
+            }
+          },
+          "headers": {
+            "authorization": "Bearer fixture",
+            "content-type": "application/json"
+          }
+        }
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "openai-text.json",
+      "python": {
+        "content": [
+          {
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你"
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/responses",
+          "body": {
+            "model": "test-model",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "go"
+                  }
+                ]
+              }
+            ],
+            "stream": true,
+            "store": false,
+            "reasoning": {
+              "effort": "none"
+            }
+          },
+          "headers": {
+            "authorization": "Bearer fixture",
+            "content-type": "application/json"
+          }
+        }
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "text",
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你"
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/responses",
+          "body": {
+            "model": "test-model",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "go"
+                  }
+                ]
+              }
+            ],
+            "stream": true,
+            "store": false,
+            "reasoning": {
+              "effort": "none"
+            }
+          },
+          "headers": {
+            "authorization": "Bearer fixture",
+            "content-type": "application/json"
+          }
+        }
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "openai-thinking-backfill.json",
+      "python": {
+        "content": [
+          {
+            "thinking": "检查输入",
+            "thinking_signature": "{\"type\":\"reasoning\",\"id\":\"rs_x\",\"summary\":[{\"type\":\"summary_text\",\"text\":\"检查输入\"}],\"encrypted_content\":\"opaque-final-only\"}",
+            "redacted": false,
+            "type": "thinking"
+          },
+          {
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "thinking_start",
+            "index": 0
+          },
+          {
+            "type": "thinking_delta",
+            "index": 0,
+            "delta": "检查输入"
+          },
+          {
+            "type": "thinking_end",
+            "index": 0,
+            "content": "检查输入"
+          },
+          {
+            "type": "text_start",
+            "index": 1
+          },
+          {
+            "type": "text_delta",
+            "index": 1,
+            "delta": "你好"
+          },
+          {
+            "type": "text_end",
+            "index": 1,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/responses",
+          "body": {
+            "model": "test-model",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "go"
+                  }
+                ]
+              }
+            ],
+            "stream": true,
+            "store": false,
+            "reasoning": {
+              "effort": "none"
+            }
+          },
+          "headers": {
+            "authorization": "Bearer fixture",
+            "content-type": "application/json"
+          }
+        }
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "thinking",
+            "thinking": "检查输入",
+            "thinking_signature": "{\"type\":\"reasoning\",\"id\":\"rs_x\",\"summary\":[{\"type\":\"summary_text\",\"text\":\"检查输入\"}],\"encrypted_content\":\"opaque-final-only\"}",
+            "redacted": false
+          },
+          {
+            "type": "text",
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "thinking_start",
+            "index": 0
+          },
+          {
+            "type": "thinking_delta",
+            "index": 0,
+            "delta": "检查输入"
+          },
+          {
+            "type": "thinking_end",
+            "index": 0,
+            "content": "检查输入"
+          },
+          {
+            "type": "text_start",
+            "index": 1
+          },
+          {
+            "type": "text_delta",
+            "index": 1,
+            "delta": "你好"
+          },
+          {
+            "type": "text_end",
+            "index": 1,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/responses",
+          "body": {
+            "model": "test-model",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "go"
+                  }
+                ]
+              }
+            ],
+            "stream": true,
+            "store": false,
+            "reasoning": {
+              "effort": "none"
+            }
+          },
+          "headers": {
+            "authorization": "Bearer fixture",
+            "content-type": "application/json"
+          }
+        }
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "openai-thinking.json",
+      "python": {
+        "content": [
+          {
+            "thinking": "检查输入",
+            "thinking_signature": "{\"type\":\"reasoning\",\"id\":\"rs_x\",\"summary\":[{\"type\":\"summary_text\",\"text\":\"检查输入\"}],\"encrypted_content\":\"opaque-encrypted\"}",
+            "redacted": false,
+            "type": "thinking"
+          },
+          {
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "thinking_start",
+            "index": 0
+          },
+          {
+            "type": "thinking_delta",
+            "index": 0,
+            "delta": "检查输入"
+          },
+          {
+            "type": "thinking_end",
+            "index": 0,
+            "content": "检查输入"
+          },
+          {
+            "type": "text_start",
+            "index": 1
+          },
+          {
+            "type": "text_delta",
+            "index": 1,
+            "delta": "你好"
+          },
+          {
+            "type": "text_end",
+            "index": 1,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/responses",
+          "body": {
+            "model": "test-model",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "go"
+                  }
+                ]
+              }
+            ],
+            "stream": true,
+            "store": false,
+            "reasoning": {
+              "effort": "none"
+            }
+          },
+          "headers": {
+            "authorization": "Bearer fixture",
+            "content-type": "application/json"
+          }
+        }
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "thinking",
+            "thinking": "检查输入",
+            "thinking_signature": "{\"type\":\"reasoning\",\"id\":\"rs_x\",\"summary\":[{\"type\":\"summary_text\",\"text\":\"检查输入\"}],\"encrypted_content\":\"opaque-encrypted\"}",
+            "redacted": false
+          },
+          {
+            "type": "text",
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "thinking_start",
+            "index": 0
+          },
+          {
+            "type": "thinking_delta",
+            "index": 0,
+            "delta": "检查输入"
+          },
+          {
+            "type": "thinking_end",
+            "index": 0,
+            "content": "检查输入"
+          },
+          {
+            "type": "text_start",
+            "index": 1
+          },
+          {
+            "type": "text_delta",
+            "index": 1,
+            "delta": "你好"
+          },
+          {
+            "type": "text_end",
+            "index": 1,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/responses",
+          "body": {
+            "model": "test-model",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "go"
+                  }
+                ]
+              }
+            ],
+            "stream": true,
+            "store": false,
+            "reasoning": {
+              "effort": "none"
+            }
+          },
+          "headers": {
+            "authorization": "Bearer fixture",
+            "content-type": "application/json"
+          }
+        }
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "openai-tool.json",
+      "python": {
+        "content": [
+          {
+            "id": "call_x|fc_x",
+            "name": "echo",
+            "arguments": {
+              "value": "hello"
+            },
+            "type": "tool_call"
+          }
+        ],
+        "stop_reason": "tool_use",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "toolcall_start",
+            "index": 0
+          },
+          {
+            "type": "toolcall_delta",
+            "index": 0,
+            "delta": "{\"value\":\"hello\"}"
+          },
+          {
+            "type": "toolcall_end",
+            "index": 0,
+            "block": {
+              "id": "call_x|fc_x",
+              "name": "echo",
+              "arguments": {
+                "value": "hello"
+              },
+              "type": "tool_call"
+            }
+          },
+          {
+            "type": "done",
+            "reason": "tool_use"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/responses",
+          "body": {
+            "model": "test-model",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "go"
+                  }
+                ]
+              }
+            ],
+            "stream": true,
+            "store": false,
+            "reasoning": {
+              "effort": "none"
+            }
+          },
+          "headers": {
+            "authorization": "Bearer fixture",
+            "content-type": "application/json"
+          }
+        }
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "tool_call",
+            "id": "call_x|fc_x",
+            "name": "echo",
+            "arguments": {
+              "value": "hello"
+            }
+          }
+        ],
+        "stop_reason": "tool_use",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "toolcall_start",
+            "index": 0
+          },
+          {
+            "type": "toolcall_delta",
+            "index": 0,
+            "delta": "{\"value\":\"hello\"}"
+          },
+          {
+            "type": "toolcall_end",
+            "index": 0,
+            "block": {
+              "type": "tool_call",
+              "id": "call_x|fc_x",
+              "name": "echo",
+              "arguments": {
+                "value": "hello"
+              }
+            }
+          },
+          {
+            "type": "done",
+            "reason": "tool_use"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/responses",
+          "body": {
+            "model": "test-model",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "go"
+                  }
+                ]
+              }
+            ],
+            "stream": true,
+            "store": false,
+            "reasoning": {
+              "effort": "none"
+            }
+          },
+          "headers": {
+            "authorization": "Bearer fixture",
+            "content-type": "application/json"
+          }
+        }
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "proxy-text.json",
+      "python": {
+        "content": [
+          {
+            "text": "你好",
+            "text_signature": "opaque-text",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ]
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "text",
+            "text": "你好",
+            "text_signature": "opaque-text"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ]
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "proxy-thinking-tool.json",
+      "python": {
+        "content": [
+          {
+            "thinking": "检查输入",
+            "thinking_signature": "opaque-thinking",
+            "redacted": false,
+            "type": "thinking"
+          },
+          {
+            "id": "tool_1",
+            "name": "echo",
+            "arguments": {
+              "value": "hello"
+            },
+            "type": "tool_call"
+          }
+        ],
+        "stop_reason": "tool_use",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "thinking_start",
+            "index": 0
+          },
+          {
+            "type": "thinking_delta",
+            "index": 0,
+            "delta": "检查输入"
+          },
+          {
+            "type": "thinking_end",
+            "index": 0,
+            "content": "检查输入"
+          },
+          {
+            "type": "toolcall_start",
+            "index": 1
+          },
+          {
+            "type": "toolcall_delta",
+            "index": 1,
+            "delta": "{\"value\":\"hello\"}"
+          },
+          {
+            "type": "toolcall_end",
+            "index": 1,
+            "block": {
+              "id": "tool_1",
+              "name": "echo",
+              "arguments": {
+                "value": "hello"
+              },
+              "type": "tool_call"
+            }
+          },
+          {
+            "type": "done",
+            "reason": "tool_use"
+          }
+        ]
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "thinking",
+            "thinking": "检查输入",
+            "thinking_signature": "opaque-thinking",
+            "redacted": false
+          },
+          {
+            "type": "tool_call",
+            "id": "tool_1",
+            "name": "echo",
+            "arguments": {
+              "value": "hello"
+            }
+          }
+        ],
+        "stop_reason": "tool_use",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "thinking_start",
+            "index": 0
+          },
+          {
+            "type": "thinking_delta",
+            "index": 0,
+            "delta": "检查输入"
+          },
+          {
+            "type": "thinking_end",
+            "index": 0,
+            "content": "检查输入"
+          },
+          {
+            "type": "toolcall_start",
+            "index": 1
+          },
+          {
+            "type": "toolcall_delta",
+            "index": 1,
+            "delta": "{\"value\":\"hello\"}"
+          },
+          {
+            "type": "toolcall_end",
+            "index": 1,
+            "block": {
+              "type": "tool_call",
+              "id": "tool_1",
+              "name": "echo",
+              "arguments": {
+                "value": "hello"
+              }
+            }
+          },
+          {
+            "type": "done",
+            "reason": "tool_use"
+          }
+        ]
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    }
+  ],
+  "status": "passed"
+}

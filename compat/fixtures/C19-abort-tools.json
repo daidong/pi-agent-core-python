@@ -1,0 +1,44 @@
+{
+  "id": "C19-abort-tools",
+  "classification": "mapped",
+  "source": "packages/agent/src/agent-loop.ts; packages/agent/src/agent.ts",
+  "prompt": "go",
+  "tools": [
+    {
+      "name": "a",
+      "result": "a-result",
+      "wait_abort": true
+    },
+    {
+      "name": "b",
+      "result": "b-result"
+    }
+  ],
+  "finish": [],
+  "operations": [
+    {
+      "event": "tool_execution_end",
+      "method": "abort"
+    }
+  ],
+  "responses": [
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_call",
+          "id": "a",
+          "name": "a",
+          "arguments": {}
+        },
+        {
+          "type": "tool_call",
+          "id": "b",
+          "name": "b",
+          "arguments": {}
+        }
+      ],
+      "stop_reason": "tool_use"
+    }
+  ]
+}

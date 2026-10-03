@@ -1,0 +1,245 @@
+[
+  {
+    "provider": "anthropic",
+    "stop_reason": "error",
+    "error": "prompt is too long: 213462 tokens > 200000 maximum"
+  },
+  {
+    "provider": "anthropic",
+    "stop_reason": "error",
+    "error": "413 {\"error\":{\"type\":\"request_too_large\",\"message\":\"Request exceeds the maximum size\"}}"
+  },
+  {
+    "provider": "openai",
+    "stop_reason": "error",
+    "error": "Your input exceeds the context window of this model"
+  },
+  {
+    "provider": "openai",
+    "stop_reason": "error",
+    "error": "Requested token count exceeds the model's maximum context length of 131072 tokens"
+  },
+  {
+    "provider": "openai",
+    "stop_reason": "error",
+    "error": "Error: 400 Input length (265330) exceeds model's maximum context length (262144)."
+  },
+  {
+    "provider": "google",
+    "stop_reason": "error",
+    "error": "The input token count (1196265) exceeds the maximum number of tokens allowed (1048575)"
+  },
+  {
+    "provider": "xai",
+    "stop_reason": "error",
+    "error": "This model's maximum prompt length is 131072 but the request contains 537812 tokens"
+  },
+  {
+    "provider": "groq",
+    "stop_reason": "error",
+    "error": "Please reduce the length of the messages or completion"
+  },
+  {
+    "provider": "openrouter",
+    "stop_reason": "error",
+    "error": "Provider returned error: Input length 131393 exceeds the maximum allowed input length of 131040 tokens."
+  },
+  {
+    "provider": "together",
+    "stop_reason": "error",
+    "error": "400 The input (516368 tokens) is longer than the model's context length (262144 tokens)."
+  },
+  {
+    "provider": "llama.cpp",
+    "stop_reason": "error",
+    "error": "the request exceeds the available context size, try increasing it"
+  },
+  {
+    "provider": "lmstudio",
+    "stop_reason": "error",
+    "error": "tokens to keep from the initial prompt is greater than the context length"
+  },
+  {
+    "provider": "ds4",
+    "stop_reason": "error",
+    "error": "400 Prompt has 256468 tokens, but the configured context size is 256000 tokens"
+  },
+  {
+    "provider": "ollama",
+    "stop_reason": "error",
+    "error": "400 `prompt too long; exceeded max context length by 100918 tokens`"
+  },
+  {
+    "provider": "zai",
+    "stop_reason": "error",
+    "error": "Prompt exceeds max length"
+  },
+  {
+    "provider": "qwen",
+    "stop_reason": "error",
+    "error": "Range of input length should be [1, 98304]"
+  },
+  {
+    "provider": "ollama",
+    "stop_reason": "error",
+    "error": "500 `model runner crashed unexpectedly`"
+  },
+  {
+    "provider": "cerebras",
+    "stop_reason": "error",
+    "error": "400 status code (no body)"
+  },
+  {
+    "provider": "cerebras",
+    "stop_reason": "error",
+    "error": "413 status code (no body)"
+  },
+  {
+    "provider": "openai",
+    "stop_reason": "error",
+    "error": "413 status code (no body)"
+  },
+  {
+    "provider": "amazon-bedrock",
+    "stop_reason": "error",
+    "error": "Throttling error: Too many tokens, please wait before trying again."
+  },
+  {
+    "provider": "amazon-bedrock",
+    "stop_reason": "error",
+    "error": "Service unavailable: The service is temporarily unavailable."
+  },
+  {
+    "provider": "anthropic",
+    "stop_reason": "error",
+    "error": "Rate limit exceeded, please retry after 30 seconds."
+  },
+  {
+    "provider": "anthropic",
+    "stop_reason": "error",
+    "error": "Too many requests. Please slow down."
+  },
+  {
+    "provider": "openai",
+    "stop_reason": "error",
+    "error": "An error occurred while processing your request. You can retry your request, or contact us."
+  },
+  {
+    "provider": "anthropic",
+    "stop_reason": "error",
+    "error": "The system encountered an unexpected error during processing. Try your request again."
+  },
+  {
+    "provider": "nvidia",
+    "stop_reason": "error",
+    "error": "ResourceExhausted: Worker local total request limit reached (288/48)"
+  },
+  {
+    "provider": "anthropic",
+    "stop_reason": "error",
+    "error": "The socket connection was closed unexpectedly."
+  },
+  {
+    "provider": "openai",
+    "stop_reason": "error",
+    "error": "OpenAI Responses stream ended before a terminal response event"
+  },
+  {
+    "provider": "anthropic",
+    "stop_reason": "error",
+    "error": "connect ENOTFOUND api.example.com"
+  },
+  {
+    "provider": "anthropic",
+    "stop_reason": "error",
+    "error": "Error: exceeded request buffer limit while retrying upstream"
+  },
+  {
+    "provider": "openai",
+    "stop_reason": "error",
+    "error": "429 You exceeded your current quota: insufficient_quota"
+  },
+  {
+    "provider": "openai-codex",
+    "stop_reason": "error",
+    "error": "subscription_sharing_usage_limit_exceeded: Usage limit reached."
+  },
+  {
+    "provider": "openai-codex",
+    "stop_reason": "error",
+    "error": "subscription_sharing_usage_unavailable: Usage cannot be checked."
+  },
+  {
+    "provider": "anthropic",
+    "stop_reason": "error",
+    "error": "ProviderHTTPError: Provider request failed (HTTP 400; request): {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"prompt is too long: 210000 tokens > 200000 maximum\"}}"
+  },
+  {
+    "provider": "anthropic",
+    "stop_reason": "error",
+    "error": "ProviderHTTPError: Provider request failed (HTTP 529; server): {\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\",\"message\":\"Overloaded\"}}"
+  },
+  {
+    "provider": "anthropic",
+    "stop_reason": "error",
+    "error": "ProviderHTTPError: Provider request failed (HTTP 401; authentication): invalid x-api-key [redacted]"
+  },
+  {
+    "provider": "anthropic",
+    "stop_reason": "error",
+    "error": "ProviderProtocolError: Stream ended without final message"
+  },
+  {
+    "provider": "openai",
+    "stop_reason": "aborted",
+    "error": "Request aborted (requested)"
+  },
+  {
+    "provider": "zai",
+    "stop_reason": "stop",
+    "usage": {
+      "input": 900,
+      "cache_read": 200
+    },
+    "context_window": 1000
+  },
+  {
+    "provider": "zai",
+    "stop_reason": "stop",
+    "usage": {
+      "input": 900,
+      "cache_read": 0
+    },
+    "context_window": 1000
+  },
+  {
+    "provider": "mimo",
+    "stop_reason": "length",
+    "usage": {
+      "input": 995,
+      "output": 0
+    },
+    "context_window": 1000,
+    "desired_max_output": 4096
+  },
+  {
+    "provider": "openai",
+    "stop_reason": "length",
+    "usage": {
+      "input": 500,
+      "output": 4096
+    },
+    "context_window": 1000,
+    "desired_max_output": 4096
+  },
+  {
+    "provider": "openai",
+    "stop_reason": "length",
+    "usage": {
+      "input": 100,
+      "output": 0
+    },
+    "context_window": 1000,
+    "desired_max_output": 4096
+  }
+]

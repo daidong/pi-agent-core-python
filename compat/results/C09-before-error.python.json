@@ -1,0 +1,276 @@
+{
+  "requests": [
+    [
+      {
+        "content": "",
+        "tools_added": [
+          {
+            "name": "t",
+            "description": "",
+            "input_schema": {
+              "type": "object"
+            }
+          }
+        ],
+        "role": "system"
+      },
+      {
+        "content": "go",
+        "role": "user"
+      }
+    ],
+    [
+      {
+        "content": "",
+        "tools_added": [
+          {
+            "name": "t",
+            "description": "",
+            "input_schema": {
+              "type": "object"
+            }
+          }
+        ],
+        "role": "system"
+      },
+      {
+        "content": "go",
+        "role": "user"
+      },
+      {
+        "content": [
+          {
+            "id": "x",
+            "name": "t",
+            "arguments": {},
+            "type": "tool_call"
+          }
+        ],
+        "stop_reason": "tool_use",
+        "role": "assistant"
+      },
+      {
+        "call_id": "x",
+        "name": "t",
+        "content": [
+          {
+            "text": "RuntimeError: denied",
+            "type": "text"
+          }
+        ],
+        "is_error": true,
+        "role": "tool_result"
+      }
+    ]
+  ],
+  "request_models": [
+    "mock",
+    "mock"
+  ],
+  "effects": [],
+  "events": [
+    {
+      "type": "agent_start"
+    },
+    {
+      "type": "turn_start"
+    },
+    {
+      "type": "message_start",
+      "message": {
+        "content": "go",
+        "role": "user"
+      }
+    },
+    {
+      "type": "message_end",
+      "message": {
+        "content": "go",
+        "role": "user"
+      }
+    },
+    {
+      "type": "message_start",
+      "message": {
+        "content": [
+          {
+            "id": "x",
+            "name": "t",
+            "arguments": {},
+            "type": "tool_call"
+          }
+        ],
+        "stop_reason": "tool_use",
+        "role": "assistant"
+      }
+    },
+    {
+      "type": "message_end",
+      "message": {
+        "content": [
+          {
+            "id": "x",
+            "name": "t",
+            "arguments": {},
+            "type": "tool_call"
+          }
+        ],
+        "stop_reason": "tool_use",
+        "role": "assistant"
+      }
+    },
+    {
+      "type": "tool_execution_start",
+      "call_id": "x"
+    },
+    {
+      "type": "tool_execution_end",
+      "call_id": "x"
+    },
+    {
+      "type": "message_start",
+      "message": {
+        "call_id": "x",
+        "name": "t",
+        "content": [
+          {
+            "text": "RuntimeError: denied",
+            "type": "text"
+          }
+        ],
+        "is_error": true,
+        "role": "tool_result"
+      }
+    },
+    {
+      "type": "message_end",
+      "message": {
+        "call_id": "x",
+        "name": "t",
+        "content": [
+          {
+            "text": "RuntimeError: denied",
+            "type": "text"
+          }
+        ],
+        "is_error": true,
+        "role": "tool_result"
+      }
+    },
+    {
+      "type": "turn_end",
+      "message": {
+        "content": [
+          {
+            "id": "x",
+            "name": "t",
+            "arguments": {},
+            "type": "tool_call"
+          }
+        ],
+        "stop_reason": "tool_use",
+        "role": "assistant"
+      }
+    },
+    {
+      "type": "turn_start"
+    },
+    {
+      "type": "message_start",
+      "message": {
+        "content": [
+          {
+            "text": "done",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "stop",
+        "role": "assistant"
+      }
+    },
+    {
+      "type": "message_end",
+      "message": {
+        "content": [
+          {
+            "text": "done",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "stop",
+        "role": "assistant"
+      }
+    },
+    {
+      "type": "turn_end",
+      "message": {
+        "content": [
+          {
+            "text": "done",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "stop",
+        "role": "assistant"
+      }
+    },
+    {
+      "type": "agent_end"
+    }
+  ],
+  "messages": [
+    {
+      "content": "",
+      "tools_added": [
+        {
+          "name": "t",
+          "description": "",
+          "input_schema": {
+            "type": "object"
+          }
+        }
+      ],
+      "role": "system"
+    },
+    {
+      "content": "go",
+      "role": "user"
+    },
+    {
+      "content": [
+        {
+          "id": "x",
+          "name": "t",
+          "arguments": {},
+          "type": "tool_call"
+        }
+      ],
+      "stop_reason": "tool_use",
+      "role": "assistant"
+    },
+    {
+      "call_id": "x",
+      "name": "t",
+      "content": [
+        {
+          "text": "RuntimeError: denied",
+          "type": "text"
+        }
+      ],
+      "is_error": true,
+      "role": "tool_result"
+    },
+    {
+      "content": [
+        {
+          "text": "done",
+          "type": "text"
+        }
+      ],
+      "stop_reason": "stop",
+      "role": "assistant"
+    }
+  ],
+  "hooks": [],
+  "status": "completed"
+}

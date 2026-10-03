@@ -1,0 +1,561 @@
+{
+  "scope": "Live synthetic prompts; in-memory tool only; no credentials recorded",
+  "results": [
+    {
+      "provider": "claude",
+      "case": "text",
+      "live": true,
+      "transport": "sse",
+      "started_at": 1790997211.605469,
+      "model": "claude-sonnet-4-6",
+      "status": "completed",
+      "passed": true,
+      "answer_matches": true,
+      "exact_format": true,
+      "final_numeric_answer": null,
+      "thinking_observed": false,
+      "tool_executions": 0,
+      "usage": {
+        "input": 48,
+        "output": 9,
+        "cache_read": 0,
+        "cache_write": 0,
+        "reasoning": 0,
+        "total_tokens": 57
+      },
+      "event_counts": {
+        "agent_start": 1,
+        "turn_start": 1,
+        "message_start": 2,
+        "message_end": 2,
+        "text_start": 1,
+        "text_delta": 2,
+        "text_end": 1,
+        "turn_end": 1,
+        "agent_end": 1
+      },
+      "wire_event_counts": {
+        "message_start": 1,
+        "content_block_start": 1,
+        "ping": 1,
+        "content_block_delta": 2,
+        "content_block_stop": 1,
+        "message_delta": 1,
+        "message_stop": 1
+      },
+      "http_statuses": [
+        200
+      ],
+      "stop_reasons": [
+        "stop"
+      ],
+      "network": {
+        "http_attempts": 1,
+        "http_retries": 0,
+        "websocket_connects": 0,
+        "websocket_reuses": 0,
+        "websocket_fallbacks": 0,
+        "websocket_expired": 0,
+        "websocket_retries": 0,
+        "websocket_delta_requests": 0
+      },
+      "error_types": [],
+      "diagnostic": null,
+      "seconds": 0.88
+    },
+    {
+      "provider": "claude",
+      "case": "tool",
+      "live": true,
+      "transport": "sse",
+      "started_at": 1790997212.488191,
+      "model": "claude-sonnet-4-6",
+      "status": "completed",
+      "passed": true,
+      "answer_matches": true,
+      "exact_format": true,
+      "final_numeric_answer": null,
+      "thinking_observed": false,
+      "tool_executions": 1,
+      "usage": {
+        "input": 1328,
+        "output": 73,
+        "cache_read": 0,
+        "cache_write": 0,
+        "reasoning": 0,
+        "total_tokens": 1401
+      },
+      "event_counts": {
+        "agent_start": 1,
+        "turn_start": 2,
+        "message_start": 4,
+        "message_end": 4,
+        "toolcall_start": 1,
+        "toolcall_delta": 4,
+        "toolcall_end": 1,
+        "tool_execution_start": 1,
+        "tool_execution_end": 1,
+        "turn_end": 2,
+        "text_start": 1,
+        "text_delta": 1,
+        "text_end": 1,
+        "agent_end": 1
+      },
+      "wire_event_counts": {
+        "message_start": 2,
+        "content_block_start": 2,
+        "ping": 2,
+        "content_block_delta": 5,
+        "content_block_stop": 2,
+        "message_delta": 2,
+        "message_stop": 2
+      },
+      "http_statuses": [
+        200,
+        200
+      ],
+      "stop_reasons": [
+        "tool_use",
+        "stop"
+      ],
+      "network": {
+        "http_attempts": 2,
+        "http_retries": 0,
+        "websocket_connects": 0,
+        "websocket_reuses": 0,
+        "websocket_fallbacks": 0,
+        "websocket_expired": 0,
+        "websocket_retries": 0,
+        "websocket_delta_requests": 0
+      },
+      "error_types": [],
+      "diagnostic": null,
+      "seconds": 2.31
+    },
+    {
+      "provider": "claude",
+      "case": "thinking",
+      "live": true,
+      "transport": "sse",
+      "started_at": 1790997214.804058,
+      "model": "claude-sonnet-4-6",
+      "status": "completed",
+      "passed": true,
+      "answer_matches": true,
+      "exact_format": false,
+      "final_numeric_answer": "19",
+      "thinking_observed": true,
+      "tool_executions": 0,
+      "usage": {
+        "input": 68,
+        "output": 1488,
+        "cache_read": 0,
+        "cache_write": 0,
+        "reasoning": 0,
+        "total_tokens": 1556
+      },
+      "event_counts": {
+        "agent_start": 1,
+        "turn_start": 1,
+        "message_start": 2,
+        "message_end": 2,
+        "thinking_start": 1,
+        "thinking_delta": 116,
+        "thinking_end": 1,
+        "text_start": 1,
+        "text_delta": 90,
+        "text_end": 1,
+        "turn_end": 1,
+        "agent_end": 1
+      },
+      "wire_event_counts": {
+        "message_start": 1,
+        "content_block_start": 2,
+        "ping": 1,
+        "content_block_delta": 207,
+        "content_block_stop": 2,
+        "message_delta": 1,
+        "message_stop": 1
+      },
+      "http_statuses": [
+        200,
+        200
+      ],
+      "stop_reasons": [
+        "stop"
+      ],
+      "signed_history_replay_passed": true,
+      "replay_usage": {
+        "input": 3,
+        "output": 9,
+        "cache_read": 0,
+        "cache_write": 1567,
+        "reasoning": 0,
+        "total_tokens": 1579
+      },
+      "network": {
+        "http_attempts": 2,
+        "http_retries": 0,
+        "websocket_connects": 0,
+        "websocket_reuses": 0,
+        "websocket_fallbacks": 0,
+        "websocket_expired": 0,
+        "websocket_retries": 0,
+        "websocket_delta_requests": 0
+      },
+      "error_types": [],
+      "diagnostic": null,
+      "seconds": 18.06
+    },
+    {
+      "provider": "codex",
+      "case": "text",
+      "live": true,
+      "transport": "sse",
+      "started_at": 1790997232.8695319,
+      "model": "gpt-6-luna",
+      "status": "completed",
+      "passed": true,
+      "answer_matches": true,
+      "exact_format": true,
+      "final_numeric_answer": null,
+      "thinking_observed": false,
+      "tool_executions": 0,
+      "usage": {
+        "input": 34,
+        "output": 8,
+        "cache_read": 0,
+        "cache_write": 0,
+        "reasoning": 0,
+        "total_tokens": 42
+      },
+      "event_counts": {
+        "agent_start": 1,
+        "turn_start": 1,
+        "message_start": 2,
+        "message_end": 2,
+        "text_start": 1,
+        "text_delta": 4,
+        "text_end": 1,
+        "turn_end": 1,
+        "agent_end": 1
+      },
+      "wire_event_counts": {
+        "response.created": 1,
+        "response.in_progress": 1,
+        "response.output_item.added": 1,
+        "response.content_part.added": 1,
+        "response.output_text.delta": 4,
+        "response.output_text.done": 1,
+        "response.content_part.done": 1,
+        "response.output_item.done": 1,
+        "response.completed": 1
+      },
+      "http_statuses": [
+        200
+      ],
+      "stop_reasons": [
+        "stop"
+      ],
+      "network": {
+        "http_attempts": 1,
+        "http_retries": 0,
+        "websocket_connects": 0,
+        "websocket_reuses": 0,
+        "websocket_fallbacks": 0,
+        "websocket_expired": 0,
+        "websocket_retries": 0,
+        "websocket_delta_requests": 0
+      },
+      "error_types": [],
+      "diagnostic": null,
+      "seconds": 1.68
+    },
+    {
+      "provider": "codex",
+      "case": "tool",
+      "live": true,
+      "transport": "sse",
+      "started_at": 1790997234.550581,
+      "model": "gpt-6-luna",
+      "status": "completed",
+      "passed": true,
+      "answer_matches": true,
+      "exact_format": true,
+      "final_numeric_answer": null,
+      "thinking_observed": false,
+      "tool_executions": 1,
+      "usage": {
+        "input": 208,
+        "output": 26,
+        "cache_read": 0,
+        "cache_write": 0,
+        "reasoning": 0,
+        "total_tokens": 234
+      },
+      "event_counts": {
+        "agent_start": 1,
+        "turn_start": 2,
+        "message_start": 4,
+        "message_end": 4,
+        "toolcall_start": 1,
+        "toolcall_delta": 9,
+        "toolcall_end": 1,
+        "tool_execution_start": 1,
+        "tool_execution_end": 1,
+        "turn_end": 2,
+        "text_start": 1,
+        "text_delta": 1,
+        "text_end": 1,
+        "agent_end": 1
+      },
+      "wire_event_counts": {
+        "response.created": 2,
+        "response.in_progress": 2,
+        "response.output_item.added": 2,
+        "response.function_call_arguments.delta": 9,
+        "response.function_call_arguments.done": 1,
+        "response.output_item.done": 2,
+        "response.completed": 2,
+        "response.content_part.added": 1,
+        "response.output_text.delta": 1,
+        "response.output_text.done": 1,
+        "response.content_part.done": 1
+      },
+      "http_statuses": [
+        200,
+        200
+      ],
+      "stop_reasons": [
+        "tool_use",
+        "stop"
+      ],
+      "network": {
+        "http_attempts": 2,
+        "http_retries": 0,
+        "websocket_connects": 0,
+        "websocket_reuses": 0,
+        "websocket_fallbacks": 0,
+        "websocket_expired": 0,
+        "websocket_retries": 0,
+        "websocket_delta_requests": 0
+      },
+      "error_types": [],
+      "diagnostic": null,
+      "seconds": 2.85
+    },
+    {
+      "provider": "codex",
+      "case": "thinking",
+      "live": true,
+      "transport": "sse",
+      "started_at": 1790997237.405069,
+      "model": "gpt-6-luna",
+      "status": "completed",
+      "passed": true,
+      "answer_matches": true,
+      "exact_format": true,
+      "final_numeric_answer": "19",
+      "thinking_observed": true,
+      "tool_executions": 0,
+      "usage": {
+        "input": 52,
+        "output": 182,
+        "cache_read": 0,
+        "cache_write": 0,
+        "reasoning": 175,
+        "total_tokens": 234
+      },
+      "event_counts": {
+        "agent_start": 1,
+        "turn_start": 1,
+        "message_start": 2,
+        "message_end": 2,
+        "thinking_start": 1,
+        "thinking_delta": 1,
+        "thinking_end": 1,
+        "text_start": 1,
+        "text_delta": 1,
+        "text_end": 1,
+        "turn_end": 1,
+        "agent_end": 1
+      },
+      "wire_event_counts": {
+        "response.created": 1,
+        "response.in_progress": 1,
+        "response.output_item.added": 2,
+        "response.reasoning_summary_part.added": 1,
+        "response.reasoning_summary_text.delta": 1,
+        "response.reasoning_summary_text.done": 1,
+        "response.reasoning_summary_part.done": 1,
+        "response.output_item.done": 2,
+        "response.content_part.added": 1,
+        "response.output_text.delta": 1,
+        "response.output_text.done": 1,
+        "response.content_part.done": 1,
+        "response.completed": 1
+      },
+      "http_statuses": [
+        200,
+        200
+      ],
+      "stop_reasons": [
+        "stop"
+      ],
+      "signed_history_replay_passed": true,
+      "replay_usage": {
+        "input": 249,
+        "output": 8,
+        "cache_read": 0,
+        "cache_write": 0,
+        "reasoning": 0,
+        "total_tokens": 257
+      },
+      "network": {
+        "http_attempts": 2,
+        "http_retries": 0,
+        "websocket_connects": 0,
+        "websocket_reuses": 0,
+        "websocket_fallbacks": 0,
+        "websocket_expired": 0,
+        "websocket_retries": 0,
+        "websocket_delta_requests": 0
+      },
+      "error_types": [],
+      "diagnostic": null,
+      "seconds": 10.56
+    },
+    {
+      "provider": "deepseek",
+      "case": "text",
+      "live": true,
+      "transport": "sse",
+      "started_at": 1790997247.971136,
+      "model": "deepseek-flash",
+      "status": "failed",
+      "passed": false,
+      "answer_matches": false,
+      "exact_format": false,
+      "final_numeric_answer": null,
+      "thinking_observed": false,
+      "tool_executions": 0,
+      "usage": {},
+      "event_counts": {
+        "agent_start": 1,
+        "turn_start": 1,
+        "message_start": 2,
+        "message_end": 2,
+        "turn_end": 1,
+        "agent_end": 1
+      },
+      "wire_event_counts": {},
+      "http_statuses": [],
+      "stop_reasons": [
+        "error"
+      ],
+      "network": {
+        "http_attempts": 0,
+        "http_retries": 0,
+        "websocket_connects": 0,
+        "websocket_reuses": 0,
+        "websocket_fallbacks": 0,
+        "websocket_expired": 0,
+        "websocket_retries": 0,
+        "websocket_delta_requests": 0
+      },
+      "error_types": [
+        "ProviderProtocolError"
+      ],
+      "diagnostic": "ProviderProtocolError: TypeError: DeepSeekProvider.build_request() takes 2 positional arguments but 3 were given",
+      "seconds": 0.01
+    },
+    {
+      "provider": "deepseek",
+      "case": "tool",
+      "live": true,
+      "transport": "sse",
+      "started_at": 1790997247.981029,
+      "model": "deepseek-flash",
+      "status": "failed",
+      "passed": false,
+      "answer_matches": false,
+      "exact_format": false,
+      "final_numeric_answer": null,
+      "thinking_observed": false,
+      "tool_executions": 0,
+      "usage": {},
+      "event_counts": {
+        "agent_start": 1,
+        "turn_start": 1,
+        "message_start": 2,
+        "message_end": 2,
+        "turn_end": 1,
+        "agent_end": 1
+      },
+      "wire_event_counts": {},
+      "http_statuses": [],
+      "stop_reasons": [
+        "error"
+      ],
+      "network": {
+        "http_attempts": 0,
+        "http_retries": 0,
+        "websocket_connects": 0,
+        "websocket_reuses": 0,
+        "websocket_fallbacks": 0,
+        "websocket_expired": 0,
+        "websocket_retries": 0,
+        "websocket_delta_requests": 0
+      },
+      "error_types": [
+        "ProviderProtocolError"
+      ],
+      "diagnostic": "ProviderProtocolError: TypeError: DeepSeekProvider.build_request() takes 2 positional arguments but 3 were given",
+      "seconds": 0.01
+    },
+    {
+      "provider": "deepseek",
+      "case": "thinking",
+      "live": true,
+      "transport": "sse",
+      "started_at": 1790997247.989244,
+      "model": "deepseek-flash",
+      "status": "failed",
+      "passed": false,
+      "answer_matches": false,
+      "exact_format": false,
+      "final_numeric_answer": null,
+      "thinking_observed": false,
+      "tool_executions": 0,
+      "usage": {},
+      "event_counts": {
+        "agent_start": 1,
+        "turn_start": 1,
+        "message_start": 2,
+        "message_end": 2,
+        "turn_end": 1,
+        "agent_end": 1
+      },
+      "wire_event_counts": {},
+      "http_statuses": [],
+      "stop_reasons": [
+        "error"
+      ],
+      "network": {
+        "http_attempts": 0,
+        "http_retries": 0,
+        "websocket_connects": 0,
+        "websocket_reuses": 0,
+        "websocket_fallbacks": 0,
+        "websocket_expired": 0,
+        "websocket_retries": 0,
+        "websocket_delta_requests": 0
+      },
+      "error_types": [
+        "ProviderProtocolError"
+      ],
+      "diagnostic": "ProviderProtocolError: TypeError: DeepSeekProvider.build_request() takes 2 positional arguments but 3 were given",
+      "seconds": 0.0
+    }
+  ]
+}

@@ -1,0 +1,221 @@
+{
+  "provider": "openai-completions",
+  "entry": "simple",
+  "base_url": "https://openrouter.ai/api/v1",
+  "model": {
+    "id": "anthropic/claude-sonnet-4.5",
+    "name": "anthropic/claude-sonnet-4.5",
+    "api": "openai-completions",
+    "provider": "openrouter",
+    "reasoning": true,
+    "input": [
+      "text",
+      "image"
+    ],
+    "contextWindow": 200000,
+    "maxTokens": 64000,
+    "cost": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0
+    },
+    "compat": {
+      "openRouterRouting": {
+        "order": [
+          "anthropic"
+        ],
+        "allow_fallbacks": false
+      }
+    }
+  },
+  "options": {
+    "reasoning": "medium",
+    "sessionId": "or-session",
+    "cacheRetention": "long"
+  },
+  "context": {
+    "messages": [
+      {
+        "role": "system",
+        "content": "Be helpful.",
+        "timestamp": 0,
+        "toolsAdded": [
+          {
+            "name": "add",
+            "description": "Add",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "a": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "a"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "q1",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "thinking",
+            "thinking": "earlier",
+            "thinkingSignature": "[{\"type\":\"reasoning.text\",\"text\":\"earlier\",\"signature\":\"sig-0\",\"format\":\"anthropic-claude-v1\",\"index\":0}]"
+          },
+          {
+            "type": "text",
+            "text": "a1"
+          }
+        ],
+        "api": "openai-completions",
+        "provider": "openrouter",
+        "model": "anthropic/claude-sonnet-4.5",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0
+        },
+        "stopReason": "stop",
+        "timestamp": 2
+      },
+      {
+        "role": "user",
+        "content": "q2",
+        "timestamp": 3
+      }
+    ]
+  },
+  "events": [
+    {
+      "id": "gen-abc",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "anthropic/claude-4.5-sonnet-20250929",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "",
+            "reasoning": "Thinking",
+            "reasoning_details": [
+              {
+                "type": "reasoning.text",
+                "text": "Thinking",
+                "format": "anthropic-claude-v1",
+                "index": 0
+              }
+            ]
+          },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "gen-abc",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "anthropic/claude-4.5-sonnet-20250929",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "reasoning": " more",
+            "reasoning_details": [
+              {
+                "type": "reasoning.text",
+                "text": " more",
+                "signature": "sig-1",
+                "index": 0
+              }
+            ]
+          },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "gen-abc",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "anthropic/claude-4.5-sonnet-20250929",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "reasoning_details": [
+              {
+                "type": "reasoning.encrypted",
+                "data": "enc==",
+                "id": "rd_1",
+                "format": "anthropic-claude-v1",
+                "index": 1
+              }
+            ]
+          },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "gen-abc",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "anthropic/claude-4.5-sonnet-20250929",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "content": "Answer"
+          },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "gen-abc",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "anthropic/claude-4.5-sonnet-20250929",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {},
+          "finish_reason": "stop"
+        }
+      ]
+    },
+    {
+      "id": "gen-abc",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "anthropic/claude-4.5-sonnet-20250929",
+      "choices": [],
+      "usage": {
+        "prompt_tokens": 1000,
+        "completion_tokens": 50,
+        "total_tokens": 1050,
+        "prompt_tokens_details": {
+          "cached_tokens": 800,
+          "cache_write_tokens": 100
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 20
+        },
+        "cost": 0.01
+      }
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+[
+  {
+    "path": "dist/pi_python_core-0.2.0-py3-none-any.whl",
+    "bytes": 49898,
+    "sha256": "25a2344a25a5908a48267054c4c9344c54722f5d6877a5568a5036bd25c7adc4"
+  },
+  {
+    "path": "dist/pi_python_core-0.2.0.tar.gz",
+    "bytes": 259881,
+    "sha256": "0eadc2cc98c166b94994dbbab484948c105ca21b883e28bba8f5a34586a3987d"
+  }
+]

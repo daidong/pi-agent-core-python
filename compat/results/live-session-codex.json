@@ -1,0 +1,127 @@
+{
+  "scope": "Live synthetic prompts; in-memory tool only; no credentials recorded",
+  "results": [
+    {
+      "provider": "codex",
+      "case": "session",
+      "live": true,
+      "transport": "websocket-cached",
+      "started_at": 1790997714.27984,
+      "model": "gpt-6-luna",
+      "statuses": [
+        "completed",
+        "completed"
+      ],
+      "tool_calls": [
+        [
+          "add",
+          {
+            "a": 2,
+            "b": 3
+          }
+        ],
+        [
+          "multiply",
+          {
+            "a": 4,
+            "b": 5
+          }
+        ]
+      ],
+      "answer_has_20": true,
+      "answer_ends_with_done": true,
+      "provider_thinking_levels": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "request_shapes": [
+        {
+          "tools": [
+            "add"
+          ],
+          "input": [
+            "user"
+          ],
+          "reasoning": {
+            "effort": "low",
+            "summary": "auto"
+          }
+        },
+        {
+          "tools": [
+            "add"
+          ],
+          "input": [
+            "user",
+            "function_call",
+            "function_call_output"
+          ],
+          "reasoning": {
+            "effort": "low",
+            "summary": "auto"
+          }
+        },
+        {
+          "tools": [
+            "add"
+          ],
+          "input": [
+            "user",
+            "function_call",
+            "function_call_output",
+            "message",
+            "additional_tools",
+            "developer",
+            "user"
+          ],
+          "reasoning": {
+            "effort": "low",
+            "summary": "auto"
+          }
+        },
+        {
+          "tools": [
+            "add"
+          ],
+          "input": [
+            "user",
+            "function_call",
+            "function_call_output",
+            "message",
+            "additional_tools",
+            "developer",
+            "user",
+            "function_call",
+            "function_call_output"
+          ],
+          "reasoning": {
+            "effort": "low",
+            "summary": "auto"
+          }
+        }
+      ],
+      "http_statuses": [
+        101,
+        101,
+        101,
+        101
+      ],
+      "network": {
+        "http_attempts": 0,
+        "http_retries": 0,
+        "websocket_connects": 1,
+        "websocket_reuses": 3,
+        "websocket_fallbacks": 0,
+        "websocket_expired": 0,
+        "websocket_retries": 0,
+        "websocket_delta_requests": 3
+      },
+      "error_types": [],
+      "native_change_sent": true,
+      "passed": true,
+      "seconds": 8.69
+    }
+  ]
+}

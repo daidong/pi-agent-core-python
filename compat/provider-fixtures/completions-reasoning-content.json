@@ -1,0 +1,157 @@
+{
+  "provider": "openai-completions",
+  "entry": "simple",
+  "base_url": "http://127.0.0.1:8080/v1",
+  "model": {
+    "id": "gpt-oss-20b",
+    "name": "gpt-oss-20b",
+    "api": "openai-completions",
+    "provider": "llamacpp",
+    "reasoning": true,
+    "input": [
+      "text"
+    ],
+    "contextWindow": 32768,
+    "maxTokens": 16384,
+    "cost": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0
+    },
+    "compat": {
+      "supportsDeveloperRole": false,
+      "thinkingFormat": "chat-template",
+      "chatTemplateKwargs": {
+        "enable_thinking": {
+          "$var": "thinking.enabled"
+        },
+        "reasoning_effort": {
+          "$var": "thinking.effort",
+          "omitWhenOff": true
+        },
+        "budget": {
+          "$var": "thinking.budget"
+        },
+        "keep": "yes"
+      },
+      "thinkingTokenBudgetField": "thinking_budget_tokens"
+    }
+  },
+  "options": {
+    "reasoning": "medium"
+  },
+  "context": {
+    "messages": [
+      {
+        "role": "system",
+        "content": "Think first.",
+        "timestamp": 0
+      },
+      {
+        "role": "user",
+        "content": "2+2?",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "thinking",
+            "thinking": "plan",
+            "thinkingSignature": "reasoning_content"
+          },
+          {
+            "type": "text",
+            "text": "4"
+          }
+        ],
+        "api": "openai-completions",
+        "provider": "llamacpp",
+        "model": "gpt-oss-20b",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0
+        },
+        "stopReason": "stop",
+        "timestamp": 2
+      },
+      {
+        "role": "user",
+        "content": "and 3+1?",
+        "timestamp": 3
+      }
+    ]
+  },
+  "events": [
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gpt-oss-20b",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "reasoning_content": "Let me"
+          },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gpt-oss-20b",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "reasoning_content": " think."
+          },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gpt-oss-20b",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "content": "Answer: 4"
+          },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "gpt-oss-20b",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {},
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 40,
+        "completion_tokens": 9,
+        "completion_tokens_details": {
+          "reasoning_tokens": 5
+        }
+      }
+    }
+  ]
+}

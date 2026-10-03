@@ -1,0 +1,164 @@
+{
+  "provider": "openai",
+  "entry": "simple",
+  "model": {
+    "id": "gpt-4.1",
+    "name": "GPT-4.1",
+    "api": "openai-responses",
+    "reasoning": false,
+    "input": [
+      "text",
+      "image"
+    ],
+    "maxTokens": 32768,
+    "contextWindow": 1047576,
+    "cost": {
+      "input": 2,
+      "output": 8,
+      "cacheRead": 0.5,
+      "cacheWrite": 0
+    },
+    "compat": {
+      "supportsStrictMode": true
+    }
+  },
+  "options": {
+    "maxTokens": 10,
+    "reasoning": "high"
+  },
+  "context": {
+    "messages": [
+      {
+        "role": "system",
+        "content": "base prompt",
+        "timestamp": 0,
+        "sections": {
+          "rules": "<rules>\nold rules\n</rules>",
+          "docs": "<docs>\nread docs\n</docs>"
+        },
+        "toolsAdded": [
+          {
+            "name": "base_tool",
+            "description": "base_tool tool",
+            "parameters": {
+              "type": "object",
+              "properties": {},
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "before",
+        "timestamp": 1
+      },
+      {
+        "role": "system",
+        "content": "updated guidance",
+        "timestamp": 5,
+        "sections": {
+          "rules": "<rules>\nnew rules\n</rules>",
+          "docs": null
+        },
+        "toolsRemoved": [
+          {
+            "name": "base_tool"
+          }
+        ],
+        "toolsAdded": [
+          {
+            "name": "late_tool",
+            "description": "late_tool tool",
+            "parameters": {
+              "type": "object",
+              "properties": {},
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "after",
+        "timestamp": 6
+      }
+    ]
+  },
+  "events": [
+    {
+      "type": "response.output_item.added",
+      "output_index": 0,
+      "item": {
+        "type": "message",
+        "id": "msg_x",
+        "role": "assistant",
+        "status": "completed",
+        "phase": "final_answer",
+        "content": []
+      }
+    },
+    {
+      "output_index": 0,
+      "type": "response.output_text.delta",
+      "delta": "你"
+    },
+    {
+      "output_index": 0,
+      "type": "response.output_text.delta",
+      "delta": "好"
+    },
+    {
+      "type": "response.output_item.done",
+      "output_index": 0,
+      "item": {
+        "type": "message",
+        "id": "msg_x",
+        "role": "assistant",
+        "status": "completed",
+        "phase": "final_answer",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "你好",
+            "annotations": []
+          }
+        ]
+      }
+    },
+    {
+      "type": "response.completed",
+      "response": {
+        "id": "resp_x",
+        "status": "completed",
+        "output": [
+          {
+            "type": "message",
+            "id": "msg_x",
+            "role": "assistant",
+            "status": "completed",
+            "phase": "final_answer",
+            "content": [
+              {
+                "type": "output_text",
+                "text": "你好",
+                "annotations": []
+              }
+            ]
+          }
+        ],
+        "usage": {
+          "input_tokens": 12,
+          "output_tokens": 8,
+          "input_tokens_details": {
+            "cached_tokens": 2
+          },
+          "output_tokens_details": {
+            "reasoning_tokens": 3
+          },
+          "total_tokens": 20
+        }
+      }
+    }
+  ]
+}

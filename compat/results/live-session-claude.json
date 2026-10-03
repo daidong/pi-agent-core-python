@@ -1,0 +1,153 @@
+{
+  "scope": "Live synthetic prompts; in-memory tool only; no credentials recorded",
+  "results": [
+    {
+      "provider": "claude",
+      "case": "session",
+      "live": true,
+      "transport": "sse",
+      "started_at": 1790997700.886941,
+      "model": "claude-sonnet-5-5",
+      "statuses": [
+        "completed",
+        "completed"
+      ],
+      "tool_calls": [
+        [
+          "add",
+          {
+            "a": 2,
+            "b": 3
+          }
+        ],
+        [
+          "multiply",
+          {
+            "a": 4,
+            "b": 5
+          }
+        ]
+      ],
+      "answer_has_20": true,
+      "answer_ends_with_done": true,
+      "provider_thinking_levels": [
+        "low",
+        "low",
+        "medium",
+        "medium"
+      ],
+      "request_shapes": [
+        {
+          "tools": [
+            "add",
+            "__pi_deferred_placeholder__ (deferred)"
+          ],
+          "messages": [
+            "user",
+            "system effort=low"
+          ],
+          "thinking": {
+            "type": "adaptive",
+            "display": "summarized",
+            "block_binding": {
+              "prefix_mismatch_behavior": "drop_block"
+            }
+          }
+        },
+        {
+          "tools": [
+            "add",
+            "__pi_deferred_placeholder__ (deferred)"
+          ],
+          "messages": [
+            "user",
+            "system effort=low",
+            "assistant",
+            "user",
+            "system effort=low"
+          ],
+          "thinking": {
+            "type": "adaptive",
+            "display": "summarized",
+            "block_binding": {
+              "prefix_mismatch_behavior": "drop_block"
+            }
+          }
+        },
+        {
+          "tools": [
+            "add",
+            "__pi_deferred_placeholder__ (deferred)",
+            "multiply (deferred)"
+          ],
+          "messages": [
+            "user",
+            "system effort=low",
+            "assistant",
+            "user",
+            "system effort=low",
+            "assistant",
+            "user",
+            "system [text,tool_addition]",
+            "system effort=medium"
+          ],
+          "thinking": {
+            "type": "adaptive",
+            "display": "summarized",
+            "block_binding": {
+              "prefix_mismatch_behavior": "drop_block"
+            }
+          }
+        },
+        {
+          "tools": [
+            "add",
+            "__pi_deferred_placeholder__ (deferred)",
+            "multiply (deferred)"
+          ],
+          "messages": [
+            "user",
+            "system effort=low",
+            "assistant",
+            "user",
+            "system effort=low",
+            "assistant",
+            "user",
+            "system [text,tool_addition]",
+            "system effort=medium",
+            "assistant",
+            "user",
+            "system effort=medium"
+          ],
+          "thinking": {
+            "type": "adaptive",
+            "display": "summarized",
+            "block_binding": {
+              "prefix_mismatch_behavior": "drop_block"
+            }
+          }
+        }
+      ],
+      "http_statuses": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "network": {
+        "http_attempts": 4,
+        "http_retries": 0,
+        "websocket_connects": 0,
+        "websocket_reuses": 0,
+        "websocket_fallbacks": 0,
+        "websocket_expired": 0,
+        "websocket_retries": 0,
+        "websocket_delta_requests": 0
+      },
+      "error_types": [],
+      "native_change_sent": true,
+      "passed": true,
+      "seconds": 4.92
+    }
+  ]
+}

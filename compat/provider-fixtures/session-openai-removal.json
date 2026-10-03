@@ -1,0 +1,182 @@
+{
+  "provider": "openai",
+  "entry": "simple",
+  "model": {
+    "id": "gpt-5.5",
+    "name": "GPT-5.5",
+    "api": "openai-responses",
+    "reasoning": true,
+    "input": [
+      "text",
+      "image"
+    ],
+    "maxTokens": 128000,
+    "contextWindow": 272000,
+    "cost": {
+      "input": 5,
+      "output": 30,
+      "cacheRead": 0.5,
+      "cacheWrite": 0,
+      "tiers": [
+        {
+          "inputTokensAbove": 272000,
+          "input": 10,
+          "output": 45,
+          "cacheRead": 1,
+          "cacheWrite": 0
+        }
+      ]
+    },
+    "thinkingLevelMap": {
+      "off": "none",
+      "minimal": null,
+      "low": "low",
+      "medium": "medium",
+      "high": "high",
+      "xhigh": "xhigh",
+      "max": null
+    },
+    "compat": {
+      "supportsStrictMode": true,
+      "supportsOpenAIGrammarTools": true,
+      "supportsAdditionalTools": true,
+      "supportsToolSearch": true,
+      "supportsMidConvoSystemMessages": true
+    }
+  },
+  "context": {
+    "messages": [
+      {
+        "role": "system",
+        "content": "base prompt",
+        "timestamp": 0,
+        "sections": {
+          "rules": "<rules>\nold rules\n</rules>",
+          "docs": "<docs>\nread docs\n</docs>"
+        },
+        "toolsAdded": [
+          {
+            "name": "base_tool",
+            "description": "base_tool tool",
+            "parameters": {
+              "type": "object",
+              "properties": {},
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "before",
+        "timestamp": 1
+      },
+      {
+        "role": "system",
+        "content": "updated guidance",
+        "timestamp": 5,
+        "sections": {
+          "rules": "<rules>\nnew rules\n</rules>",
+          "docs": null
+        },
+        "toolsRemoved": [
+          {
+            "name": "base_tool"
+          }
+        ],
+        "toolsAdded": [
+          {
+            "name": "late_tool",
+            "description": "late_tool tool",
+            "parameters": {
+              "type": "object",
+              "properties": {},
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "after",
+        "timestamp": 6
+      }
+    ]
+  },
+  "events": [
+    {
+      "type": "response.output_item.added",
+      "output_index": 0,
+      "item": {
+        "type": "message",
+        "id": "msg_x",
+        "role": "assistant",
+        "status": "completed",
+        "phase": "final_answer",
+        "content": []
+      }
+    },
+    {
+      "output_index": 0,
+      "type": "response.output_text.delta",
+      "delta": "你"
+    },
+    {
+      "output_index": 0,
+      "type": "response.output_text.delta",
+      "delta": "好"
+    },
+    {
+      "type": "response.output_item.done",
+      "output_index": 0,
+      "item": {
+        "type": "message",
+        "id": "msg_x",
+        "role": "assistant",
+        "status": "completed",
+        "phase": "final_answer",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "你好",
+            "annotations": []
+          }
+        ]
+      }
+    },
+    {
+      "type": "response.completed",
+      "response": {
+        "id": "resp_x",
+        "status": "completed",
+        "output": [
+          {
+            "type": "message",
+            "id": "msg_x",
+            "role": "assistant",
+            "status": "completed",
+            "phase": "final_answer",
+            "content": [
+              {
+                "type": "output_text",
+                "text": "你好",
+                "annotations": []
+              }
+            ]
+          }
+        ],
+        "usage": {
+          "input_tokens": 12,
+          "output_tokens": 8,
+          "input_tokens_details": {
+            "cached_tokens": 2
+          },
+          "output_tokens_details": {
+            "reasoning_tokens": 3
+          },
+          "total_tokens": 20
+        }
+      }
+    }
+  ]
+}

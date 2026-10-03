@@ -1,0 +1,128 @@
+{
+  "provider": "openai",
+  "entry": "simple",
+  "model": {
+    "id": "gpt-5.6-luna",
+    "name": "GPT-5.6 Luna",
+    "api": "openai-responses",
+    "reasoning": true,
+    "input": [
+      "text",
+      "image"
+    ],
+    "maxTokens": 128000,
+    "contextWindow": 272000,
+    "cost": {
+      "input": 0.2,
+      "output": 1.2,
+      "cacheRead": 0.02,
+      "cacheWrite": 0.25,
+      "tiers": [
+        {
+          "inputTokensAbove": 272000,
+          "input": 0.4,
+          "output": 1.8,
+          "cacheRead": 0.04,
+          "cacheWrite": 0.5
+        }
+      ]
+    },
+    "thinkingLevelMap": {
+      "off": "none",
+      "minimal": null,
+      "low": "low",
+      "medium": "medium",
+      "high": "high",
+      "xhigh": "xhigh",
+      "max": "max"
+    },
+    "compat": {
+      "supportsStrictMode": true,
+      "supportsOpenAIGrammarTools": true,
+      "supportsAdditionalTools": true,
+      "supportsToolSearch": true,
+      "supportsMidConvoSystemMessages": true,
+      "supportsExplicitPromptCacheMode": true
+    }
+  },
+  "options": {
+    "cacheRetention": "none",
+    "sessionId": "ignored"
+  },
+  "events": [
+    {
+      "type": "response.output_item.added",
+      "output_index": 0,
+      "item": {
+        "type": "message",
+        "id": "msg_x",
+        "role": "assistant",
+        "status": "completed",
+        "phase": "final_answer",
+        "content": []
+      }
+    },
+    {
+      "output_index": 0,
+      "type": "response.output_text.delta",
+      "delta": "你"
+    },
+    {
+      "output_index": 0,
+      "type": "response.output_text.delta",
+      "delta": "好"
+    },
+    {
+      "type": "response.output_item.done",
+      "output_index": 0,
+      "item": {
+        "type": "message",
+        "id": "msg_x",
+        "role": "assistant",
+        "status": "completed",
+        "phase": "final_answer",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "你好",
+            "annotations": []
+          }
+        ]
+      }
+    },
+    {
+      "type": "response.completed",
+      "response": {
+        "id": "resp_x",
+        "status": "completed",
+        "output": [
+          {
+            "type": "message",
+            "id": "msg_x",
+            "role": "assistant",
+            "status": "completed",
+            "phase": "final_answer",
+            "content": [
+              {
+                "type": "output_text",
+                "text": "你好",
+                "annotations": []
+              }
+            ]
+          }
+        ],
+        "usage": {
+          "input_tokens": 12,
+          "output_tokens": 8,
+          "input_tokens_details": {
+            "cached_tokens": 2
+          },
+          "output_tokens_details": {
+            "reasoning_tokens": 3
+          },
+          "total_tokens": 20
+        }
+      }
+    }
+  ]
+}

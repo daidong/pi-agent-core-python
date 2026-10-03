@@ -1,0 +1,39 @@
+{
+  "id": "C09-before-error",
+  "classification": "mapped",
+  "source": "packages/agent/src/agent-loop.ts; packages/agent/src/agent.ts",
+  "prompt": "go",
+  "tools": [
+    {
+      "name": "t",
+      "result": "t-result"
+    }
+  ],
+  "before_error": {
+    "x": "denied"
+  },
+  "responses": [
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_call",
+          "id": "x",
+          "name": "t",
+          "arguments": {}
+        }
+      ],
+      "stop_reason": "tool_use"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "done"
+        }
+      ],
+      "stop_reason": "stop"
+    }
+  ]
+}

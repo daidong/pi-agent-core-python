@@ -1,0 +1,173 @@
+{
+  "platform": "macOS-26.7-arm64-arm-64bit",
+  "python": "3.11.14 (main, Oct 10 2025, 12:55:50) [Clang 20.1.4 ]",
+  "versions": {
+    "node": "v24.4.1",
+    "npm": "11.4.2",
+    "uv": "uv 0.9.2 (141369ce7 2025-10-10)"
+  },
+  "checks": [
+    {
+      "command": [
+        "uv",
+        "sync",
+        "--locked",
+        "--extra",
+        "providers"
+      ],
+      "exit_code": 0,
+      "seconds": 0.013097084010951221,
+      "stdout": "",
+      "stderr": "Resolved 30 packages in 2ms\nAudited 29 packages in 1ms\n"
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "ruff",
+        "check",
+        "src",
+        "tests",
+        "examples",
+        "compat",
+        "scripts"
+      ],
+      "exit_code": 0,
+      "seconds": 0.02745791699271649,
+      "stdout": "All checks passed!\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "ruff",
+        "format",
+        "--check",
+        "src",
+        "tests",
+        "examples",
+        "compat",
+        "scripts"
+      ],
+      "exit_code": 0,
+      "seconds": 0.02157708304002881,
+      "stdout": "49 files already formatted\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "mypy",
+        "src/pi_python"
+      ],
+      "exit_code": 0,
+      "seconds": 0.5172776660183445,
+      "stdout": "Success: no issues found in 23 source files\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "pytest",
+        "-q"
+      ],
+      "exit_code": 0,
+      "seconds": 1.1158308329759166,
+      "stdout": "........................................................................ [ 33%]\n........................................................................ [ 67%]\n....................................................................     [100%]\n212 passed in 0.94s\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "examples/in_memory.py"
+      ],
+      "exit_code": 0,
+      "seconds": 0.08805374999064952,
+      "stdout": "The telemetry contains 3 complete records.\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "npm",
+        "test",
+        "--prefix",
+        "reference/pi/packages/agent",
+        "--",
+        "test/agent-loop.test.ts",
+        "test/agent.test.ts"
+      ],
+      "exit_code": 0,
+      "seconds": 0.954503541928716,
+      "stdout": "\n> @earendil-works/pi-agent-core@1.0.0 test\n> vitest --run test/agent-loop.test.ts test/agent.test.ts\n\n\n RUN  v4.1.11 /Users/daidong/Documents/gitrepos/pi-python/reference/pi/packages/agent\n\n\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\n\n Test Files  2 passed (2)\n      Tests  77 passed (77)\n   Start at  22:45:39\n   Duration  639ms (transform 430ms, setup 0ms, import 795ms, tests 177ms, environment 0ms)\n\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "npm",
+        "test",
+        "--prefix",
+        "reference/pi/packages/ai",
+        "--",
+        "test/transcript-tool-changes.test.ts",
+        "test/validation.test.ts"
+      ],
+      "exit_code": 0,
+      "seconds": 0.9560029580025002,
+      "stdout": "\n> @earendil-works/pi-ai@1.0.0 test\n> vitest --run test/transcript-tool-changes.test.ts test/validation.test.ts\n\n\n RUN  v4.1.11 /Users/daidong/Documents/gitrepos/pi-python/reference/pi/packages/ai\n\n\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\n\n Test Files  2 passed (2)\n      Tests  20 passed (20)\n   Start at  22:45:40\n   Duration  683ms (transform 362ms, setup 0ms, import 568ms, tests 165ms, environment 0ms)\n\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/conformance.py"
+      ],
+      "exit_code": 0,
+      "seconds": 3.807721166056581,
+      "stdout": "C01-text: passed []\nC02-tool: passed []\nC03-sequential: passed []\nC04-parallel: passed []\nC05-one-sequential: passed []\nC06-one-failure: passed []\nC07-unknown: passed []\nC08-prepare: passed []\nC09-block: passed []\nC09-replace: passed []\nC10-length: passed []\nC11-transform: passed []\nC12-system: passed []\nC13-steering: passed []\nC14-followup-all: passed []\nC14-followup-one: passed []\nC15-prepare: passed []\nC16-continue: passed []\nC16-end: passed []\nC16-mixed: passed []\nC16-terminate: passed []\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/provider_conformance.py"
+      ],
+      "exit_code": 0,
+      "seconds": 5.4809507499448955,
+      "stdout": "anthropic-oauth.json passed\nanthropic-request-cache-long.json passed\nanthropic-request-cache-none.json passed\nanthropic-request-replay.json passed\nanthropic-request-tools-image.json passed\nanthropic-text.json passed\nanthropic-thinking.json passed\nanthropic-tool.json passed\ncodex-request-tools-image.json passed\ncodex-text.json passed\nopenai-incomplete.json passed\nopenai-request-cache-long.json passed\nopenai-request-cache-none.json passed\nopenai-request-reasoning.json passed\nopenai-request-replay.json passed\nopenai-request-tools-image.json passed\nopenai-text.json passed\nopenai-thinking-backfill.json passed\nopenai-thinking.json passed\nopenai-tool.json passed\nproxy-text.json passed\nproxy-thinking-tool.json passed\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "examples/provider_chat.py",
+        "--help"
+      ],
+      "exit_code": 0,
+      "seconds": 0.08845270902384073,
+      "stdout": "usage: provider_chat.py [-h] --provider\n                        {anthropic,openai,openai-codex,openai-chatgpt,deepseek}\n                        --model MODEL [--prompt PROMPT]\n                        [--credential-file CREDENTIAL_FILE] [--login]\n                        [--device]\n                        [--thinking {off,minimal,low,medium,high,xhigh,max}]\n                        [--thinking-mode {manual,adaptive}]\n                        [--transport {sse,websocket,websocket-cached,auto}]\n                        [--session-id SESSION_ID]\n\nExplicit API/OAuth example. Invoke --help; never imported by the core.\n\noptions:\n  -h, --help            show this help message and exit\n  --provider {anthropic,openai,openai-codex,openai-chatgpt,deepseek}\n  --model MODEL         Model ID enabled for this account\n  --prompt PROMPT\n  --credential-file CREDENTIAL_FILE\n                        App-owned OAuth file (never reuse another client file)\n  --login\n  --device              Codex device authorization instead of browser callback\n  --thinking {off,minimal,low,medium,high,xhigh,max}\n  --thinking-mode {manual,adaptive}\n  --transport {sse,websocket,websocket-cached,auto}\n  --session-id SESSION_ID\n                        Required for websocket-cached\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "uv",
+        "build"
+      ],
+      "exit_code": 0,
+      "seconds": 0.6768994580488652,
+      "stdout": "",
+      "stderr": "Building source distribution...\nBuilding wheel from source distribution...\nSuccessfully built dist/pi_python_core-0.3.0.tar.gz\nSuccessfully built dist/pi_python_core-0.3.0-py3-none-any.whl\n"
+    }
+  ],
+  "status": "passed"
+}

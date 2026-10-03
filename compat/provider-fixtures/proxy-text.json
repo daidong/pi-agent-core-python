@@ -1,0 +1,27 @@
+{
+  "provider": "proxy",
+  "events": [
+    {
+      "type": "start"
+    },
+    {
+      "type": "text_start",
+      "contentIndex": 0
+    },
+    {
+      "type": "text_delta",
+      "contentIndex": 0,
+      "delta": "\u4f60\u597d"
+    },
+    {
+      "type": "text_end",
+      "contentIndex": 0,
+      "contentSignature": "opaque-text"
+    },
+    {
+      "type": "done",
+      "reason": "stop",
+      "usage": {}
+    }
+  ]
+}

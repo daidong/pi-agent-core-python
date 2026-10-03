@@ -1,0 +1,50 @@
+{
+  "id": "C08-prepare",
+  "classification": "mapped",
+  "source": "packages/agent/test/agent-loop.test.ts; packages/agent/test/agent.test.ts",
+  "prompt": "go",
+  "tools": [
+    {
+      "name": "t",
+      "result": "t-result",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "n": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "n"
+        ]
+      },
+      "prepare_number": "n"
+    }
+  ],
+  "responses": [
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_call",
+          "id": "x",
+          "name": "t",
+          "arguments": {
+            "n": "3"
+          }
+        }
+      ],
+      "stop_reason": "tool_use"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "done"
+        }
+      ],
+      "stop_reason": "stop"
+    }
+  ]
+}

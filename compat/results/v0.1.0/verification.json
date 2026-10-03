@@ -1,0 +1,146 @@
+{
+  "platform": "macOS-26.7-arm64-arm-64bit",
+  "python": "3.11.14 (main, Oct 10 2025, 12:55:50) [Clang 20.1.4 ]",
+  "versions": {
+    "node": "v24.4.1",
+    "npm": "11.4.2",
+    "uv": "uv 0.9.2 (141369ce7 2025-10-10)"
+  },
+  "checks": [
+    {
+      "command": [
+        "uv",
+        "sync",
+        "--locked"
+      ],
+      "exit_code": 0,
+      "seconds": 0.012117375037632883,
+      "stdout": "",
+      "stderr": "Resolved 19 packages in 2ms\nAudited 18 packages in 0.28ms\n"
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "ruff",
+        "check",
+        "src",
+        "tests",
+        "examples",
+        "compat",
+        "scripts"
+      ],
+      "exit_code": 0,
+      "seconds": 0.026280042016878724,
+      "stdout": "All checks passed!\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "ruff",
+        "format",
+        "--check",
+        "src",
+        "tests",
+        "examples",
+        "compat",
+        "scripts"
+      ],
+      "exit_code": 0,
+      "seconds": 0.020990374963730574,
+      "stdout": "30 files already formatted\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "mypy",
+        "src/pi_python"
+      ],
+      "exit_code": 0,
+      "seconds": 0.4067320419708267,
+      "stdout": "Success: no issues found in 13 source files\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "pytest",
+        "-q"
+      ],
+      "exit_code": 0,
+      "seconds": 0.4539762920467183,
+      "stdout": "........................................................................ [ 69%]\n...............................                                          [100%]\n103 passed in 0.31s\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "examples/in_memory.py"
+      ],
+      "exit_code": 0,
+      "seconds": 0.07599000004120171,
+      "stdout": "The telemetry contains 3 complete records.\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "npm",
+        "test",
+        "--prefix",
+        "reference/pi/packages/agent",
+        "--",
+        "test/agent-loop.test.ts",
+        "test/agent.test.ts"
+      ],
+      "exit_code": 0,
+      "seconds": 0.9705237920861691,
+      "stdout": "\n> @earendil-works/pi-agent-core@1.0.0 test\n> vitest --run test/agent-loop.test.ts test/agent.test.ts\n\n\n RUN  v4.1.11 /Users/daidong/Documents/gitrepos/pi-python/reference/pi/packages/agent\n\n\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\n\n Test Files  2 passed (2)\n      Tests  77 passed (77)\n   Start at  21:32:11\n   Duration  649ms (transform 432ms, setup 0ms, import 816ms, tests 175ms, environment 0ms)\n\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "npm",
+        "test",
+        "--prefix",
+        "reference/pi/packages/ai",
+        "--",
+        "test/transcript-tool-changes.test.ts",
+        "test/validation.test.ts"
+      ],
+      "exit_code": 0,
+      "seconds": 0.9394391669193283,
+      "stdout": "\n> @earendil-works/pi-ai@1.0.0 test\n> vitest --run test/transcript-tool-changes.test.ts test/validation.test.ts\n\n\n RUN  v4.1.11 /Users/daidong/Documents/gitrepos/pi-python/reference/pi/packages/ai\n\n\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\n\n Test Files  2 passed (2)\n      Tests  20 passed (20)\n   Start at  21:32:12\n   Duration  667ms (transform 353ms, setup 0ms, import 553ms, tests 165ms, environment 0ms)\n\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/conformance.py"
+      ],
+      "exit_code": 0,
+      "seconds": 3.696778165991418,
+      "stdout": "C01-text: passed []\nC02-tool: passed []\nC03-sequential: passed []\nC04-parallel: passed []\nC05-one-sequential: passed []\nC06-one-failure: passed []\nC07-unknown: passed []\nC08-prepare: passed []\nC09-block: passed []\nC09-replace: passed []\nC10-length: passed []\nC11-transform: passed []\nC12-system: passed []\nC13-steering: passed []\nC14-followup-all: passed []\nC14-followup-one: passed []\nC15-prepare: passed []\nC16-continue: passed []\nC16-end: passed []\nC16-mixed: passed []\nC16-terminate: passed []\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "uv",
+        "build"
+      ],
+      "exit_code": 0,
+      "seconds": 0.6313465830171481,
+      "stdout": "",
+      "stderr": "Building source distribution...\nBuilding wheel from source distribution...\nSuccessfully built dist/pi_python_core-0.1.0.tar.gz\nSuccessfully built dist/pi_python_core-0.1.0-py3-none-any.whl\n"
+    }
+  ],
+  "status": "passed"
+}

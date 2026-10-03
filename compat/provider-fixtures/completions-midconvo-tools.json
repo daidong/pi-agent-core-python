@@ -1,0 +1,134 @@
+{
+  "provider": "openai-completions",
+  "entry": "simple",
+  "model": {
+    "id": "kimi-k2",
+    "name": "kimi-k2",
+    "api": "openai-completions",
+    "provider": "openai-completions",
+    "reasoning": true,
+    "input": [
+      "text"
+    ],
+    "contextWindow": 128000,
+    "maxTokens": 8192,
+    "cost": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0
+    },
+    "compat": {
+      "supportsMidConvoSystemMessages": true,
+      "supportsMidConvoToolAdditions": true,
+      "thinkingFormat": "qwen",
+      "zaiToolStream": true
+    }
+  },
+  "options": {
+    "reasoning": "high"
+  },
+  "context": {
+    "messages": [
+      {
+        "role": "system",
+        "content": "base prompt",
+        "timestamp": 0,
+        "toolsAdded": [
+          {
+            "name": "base_tool",
+            "description": "base_tool tool",
+            "parameters": {
+              "type": "object",
+              "properties": {},
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "before",
+        "timestamp": 1
+      },
+      {
+        "role": "system",
+        "content": "updated guidance",
+        "timestamp": 5,
+        "toolsAdded": [
+          {
+            "name": "late_tool",
+            "description": "late_tool tool",
+            "parameters": {
+              "type": "object",
+              "properties": {},
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "after",
+        "timestamp": 6
+      }
+    ]
+  },
+  "events": [
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "kimi-k2",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": ""
+          },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "kimi-k2",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "content": "ok"
+          },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "kimi-k2",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {},
+          "finish_reason": "stop"
+        }
+      ]
+    },
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "kimi-k2",
+      "choices": [],
+      "usage": {
+        "prompt_tokens": 9,
+        "completion_tokens": 1
+      }
+    }
+  ]
+}

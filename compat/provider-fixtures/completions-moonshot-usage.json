@@ -1,0 +1,68 @@
+{
+  "provider": "openai-completions",
+  "entry": "simple",
+  "base_url": "https://api.moonshot.ai/v1",
+  "model": {
+    "id": "kimi-k2-turbo",
+    "name": "kimi-k2-turbo",
+    "api": "openai-completions",
+    "provider": "moonshotai",
+    "reasoning": false,
+    "input": [
+      "text"
+    ],
+    "contextWindow": 256000,
+    "maxTokens": 16384,
+    "cost": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0
+    }
+  },
+  "context": {
+    "messages": [
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 0
+      }
+    ]
+  },
+  "events": [
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "kimi-k2-turbo",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": "hey"
+          },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "kimi-k2-turbo",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {},
+          "finish_reason": "stop",
+          "usage": {
+            "prompt_tokens": 30,
+            "completion_tokens": 2,
+            "cached_tokens": 24
+          }
+        }
+      ]
+    }
+  ]
+}

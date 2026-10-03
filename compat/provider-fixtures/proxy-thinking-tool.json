@@ -1,0 +1,50 @@
+{
+  "provider": "proxy",
+  "events": [
+    {
+      "type": "start"
+    },
+    {
+      "type": "thinking_start",
+      "contentIndex": 0
+    },
+    {
+      "type": "thinking_delta",
+      "contentIndex": 0,
+      "delta": "\u68c0\u67e5\u8f93\u5165"
+    },
+    {
+      "type": "thinking_end",
+      "contentIndex": 0,
+      "contentSignature": "opaque-thinking"
+    },
+    {
+      "type": "toolcall_start",
+      "contentIndex": 1,
+      "id": "tool_1",
+      "toolName": "echo"
+    },
+    {
+      "type": "toolcall_delta",
+      "contentIndex": 1,
+      "delta": "{\"value\":\"hello\"}"
+    },
+    {
+      "type": "toolcall_end",
+      "contentIndex": 1,
+      "toolCall": {
+        "type": "toolCall",
+        "id": "tool_1",
+        "name": "echo",
+        "arguments": {
+          "value": "hello"
+        }
+      }
+    },
+    {
+      "type": "done",
+      "reason": "toolUse",
+      "usage": {}
+    }
+  ]
+}

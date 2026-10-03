@@ -1,0 +1,37 @@
+{
+  "scope": "Live synthetic prompts; in-memory tool only; no credentials recorded",
+  "results": [
+    {
+      "provider": "codex",
+      "case": "tool",
+      "live": true,
+      "transport": "websocket-cached",
+      "started_at": 1790995081.483677,
+      "model": "gpt-6-luna",
+      "status": "failed",
+      "passed": false,
+      "answer_matches": false,
+      "thinking_observed": false,
+      "tool_executions": 0,
+      "usage": {},
+      "event_counts": {
+        "agent_start": 1,
+        "turn_start": 1,
+        "message_start": 2,
+        "message_end": 2,
+        "turn_end": 1,
+        "agent_end": 1
+      },
+      "wire_event_counts": {},
+      "http_statuses": [],
+      "stop_reasons": [
+        "error"
+      ],
+      "error_types": [
+        "ProviderProtocolError"
+      ],
+      "diagnostic": "ProviderProtocolError: MultipleValuesError: 'set-cookie'",
+      "seconds": 3.59
+    }
+  ]
+}

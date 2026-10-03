@@ -1,0 +1,188 @@
+{
+  "provider": "openai-completions",
+  "entry": "simple",
+  "base_url": "https://api.deepseek.com",
+  "model": {
+    "id": "deepseek-reasoner",
+    "name": "deepseek-reasoner",
+    "api": "openai-completions",
+    "provider": "deepseek",
+    "reasoning": true,
+    "input": [
+      "text"
+    ],
+    "contextWindow": 128000,
+    "maxTokens": 32000,
+    "cost": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0
+    }
+  },
+  "options": {
+    "reasoning": "high"
+  },
+  "context": {
+    "messages": [
+      {
+        "role": "system",
+        "content": "Be brief.",
+        "timestamp": 0,
+        "toolsAdded": [
+          {
+            "name": "add",
+            "description": "Add",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "a": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "a"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "hi",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "hello"
+          }
+        ],
+        "api": "openai-completions",
+        "provider": "deepseek",
+        "model": "deepseek-reasoner",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0
+        },
+        "stopReason": "stop",
+        "timestamp": 2
+      },
+      {
+        "role": "user",
+        "content": "add 5",
+        "timestamp": 3
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "thinking",
+            "thinking": "plan",
+            "thinkingSignature": "reasoning_content"
+          },
+          {
+            "type": "toolCall",
+            "id": "call_d",
+            "name": "add",
+            "arguments": {
+              "a": 5
+            }
+          }
+        ],
+        "api": "openai-completions",
+        "provider": "deepseek",
+        "model": "deepseek-reasoner",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0
+        },
+        "stopReason": "toolUse",
+        "timestamp": 4
+      },
+      {
+        "role": "toolResult",
+        "toolCallId": "call_d",
+        "toolName": "add",
+        "content": [
+          {
+            "type": "text",
+            "text": "5"
+          }
+        ],
+        "isError": false,
+        "timestamp": 5
+      },
+      {
+        "role": "user",
+        "content": "thanks",
+        "timestamp": 6
+      }
+    ]
+  },
+  "events": [
+    {
+      "id": "ds-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "deepseek-reasoner",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "reasoning_content": "Simple"
+          },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "ds-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "deepseek-reasoner",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "content": "You're welcome."
+          },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "ds-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "deepseek-reasoner",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {},
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 50,
+        "completion_tokens": 10,
+        "total_tokens": 60,
+        "prompt_cache_hit_tokens": 32,
+        "prompt_cache_miss_tokens": 18,
+        "completion_tokens_details": {
+          "reasoning_tokens": 6
+        }
+      }
+    }
+  ]
+}

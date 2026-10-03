@@ -1,0 +1,69 @@
+name: core
+on: [push, pull_request]
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --locked --extra providers --extra mcp
+      - run: uv run ruff check src tests examples compat scripts
+      - run: uv run ruff format --check src tests examples compat scripts
+      - run: uv run mypy src/pi_python
+  test:
+    name: test (${{ matrix.os }}, ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python: ['3.11', '3.12', '3.13', '3.14', '3.14t', 'pypy3.11']
+        include:
+          - {os: macos-latest, python: '3.11'}
+          - {os: macos-latest, python: '3.14'}
+          - {os: windows-latest, python: '3.11'}
+          - {os: windows-latest, python: '3.14'}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      # The MCP SDK's stdio server cannot start on PyPy (no fcntl.F_DUPFD_CLOEXEC); its test skips there.
+      - run: uv sync --locked --extra providers ${{ !startsWith(matrix.python, 'pypy') && '--extra mcp' || '' }} --python '${{ matrix.python }}'
+      - run: uv run --python '${{ matrix.python }}' pytest -q
+  installed-wheel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv build
+      - run: |
+          uv venv -p 3.11 /tmp/installed
+          uv pip install -p /tmp/installed/bin/python dist/pi_python_core-*-py3-none-any.whl
+          cd /tmp
+          /tmp/installed/bin/python -c 'import importlib.util; assert importlib.util.find_spec("httpx") is None'
+          /tmp/installed/bin/python "$GITHUB_WORKSPACE/examples/in_memory.py"
+  # Install requirements are ranges; the lower bounds must keep working.
+  lowest-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv build --wheel
+      - run: |
+          uv venv -p 3.11 /tmp/lowest
+          wheel=$(ls dist/pi_python_core-*-py3-none-any.whl)
+          uv pip install -p /tmp/lowest/bin/python "${wheel}[providers]" jsonschema==4.18.0 httpx==0.27.0 websockets==14.2 "PyJWT[crypto]==2.8.0" pytest==8.4.2 pytest-asyncio==1.2.0 pydantic==2.13.5
+          /tmp/lowest/bin/python -m pytest -q
+  upstream:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.4.1'
+      - run: uv sync --locked --extra providers
+      - run: uv run python scripts/bootstrap_reference.py
+      - run: npm test --prefix reference/pi/packages/agent -- test/agent-loop.test.ts test/agent.test.ts
+      - run: npm test --prefix reference/pi/packages/ai -- test/transcript-tool-changes.test.ts test/validation.test.ts
+      - run: uv run python scripts/conformance.py
+      - run: uv run python scripts/provider_conformance.py

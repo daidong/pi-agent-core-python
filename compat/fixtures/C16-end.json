@@ -1,0 +1,39 @@
+{
+  "id": "C16-end",
+  "classification": "mapped",
+  "source": "packages/agent/test/agent-loop.test.ts; packages/agent/test/agent.test.ts",
+  "prompt": "go",
+  "tools": [
+    {
+      "name": "t",
+      "result": "t-result"
+    }
+  ],
+  "finish": [
+    "end"
+  ],
+  "operations": [
+    {
+      "event": "tool_execution_end",
+      "method": "follow_up",
+      "message": {
+        "role": "user",
+        "content": "remain"
+      }
+    }
+  ],
+  "responses": [
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_call",
+          "id": "x",
+          "name": "t",
+          "arguments": {}
+        }
+      ],
+      "stop_reason": "tool_use"
+    }
+  ]
+}

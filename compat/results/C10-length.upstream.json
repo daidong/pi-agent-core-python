@@ -1,0 +1,393 @@
+{
+  "requests": [
+    [
+      {
+        "role": "system",
+        "content": "",
+        "tools_added": [
+          {
+            "name": "t",
+            "description": "",
+            "input_schema": {
+              "type": "object"
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "go"
+          }
+        ]
+      }
+    ],
+    [
+      {
+        "role": "system",
+        "content": "",
+        "tools_added": [
+          {
+            "name": "t",
+            "description": "",
+            "input_schema": {
+              "type": "object"
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "go"
+          }
+        ]
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_call",
+            "id": "a",
+            "name": "t",
+            "arguments": {}
+          },
+          {
+            "type": "tool_call",
+            "id": "b",
+            "name": "t",
+            "arguments": {}
+          }
+        ],
+        "stop_reason": "length"
+      },
+      {
+        "role": "tool_result",
+        "call_id": "a",
+        "name": "t",
+        "content": [
+          {
+            "type": "text",
+            "text": "Tool call \"t\" was not executed: the response hit the output token limit, so its arguments may be truncated. Re-issue the tool call with complete arguments."
+          }
+        ],
+        "is_error": true
+      },
+      {
+        "role": "tool_result",
+        "call_id": "b",
+        "name": "t",
+        "content": [
+          {
+            "type": "text",
+            "text": "Tool call \"t\" was not executed: the response hit the output token limit, so its arguments may be truncated. Re-issue the tool call with complete arguments."
+          }
+        ],
+        "is_error": true
+      }
+    ]
+  ],
+  "request_models": [
+    "mock",
+    "mock"
+  ],
+  "effects": [],
+  "events": [
+    {
+      "type": "agent_start"
+    },
+    {
+      "type": "turn_start"
+    },
+    {
+      "type": "message_start",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "go"
+          }
+        ]
+      }
+    },
+    {
+      "type": "message_end",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "go"
+          }
+        ]
+      }
+    },
+    {
+      "type": "message_start",
+      "message": {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_call",
+            "id": "a",
+            "name": "t",
+            "arguments": {}
+          },
+          {
+            "type": "tool_call",
+            "id": "b",
+            "name": "t",
+            "arguments": {}
+          }
+        ],
+        "stop_reason": "length"
+      }
+    },
+    {
+      "type": "message_end",
+      "message": {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_call",
+            "id": "a",
+            "name": "t",
+            "arguments": {}
+          },
+          {
+            "type": "tool_call",
+            "id": "b",
+            "name": "t",
+            "arguments": {}
+          }
+        ],
+        "stop_reason": "length"
+      }
+    },
+    {
+      "type": "tool_execution_start",
+      "call_id": "a"
+    },
+    {
+      "type": "tool_execution_end",
+      "call_id": "a"
+    },
+    {
+      "type": "message_start",
+      "message": {
+        "role": "tool_result",
+        "call_id": "a",
+        "name": "t",
+        "content": [
+          {
+            "type": "text",
+            "text": "Tool call \"t\" was not executed: the response hit the output token limit, so its arguments may be truncated. Re-issue the tool call with complete arguments."
+          }
+        ],
+        "is_error": true
+      }
+    },
+    {
+      "type": "message_end",
+      "message": {
+        "role": "tool_result",
+        "call_id": "a",
+        "name": "t",
+        "content": [
+          {
+            "type": "text",
+            "text": "Tool call \"t\" was not executed: the response hit the output token limit, so its arguments may be truncated. Re-issue the tool call with complete arguments."
+          }
+        ],
+        "is_error": true
+      }
+    },
+    {
+      "type": "tool_execution_start",
+      "call_id": "b"
+    },
+    {
+      "type": "tool_execution_end",
+      "call_id": "b"
+    },
+    {
+      "type": "message_start",
+      "message": {
+        "role": "tool_result",
+        "call_id": "b",
+        "name": "t",
+        "content": [
+          {
+            "type": "text",
+            "text": "Tool call \"t\" was not executed: the response hit the output token limit, so its arguments may be truncated. Re-issue the tool call with complete arguments."
+          }
+        ],
+        "is_error": true
+      }
+    },
+    {
+      "type": "message_end",
+      "message": {
+        "role": "tool_result",
+        "call_id": "b",
+        "name": "t",
+        "content": [
+          {
+            "type": "text",
+            "text": "Tool call \"t\" was not executed: the response hit the output token limit, so its arguments may be truncated. Re-issue the tool call with complete arguments."
+          }
+        ],
+        "is_error": true
+      }
+    },
+    {
+      "type": "turn_end",
+      "message": {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_call",
+            "id": "a",
+            "name": "t",
+            "arguments": {}
+          },
+          {
+            "type": "tool_call",
+            "id": "b",
+            "name": "t",
+            "arguments": {}
+          }
+        ],
+        "stop_reason": "length"
+      }
+    },
+    {
+      "type": "turn_start"
+    },
+    {
+      "type": "message_start",
+      "message": {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "done"
+          }
+        ],
+        "stop_reason": "stop"
+      }
+    },
+    {
+      "type": "message_end",
+      "message": {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "done"
+          }
+        ],
+        "stop_reason": "stop"
+      }
+    },
+    {
+      "type": "turn_end",
+      "message": {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "done"
+          }
+        ],
+        "stop_reason": "stop"
+      }
+    },
+    {
+      "type": "agent_end"
+    }
+  ],
+  "messages": [
+    {
+      "role": "system",
+      "content": "",
+      "tools_added": [
+        {
+          "name": "t",
+          "description": "",
+          "input_schema": {
+            "type": "object"
+          }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "go"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "tool_call",
+          "id": "a",
+          "name": "t",
+          "arguments": {}
+        },
+        {
+          "type": "tool_call",
+          "id": "b",
+          "name": "t",
+          "arguments": {}
+        }
+      ],
+      "stop_reason": "length"
+    },
+    {
+      "role": "tool_result",
+      "call_id": "a",
+      "name": "t",
+      "content": [
+        {
+          "type": "text",
+          "text": "Tool call \"t\" was not executed: the response hit the output token limit, so its arguments may be truncated. Re-issue the tool call with complete arguments."
+        }
+      ],
+      "is_error": true
+    },
+    {
+      "role": "tool_result",
+      "call_id": "b",
+      "name": "t",
+      "content": [
+        {
+          "type": "text",
+          "text": "Tool call \"t\" was not executed: the response hit the output token limit, so its arguments may be truncated. Re-issue the tool call with complete arguments."
+        }
+      ],
+      "is_error": true
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "done"
+        }
+      ],
+      "stop_reason": "stop"
+    }
+  ],
+  "hooks": [],
+  "status": "completed"
+}

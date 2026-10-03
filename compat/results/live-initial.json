@@ -1,0 +1,144 @@
+{
+  "scope": "Live synthetic prompts; in-memory tool only; no credentials recorded",
+  "results": [
+    {
+      "provider": "deepseek",
+      "case": "text",
+      "live": true,
+      "started_at": 1790994687.215775,
+      "model": "deepseek-flash",
+      "status": "completed",
+      "passed": true,
+      "answer_matches": true,
+      "tool_executions": 0,
+      "usage": {
+        "input": 14,
+        "output": 6,
+        "cache_read": 0,
+        "cache_write": 0,
+        "reasoning": 0,
+        "total_tokens": 20
+      },
+      "event_counts": {
+        "agent_start": 1,
+        "turn_start": 1,
+        "message_start": 2,
+        "message_end": 2,
+        "text_start": 1,
+        "text_delta": 6,
+        "text_end": 1,
+        "turn_end": 1,
+        "agent_end": 1
+      },
+      "wire_event_counts": {
+        "response.created": 1,
+        "response.in_progress": 1,
+        "response.output_item.added": 1,
+        "response.content_part.added": 1,
+        "response.output_text.delta": 6,
+        "response.output_text.done": 1,
+        "response.content_part.done": 1,
+        "response.output_item.done": 1,
+        "response.completed": 1
+      },
+      "http_statuses": [
+        200
+      ],
+      "error_types": [],
+      "diagnostic": null,
+      "seconds": 0.95
+    },
+    {
+      "provider": "claude",
+      "case": "text",
+      "live": true,
+      "started_at": 1790994688.169892,
+      "model": "claude-sonnet-4-6",
+      "status": "completed",
+      "passed": true,
+      "answer_matches": true,
+      "tool_executions": 0,
+      "usage": {
+        "input": 32,
+        "output": 9,
+        "cache_read": 0,
+        "cache_write": 0,
+        "reasoning": 0,
+        "total_tokens": 41
+      },
+      "event_counts": {
+        "agent_start": 1,
+        "turn_start": 1,
+        "message_start": 2,
+        "message_end": 2,
+        "text_start": 1,
+        "text_delta": 2,
+        "text_end": 1,
+        "turn_end": 1,
+        "agent_end": 1
+      },
+      "wire_event_counts": {
+        "message_start": 1,
+        "content_block_start": 1,
+        "ping": 1,
+        "content_block_delta": 2,
+        "content_block_stop": 1,
+        "message_delta": 1,
+        "message_stop": 1
+      },
+      "http_statuses": [
+        200
+      ],
+      "error_types": [],
+      "diagnostic": null,
+      "seconds": 1.09
+    },
+    {
+      "provider": "codex",
+      "case": "text",
+      "live": true,
+      "started_at": 1790994689.2642272,
+      "model": "gpt-6-luna",
+      "status": "completed",
+      "passed": true,
+      "answer_matches": true,
+      "tool_executions": 0,
+      "usage": {
+        "input": 24,
+        "output": 8,
+        "cache_read": 0,
+        "cache_write": 0,
+        "reasoning": 0,
+        "total_tokens": 32
+      },
+      "event_counts": {
+        "agent_start": 1,
+        "turn_start": 1,
+        "message_start": 2,
+        "message_end": 2,
+        "text_start": 1,
+        "text_delta": 4,
+        "text_end": 1,
+        "turn_end": 1,
+        "agent_end": 1
+      },
+      "wire_event_counts": {
+        "response.created": 1,
+        "response.in_progress": 1,
+        "response.output_item.added": 1,
+        "response.content_part.added": 1,
+        "response.output_text.delta": 4,
+        "response.output_text.done": 1,
+        "response.content_part.done": 1,
+        "response.output_item.done": 1,
+        "response.completed": 1
+      },
+      "http_statuses": [
+        200
+      ],
+      "error_types": [],
+      "diagnostic": null,
+      "seconds": 1.49
+    }
+  ]
+}

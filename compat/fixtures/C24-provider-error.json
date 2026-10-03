@@ -1,0 +1,21 @@
+{
+  "id": "C24-provider-error",
+  "classification": "mapped",
+  "source": "packages/agent/src/agent-loop.ts; packages/agent/src/agent.ts",
+  "prompt": "go",
+  "finish": [],
+  "responses": [
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "partial answer"
+        }
+      ],
+      "stop_reason": "error",
+      "error": "overloaded",
+      "stream": true
+    }
+  ]
+}

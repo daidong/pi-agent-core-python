@@ -1,0 +1,56 @@
+{
+  "id": "C14-followup-one",
+  "classification": "mapped",
+  "source": "packages/agent/test/agent-loop.test.ts; packages/agent/test/agent.test.ts",
+  "prompt": "go",
+  "operations": [
+    {
+      "event": "turn_end",
+      "method": "follow_up",
+      "message": {
+        "role": "user",
+        "content": "later1"
+      }
+    },
+    {
+      "event": "turn_end",
+      "method": "follow_up",
+      "message": {
+        "role": "user",
+        "content": "later2"
+      }
+    }
+  ],
+  "responses": [
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "1"
+        }
+      ],
+      "stop_reason": "stop"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "2"
+        }
+      ],
+      "stop_reason": "stop"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "3"
+        }
+      ],
+      "stop_reason": "stop"
+    }
+  ]
+}

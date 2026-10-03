@@ -1,0 +1,146 @@
+{
+  "provider": "openai-completions",
+  "entry": "simple",
+  "model": {
+    "id": "mistral-small",
+    "name": "mistral-small",
+    "api": "openai-completions",
+    "provider": "openai-completions",
+    "reasoning": true,
+    "input": [
+      "text"
+    ],
+    "contextWindow": 32000,
+    "maxTokens": 4096,
+    "cost": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0
+    },
+    "compat": {
+      "requiresAssistantAfterToolResult": true,
+      "requiresToolResultName": true,
+      "requiresThinkingAsText": true,
+      "maxTokensField": "max_tokens",
+      "supportsStore": false,
+      "supportsUsageInStreaming": false,
+      "supportsStrictMode": true,
+      "supportsFinishReason": false,
+      "supportsDeveloperRole": false,
+      "supportsReasoningEffort": false
+    }
+  },
+  "context": {
+    "messages": [
+      {
+        "role": "system",
+        "content": "Use tools.",
+        "timestamp": 0,
+        "toolsAdded": [
+          {
+            "name": "add",
+            "description": "Add",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "a": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "a"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "add one",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "thinking",
+            "thinking": "plan",
+            "thinkingSignature": "reasoning_content"
+          },
+          {
+            "type": "text",
+            "text": "using tool"
+          },
+          {
+            "type": "toolCall",
+            "id": "call_a",
+            "name": "add",
+            "arguments": {
+              "a": 1
+            }
+          }
+        ],
+        "api": "openai-completions",
+        "provider": "openai-completions",
+        "model": "mistral-small",
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0
+        },
+        "stopReason": "toolUse",
+        "timestamp": 2
+      },
+      {
+        "role": "toolResult",
+        "toolCallId": "call_a",
+        "toolName": "add",
+        "content": [
+          {
+            "type": "text",
+            "text": "1"
+          }
+        ],
+        "isError": false,
+        "timestamp": 3
+      },
+      {
+        "role": "user",
+        "content": "again",
+        "timestamp": 4
+      }
+    ]
+  },
+  "events": [
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "mistral-small",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "tool_calls": [
+              {
+                "index": 0,
+                "id": "call_b",
+                "type": "function",
+                "function": {
+                  "name": "add",
+                  "arguments": "{\"a\":1}"
+                }
+              }
+            ]
+          },
+          "finish_reason": null
+        }
+      ]
+    }
+  ]
+}

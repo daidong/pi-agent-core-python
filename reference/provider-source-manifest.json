@@ -1,0 +1,137 @@
+{
+  "commit": "a13d35a742c6ef8462812a28fbe1d8c8b7431c32",
+  "source_files": [
+    {
+      "path": "packages/agent/src/agent.ts",
+      "bytes": 19748,
+      "sha256": "7024a3145a6ebc951a0f030164adb1dfb12d33d6e0dbbac15ef0efda49c87457",
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/agent/src/agent.ts"
+    },
+    {
+      "path": "packages/agent/src/agent-loop.ts",
+      "bytes": 29088,
+      "sha256": "e773e822a2587caf314e6bb66ea6370fce3468b7eecd26d6a67afe673f81eabc",
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/agent/src/agent-loop.ts"
+    },
+    {
+      "path": "packages/agent/src/proxy.ts",
+      "bytes": 11699,
+      "sha256": "9c23fc8a625e79c6f8d180a65146288eaa8c10995d7c6fd91b75f57ff934fd40",
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/agent/src/proxy.ts"
+    },
+    {
+      "path": "packages/agent/src/types.ts",
+      "bytes": 20955,
+      "sha256": "347efd535342c1d5fbd6b731168c57fcbb201a6652707f8e22e1b66fe3b69c2d",
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/agent/src/types.ts"
+    },
+    {
+      "path": "packages/ai/src/api/anthropic-messages.ts",
+      "bytes": 55484,
+      "sha256": "5071e8aa7939e508e45d765deb9acecf606d6bab2ce662ae8bb87c2e3c5b50eb",
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/ai/src/api/anthropic-messages.ts"
+    },
+    {
+      "path": "packages/ai/src/api/openai-responses.ts",
+      "bytes": 15292,
+      "sha256": "dc95a3ddf55454feb6f841055c518ca2a212a8a5bcc5982e7812da35151458cb",
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/ai/src/api/openai-responses.ts"
+    },
+    {
+      "path": "packages/ai/src/api/openai-responses-shared.ts",
+      "bytes": 31005,
+      "sha256": "09100e0bfe8fa4ad212312956930f4a9e70cd29ca823d2e1f1c97f87b4541afe",
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/ai/src/api/openai-responses-shared.ts"
+    },
+    {
+      "path": "packages/ai/src/api/openai-codex-responses.ts",
+      "bytes": 55836,
+      "sha256": "1f7a4f169d826a30189e3905475ca9f4c7edc518812013ae4b9f86b367942a05",
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/ai/src/api/openai-codex-responses.ts"
+    },
+    {
+      "path": "packages/ai/src/api/simple-options.ts",
+      "bytes": 3256,
+      "sha256": "8bb50ff92c1759434ead59d1b4111826b6be47d13f744b8cc3b775c684536d46",
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/ai/src/api/simple-options.ts"
+    },
+    {
+      "path": "packages/ai/src/api/transform-messages.ts",
+      "bytes": 7666,
+      "sha256": "6d82d11a49213a4193e0d074f36d7af76e8a911b003104c0aa2c22569b2fe669",
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/ai/src/api/transform-messages.ts"
+    },
+    {
+      "path": "packages/ai/src/auth/oauth/anthropic.ts",
+      "bytes": 9228,
+      "sha256": "d28083819f29cd1b04f7527d3e3f9220c4fcc4e90f2fc8327aab6e1564684286",
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/ai/src/auth/oauth/anthropic.ts"
+    },
+    {
+      "path": "packages/ai/src/auth/oauth/openai-chatgpt.ts",
+      "bytes": 11371,
+      "sha256": "751faee3628bb698b1bd5e248ad6977fa980d6ca73a6f186e510027f679bb5c6",
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/ai/src/auth/oauth/openai-chatgpt.ts"
+    },
+    {
+      "path": "packages/ai/src/auth/oauth/openai-codex.ts",
+      "bytes": 13368,
+      "sha256": "5d9d2a8629a845be0db17b8b2da353e6b2d984fd37fbdf75271f0e68ecbd5dde",
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/ai/src/auth/oauth/openai-codex.ts"
+    },
+    {
+      "path": "packages/ai/src/types.ts",
+      "bytes": 48466,
+      "sha256": "7ac401b31a7679a77469037091093c4c25d3719d7c9e9078378fece509fa8e8d",
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/ai/src/types.ts"
+    },
+    {
+      "path": "packages/ai/src/utils/transcript.ts",
+      "bytes": 9403,
+      "sha256": "cad0c126cdfadc1b4f430cc5a95b1c9285ecd1ee9957642d7773b1357bbc9ac5",
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/ai/src/utils/transcript.ts"
+    },
+    {
+      "path": "packages/ai/src/utils/text.ts",
+      "bytes": 1560,
+      "sha256": "d37c1825855c7fc71669a545b5b266810242c1c7e58d57228c0c143f29c1c544",
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/ai/src/utils/text.ts"
+    },
+    {
+      "path": "packages/ai/src/utils/estimate.ts",
+      "bytes": 4270,
+      "sha256": "8df2512ca8c3e71eea5574b3d56c3569963e1fdabaef4bd17baaba86186c1840",
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/ai/src/utils/estimate.ts"
+    },
+    {
+      "path": "packages/ai/src/utils/hash.ts",
+      "bytes": 540,
+      "sha256": "2cdfce4af41810d1a92c7f0a55c78637a3173041038aafd85b378be345761ed8",
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/ai/src/utils/hash.ts"
+    },
+    {
+      "path": "packages/ai/src/api/openai-prompt-cache.ts",
+      "bytes": 358,
+      "sha256": "78727b9b42d5c5cdc47d17f44d532cdf951cbee3b158cacfb3e640d8f792e8a4",
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/ai/src/api/openai-prompt-cache.ts"
+    },
+    {
+      "path": "packages/ai/src/api/openai-completions.ts",
+      "bytes": 63058,
+      "sha256": "7c1bc51ddf740ce69b371e1ae391fcdcecde26852428451e7b17eeabdcfb4eb4",
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/ai/src/api/openai-completions.ts"
+    },
+    {
+      "path": "packages/ai/src/utils/overflow.ts",
+      "bytes": 10267,
+      "sha256": "2fa34713faa32430af3295ac25a10fd2e361cc0343b0f554491c16d2a2f44fc9",
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/ai/src/utils/overflow.ts"
+    },
+    {
+      "path": "packages/ai/src/utils/retry.ts",
+      "bytes": 9346,
+      "sha256": "58a081dc9e2e8f6c381e11d38ed4f9e1df33e30c35d1f94b2b40ea4a1c3ec6c7",
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/ai/src/utils/retry.ts"
+    }
+  ]
+}

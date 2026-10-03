@@ -1,0 +1,10 @@
+{
+  "ref": "refs/tags/v1.0.0",
+  "node_id": "REF_kwDOPbFNk7ByZWZzL3RhZ3MvdjEuMC4w",
+  "url": "https://api.github.com/repos/earendil-works/pi/git/refs/tags/v1.0.0",
+  "object": {
+    "sha": "a13d35a742c6ef8462812a28fbe1d8c8b7431c32",
+    "type": "commit",
+    "url": "https://api.github.com/repos/earendil-works/pi/git/commits/a13d35a742c6ef8462812a28fbe1d8c8b7431c32"
+  }
+}

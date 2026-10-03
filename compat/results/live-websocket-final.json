@@ -1,0 +1,78 @@
+{
+  "scope": "Live synthetic prompts; in-memory tool only; no credentials recorded",
+  "results": [
+    {
+      "provider": "codex",
+      "case": "tool",
+      "live": true,
+      "transport": "websocket-cached",
+      "started_at": 1790995194.020988,
+      "model": "gpt-6-luna",
+      "status": "completed",
+      "passed": true,
+      "answer_matches": true,
+      "exact_format": true,
+      "final_numeric_answer": null,
+      "thinking_observed": false,
+      "tool_executions": 1,
+      "usage": {
+        "input": 208,
+        "output": 26,
+        "cache_read": 0,
+        "cache_write": 0,
+        "reasoning": 0,
+        "total_tokens": 234
+      },
+      "event_counts": {
+        "agent_start": 1,
+        "turn_start": 2,
+        "message_start": 4,
+        "message_end": 4,
+        "toolcall_start": 1,
+        "toolcall_delta": 9,
+        "toolcall_end": 1,
+        "tool_execution_start": 1,
+        "tool_execution_end": 1,
+        "turn_end": 2,
+        "text_start": 1,
+        "text_delta": 1,
+        "text_end": 1,
+        "agent_end": 1
+      },
+      "wire_event_counts": {
+        "codex.rate_limits": 2,
+        "codex.response.metadata": 2,
+        "response.created": 2,
+        "response.in_progress": 2,
+        "response.output_item.added": 2,
+        "response.function_call_arguments.delta": 9,
+        "response.function_call_arguments.done": 1,
+        "response.output_item.done": 2,
+        "responsesapi.websocket_timing": 2,
+        "response.completed": 2,
+        "response.content_part.added": 1,
+        "response.output_text.delta": 1,
+        "response.output_text.done": 1,
+        "response.content_part.done": 1
+      },
+      "http_statuses": [
+        101,
+        101
+      ],
+      "stop_reasons": [
+        "tool_use",
+        "stop"
+      ],
+      "network": {
+        "http_attempts": 0,
+        "http_retries": 0,
+        "websocket_connects": 1,
+        "websocket_reuses": 1,
+        "websocket_fallbacks": 0
+      },
+      "error_types": [],
+      "diagnostic": null,
+      "seconds": 5.87
+    }
+  ]
+}

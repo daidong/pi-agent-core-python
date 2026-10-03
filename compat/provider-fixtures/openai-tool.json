@@ -1,0 +1,63 @@
+{
+  "provider": "openai",
+  "entry": "simple",
+  "events": [
+    {
+      "type": "response.output_item.added",
+      "output_index": 0,
+      "item": {
+        "type": "function_call",
+        "id": "fc_x",
+        "call_id": "call_x",
+        "name": "echo",
+        "arguments": "",
+        "status": "completed"
+      }
+    },
+    {
+      "output_index": 0,
+      "type": "response.function_call_arguments.delta",
+      "delta": "{\"value\":\"hello\"}"
+    },
+    {
+      "type": "response.output_item.done",
+      "output_index": 0,
+      "item": {
+        "type": "function_call",
+        "id": "fc_x",
+        "call_id": "call_x",
+        "name": "echo",
+        "arguments": "{\"value\":\"hello\"}",
+        "status": "completed"
+      }
+    },
+    {
+      "type": "response.completed",
+      "response": {
+        "id": "resp_x",
+        "status": "completed",
+        "output": [
+          {
+            "type": "function_call",
+            "id": "fc_x",
+            "call_id": "call_x",
+            "name": "echo",
+            "arguments": "{\"value\":\"hello\"}",
+            "status": "completed"
+          }
+        ],
+        "usage": {
+          "input_tokens": 12,
+          "output_tokens": 8,
+          "input_tokens_details": {
+            "cached_tokens": 2
+          },
+          "output_tokens_details": {
+            "reasoning_tokens": 3
+          },
+          "total_tokens": 20
+        }
+      }
+    }
+  ]
+}

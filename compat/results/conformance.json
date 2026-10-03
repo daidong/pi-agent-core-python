@@ -1,0 +1,327 @@
+[
+  {
+    "fixture": "C01-text",
+    "command": [
+      "node",
+      "--import",
+      "./reference/register.mjs",
+      "reference/runner.ts",
+      "compat/fixtures/C01-text.json"
+    ],
+    "reference_exit_code": 0,
+    "status": "passed",
+    "differences": []
+  },
+  {
+    "fixture": "C02-tool",
+    "command": [
+      "node",
+      "--import",
+      "./reference/register.mjs",
+      "reference/runner.ts",
+      "compat/fixtures/C02-tool.json"
+    ],
+    "reference_exit_code": 0,
+    "status": "passed",
+    "differences": []
+  },
+  {
+    "fixture": "C03-sequential",
+    "command": [
+      "node",
+      "--import",
+      "./reference/register.mjs",
+      "reference/runner.ts",
+      "compat/fixtures/C03-sequential.json"
+    ],
+    "reference_exit_code": 0,
+    "status": "passed",
+    "differences": []
+  },
+  {
+    "fixture": "C04-parallel",
+    "command": [
+      "node",
+      "--import",
+      "./reference/register.mjs",
+      "reference/runner.ts",
+      "compat/fixtures/C04-parallel.json"
+    ],
+    "reference_exit_code": 0,
+    "status": "passed",
+    "differences": []
+  },
+  {
+    "fixture": "C05-one-sequential",
+    "command": [
+      "node",
+      "--import",
+      "./reference/register.mjs",
+      "reference/runner.ts",
+      "compat/fixtures/C05-one-sequential.json"
+    ],
+    "reference_exit_code": 0,
+    "status": "passed",
+    "differences": []
+  },
+  {
+    "fixture": "C06-one-failure",
+    "command": [
+      "node",
+      "--import",
+      "./reference/register.mjs",
+      "reference/runner.ts",
+      "compat/fixtures/C06-one-failure.json"
+    ],
+    "reference_exit_code": 0,
+    "status": "passed",
+    "differences": []
+  },
+  {
+    "fixture": "C07-unknown",
+    "command": [
+      "node",
+      "--import",
+      "./reference/register.mjs",
+      "reference/runner.ts",
+      "compat/fixtures/C07-unknown.json"
+    ],
+    "reference_exit_code": 0,
+    "status": "passed",
+    "differences": []
+  },
+  {
+    "fixture": "C08-prepare",
+    "command": [
+      "node",
+      "--import",
+      "./reference/register.mjs",
+      "reference/runner.ts",
+      "compat/fixtures/C08-prepare.json"
+    ],
+    "reference_exit_code": 0,
+    "status": "passed",
+    "differences": []
+  },
+  {
+    "fixture": "C09-before-error",
+    "command": [
+      "node",
+      "--import",
+      "./reference/register.mjs",
+      "reference/runner.ts",
+      "compat/fixtures/C09-before-error.json"
+    ],
+    "reference_exit_code": 0,
+    "status": "passed",
+    "differences": []
+  },
+  {
+    "fixture": "C09-block",
+    "command": [
+      "node",
+      "--import",
+      "./reference/register.mjs",
+      "reference/runner.ts",
+      "compat/fixtures/C09-block.json"
+    ],
+    "reference_exit_code": 0,
+    "status": "passed",
+    "differences": []
+  },
+  {
+    "fixture": "C09-replace",
+    "command": [
+      "node",
+      "--import",
+      "./reference/register.mjs",
+      "reference/runner.ts",
+      "compat/fixtures/C09-replace.json"
+    ],
+    "reference_exit_code": 0,
+    "status": "passed",
+    "differences": []
+  },
+  {
+    "fixture": "C10-length",
+    "command": [
+      "node",
+      "--import",
+      "./reference/register.mjs",
+      "reference/runner.ts",
+      "compat/fixtures/C10-length.json"
+    ],
+    "reference_exit_code": 0,
+    "status": "passed",
+    "differences": []
+  },
+  {
+    "fixture": "C11-transform",
+    "command": [
+      "node",
+      "--import",
+      "./reference/register.mjs",
+      "reference/runner.ts",
+      "compat/fixtures/C11-transform.json"
+    ],
+    "reference_exit_code": 0,
+    "status": "passed",
+    "differences": []
+  },
+  {
+    "fixture": "C12-system",
+    "command": [
+      "node",
+      "--import",
+      "./reference/register.mjs",
+      "reference/runner.ts",
+      "compat/fixtures/C12-system.json"
+    ],
+    "reference_exit_code": 0,
+    "status": "passed",
+    "differences": []
+  },
+  {
+    "fixture": "C13-steering",
+    "command": [
+      "node",
+      "--import",
+      "./reference/register.mjs",
+      "reference/runner.ts",
+      "compat/fixtures/C13-steering.json"
+    ],
+    "reference_exit_code": 0,
+    "status": "passed",
+    "differences": []
+  },
+  {
+    "fixture": "C14-followup-all",
+    "command": [
+      "node",
+      "--import",
+      "./reference/register.mjs",
+      "reference/runner.ts",
+      "compat/fixtures/C14-followup-all.json"
+    ],
+    "reference_exit_code": 0,
+    "status": "passed",
+    "differences": []
+  },
+  {
+    "fixture": "C14-followup-one",
+    "command": [
+      "node",
+      "--import",
+      "./reference/register.mjs",
+      "reference/runner.ts",
+      "compat/fixtures/C14-followup-one.json"
+    ],
+    "reference_exit_code": 0,
+    "status": "passed",
+    "differences": []
+  },
+  {
+    "fixture": "C15-prepare",
+    "command": [
+      "node",
+      "--import",
+      "./reference/register.mjs",
+      "reference/runner.ts",
+      "compat/fixtures/C15-prepare.json"
+    ],
+    "reference_exit_code": 0,
+    "status": "passed",
+    "differences": []
+  },
+  {
+    "fixture": "C16-continue",
+    "command": [
+      "node",
+      "--import",
+      "./reference/register.mjs",
+      "reference/runner.ts",
+      "compat/fixtures/C16-continue.json"
+    ],
+    "reference_exit_code": 0,
+    "status": "passed",
+    "differences": []
+  },
+  {
+    "fixture": "C16-end",
+    "command": [
+      "node",
+      "--import",
+      "./reference/register.mjs",
+      "reference/runner.ts",
+      "compat/fixtures/C16-end.json"
+    ],
+    "reference_exit_code": 0,
+    "status": "passed",
+    "differences": []
+  },
+  {
+    "fixture": "C16-mixed",
+    "command": [
+      "node",
+      "--import",
+      "./reference/register.mjs",
+      "reference/runner.ts",
+      "compat/fixtures/C16-mixed.json"
+    ],
+    "reference_exit_code": 0,
+    "status": "passed",
+    "differences": []
+  },
+  {
+    "fixture": "C16-terminate",
+    "command": [
+      "node",
+      "--import",
+      "./reference/register.mjs",
+      "reference/runner.ts",
+      "compat/fixtures/C16-terminate.json"
+    ],
+    "reference_exit_code": 0,
+    "status": "passed",
+    "differences": []
+  },
+  {
+    "fixture": "C19-abort-stream",
+    "command": [
+      "node",
+      "--import",
+      "./reference/register.mjs",
+      "reference/runner.ts",
+      "compat/fixtures/C19-abort-stream.json"
+    ],
+    "reference_exit_code": 0,
+    "status": "passed",
+    "differences": []
+  },
+  {
+    "fixture": "C19-abort-tools",
+    "command": [
+      "node",
+      "--import",
+      "./reference/register.mjs",
+      "reference/runner.ts",
+      "compat/fixtures/C19-abort-tools.json"
+    ],
+    "reference_exit_code": 0,
+    "status": "passed",
+    "differences": []
+  },
+  {
+    "fixture": "C24-provider-error",
+    "command": [
+      "node",
+      "--import",
+      "./reference/register.mjs",
+      "reference/runner.ts",
+      "compat/fixtures/C24-provider-error.json"
+    ],
+    "reference_exit_code": 0,
+    "status": "passed",
+    "differences": []
+  }
+]

@@ -1,0 +1,106 @@
+{
+  "provider": "openai-completions",
+  "entry": "simple",
+  "base_url": "http://localhost:11434/v1",
+  "model": {
+    "id": "qwen3:8b",
+    "name": "qwen3:8b",
+    "api": "openai-completions",
+    "provider": "ollama",
+    "reasoning": false,
+    "input": [
+      "text"
+    ],
+    "contextWindow": 40960,
+    "maxTokens": 8192,
+    "cost": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0
+    },
+    "compat": {
+      "supportsDeveloperRole": false,
+      "supportsReasoningEffort": false
+    }
+  },
+  "options": {
+    "temperature": 0.2,
+    "samplingParams": {
+      "top_k": 20,
+      "min_p": 0
+    }
+  },
+  "context": {
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are terse.",
+        "timestamp": 0
+      },
+      {
+        "role": "user",
+        "content": "Say hi",
+        "timestamp": 1
+      }
+    ]
+  },
+  "events": [
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "qwen3:8b",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": ""
+          },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "qwen3:8b",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "content": "Hello"
+          },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "qwen3:8b",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {},
+          "finish_reason": "stop"
+        }
+      ]
+    },
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "qwen3:8b",
+      "choices": [],
+      "usage": {
+        "prompt_tokens": 20,
+        "completion_tokens": 3,
+        "total_tokens": 23
+      }
+    }
+  ]
+}

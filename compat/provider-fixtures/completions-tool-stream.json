@@ -1,0 +1,251 @@
+{
+  "provider": "openai-completions",
+  "entry": "simple",
+  "base_url": "http://localhost:8000/v1",
+  "model": {
+    "id": "Qwen/Qwen3-8B",
+    "name": "Qwen/Qwen3-8B",
+    "api": "openai-completions",
+    "provider": "vllm",
+    "reasoning": false,
+    "input": [
+      "text"
+    ],
+    "contextWindow": 32768,
+    "maxTokens": 4096,
+    "cost": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0
+    },
+    "compat": {
+      "supportsDeveloperRole": false
+    }
+  },
+  "options": {
+    "toolChoice": "auto"
+  },
+  "context": {
+    "messages": [
+      {
+        "role": "system",
+        "content": "Use tools.",
+        "timestamp": 0,
+        "toolsAdded": [
+          {
+            "name": "add",
+            "description": "Add",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "a": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "a"
+              ],
+              "additionalProperties": false
+            }
+          },
+          {
+            "name": "weather",
+            "description": "Weather for a city",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "city"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": "add 2 and 3; weather in Paris",
+        "timestamp": 1
+      }
+    ]
+  },
+  "events": [
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "Qwen/Qwen3-8B",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "role": "assistant",
+            "content": ""
+          },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "Qwen/Qwen3-8B",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "content": "Calling tools."
+          },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "Qwen/Qwen3-8B",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "tool_calls": [
+              {
+                "index": 0,
+                "id": "chatcmpl-tool-a1",
+                "type": "function",
+                "function": {
+                  "name": "add",
+                  "arguments": ""
+                }
+              }
+            ]
+          },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "Qwen/Qwen3-8B",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "tool_calls": [
+              {
+                "index": 0,
+                "function": {
+                  "arguments": "{\"a\": 2"
+                }
+              }
+            ]
+          },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "Qwen/Qwen3-8B",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "tool_calls": [
+              {
+                "index": 0,
+                "function": {
+                  "arguments": ", \"b\": 3}"
+                }
+              }
+            ]
+          },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "Qwen/Qwen3-8B",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "tool_calls": [
+              {
+                "index": 1,
+                "id": "chatcmpl-tool-b2",
+                "type": "function",
+                "function": {
+                  "name": "weather",
+                  "arguments": "{\"city\": "
+                }
+              }
+            ]
+          },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "Qwen/Qwen3-8B",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "tool_calls": [
+              {
+                "index": 1,
+                "function": {
+                  "arguments": "\"Paris\"}"
+                }
+              }
+            ]
+          },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "Qwen/Qwen3-8B",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {},
+          "finish_reason": "tool_calls"
+        }
+      ]
+    },
+    {
+      "id": "chatcmpl-1",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "Qwen/Qwen3-8B",
+      "choices": [],
+      "usage": {
+        "prompt_tokens": 120,
+        "completion_tokens": 40,
+        "total_tokens": 160
+      }
+    }
+  ]
+}

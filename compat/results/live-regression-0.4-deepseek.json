@@ -1,0 +1,221 @@
+{
+  "scope": "Live synthetic prompts; in-memory tool only; no credentials recorded",
+  "results": [
+    {
+      "provider": "deepseek",
+      "case": "text",
+      "live": true,
+      "transport": "sse",
+      "started_at": 1790997772.9723032,
+      "model": "deepseek-flash",
+      "status": "completed",
+      "passed": true,
+      "answer_matches": true,
+      "exact_format": true,
+      "final_numeric_answer": null,
+      "thinking_observed": false,
+      "tool_executions": 0,
+      "usage": {
+        "input": 31,
+        "output": 6,
+        "cache_read": 0,
+        "cache_write": 0,
+        "reasoning": 0,
+        "total_tokens": 37
+      },
+      "event_counts": {
+        "agent_start": 1,
+        "turn_start": 1,
+        "message_start": 2,
+        "message_end": 2,
+        "text_start": 1,
+        "text_delta": 6,
+        "text_end": 1,
+        "turn_end": 1,
+        "agent_end": 1
+      },
+      "wire_event_counts": {
+        "response.created": 1,
+        "response.in_progress": 1,
+        "response.output_item.added": 1,
+        "response.content_part.added": 1,
+        "response.output_text.delta": 6,
+        "response.output_text.done": 1,
+        "response.content_part.done": 1,
+        "response.output_item.done": 1,
+        "response.completed": 1
+      },
+      "http_statuses": [
+        200
+      ],
+      "stop_reasons": [
+        "stop"
+      ],
+      "network": {
+        "http_attempts": 1,
+        "http_retries": 0,
+        "websocket_connects": 0,
+        "websocket_reuses": 0,
+        "websocket_fallbacks": 0,
+        "websocket_expired": 0,
+        "websocket_retries": 0,
+        "websocket_delta_requests": 0
+      },
+      "error_types": [],
+      "diagnostic": null,
+      "seconds": 1.06
+    },
+    {
+      "provider": "deepseek",
+      "case": "tool",
+      "live": true,
+      "transport": "sse",
+      "started_at": 1790997774.030316,
+      "model": "deepseek-flash",
+      "status": "completed",
+      "passed": true,
+      "answer_matches": true,
+      "exact_format": true,
+      "final_numeric_answer": null,
+      "thinking_observed": false,
+      "tool_executions": 1,
+      "usage": {
+        "input": 443,
+        "output": 53,
+        "cache_read": 256,
+        "cache_write": 0,
+        "reasoning": 0,
+        "total_tokens": 752
+      },
+      "event_counts": {
+        "agent_start": 1,
+        "turn_start": 2,
+        "message_start": 4,
+        "message_end": 4,
+        "toolcall_start": 1,
+        "toolcall_delta": 13,
+        "toolcall_end": 1,
+        "tool_execution_start": 1,
+        "tool_execution_end": 1,
+        "turn_end": 2,
+        "text_start": 1,
+        "text_delta": 1,
+        "text_end": 1,
+        "agent_end": 1
+      },
+      "wire_event_counts": {
+        "response.created": 2,
+        "response.in_progress": 2,
+        "response.output_item.added": 2,
+        "response.function_call_arguments.delta": 13,
+        "response.function_call_arguments.done": 1,
+        "response.output_item.done": 2,
+        "response.completed": 2,
+        "response.content_part.added": 1,
+        "response.output_text.delta": 1,
+        "response.output_text.done": 1,
+        "response.content_part.done": 1
+      },
+      "http_statuses": [
+        200,
+        200
+      ],
+      "stop_reasons": [
+        "tool_use",
+        "stop"
+      ],
+      "network": {
+        "http_attempts": 2,
+        "http_retries": 0,
+        "websocket_connects": 0,
+        "websocket_reuses": 0,
+        "websocket_fallbacks": 0,
+        "websocket_expired": 0,
+        "websocket_retries": 0,
+        "websocket_delta_requests": 0
+      },
+      "error_types": [],
+      "diagnostic": null,
+      "seconds": 2.13
+    },
+    {
+      "provider": "deepseek",
+      "case": "thinking",
+      "live": true,
+      "transport": "sse",
+      "started_at": 1790997776.166102,
+      "model": "deepseek-flash",
+      "status": "completed",
+      "passed": true,
+      "answer_matches": true,
+      "exact_format": true,
+      "final_numeric_answer": "19",
+      "thinking_observed": true,
+      "tool_executions": 0,
+      "usage": {
+        "input": 72,
+        "output": 559,
+        "cache_read": 0,
+        "cache_write": 0,
+        "reasoning": 557,
+        "total_tokens": 631
+      },
+      "event_counts": {
+        "agent_start": 1,
+        "turn_start": 1,
+        "message_start": 2,
+        "message_end": 2,
+        "thinking_start": 1,
+        "thinking_delta": 557,
+        "thinking_end": 1,
+        "text_start": 1,
+        "text_delta": 1,
+        "text_end": 1,
+        "turn_end": 1,
+        "agent_end": 1
+      },
+      "wire_event_counts": {
+        "response.created": 1,
+        "response.in_progress": 1,
+        "response.output_item.added": 2,
+        "response.content_part.added": 2,
+        "response.reasoning_text.delta": 557,
+        "response.reasoning_text.done": 1,
+        "response.content_part.done": 2,
+        "response.output_item.done": 2,
+        "response.output_text.delta": 1,
+        "response.output_text.done": 1,
+        "response.completed": 1
+      },
+      "http_statuses": [
+        200,
+        200
+      ],
+      "stop_reasons": [
+        "stop"
+      ],
+      "signed_history_replay_passed": true,
+      "replay_usage": {
+        "input": 88,
+        "output": 40,
+        "cache_read": 0,
+        "cache_write": 0,
+        "reasoning": 33,
+        "total_tokens": 128
+      },
+      "network": {
+        "http_attempts": 2,
+        "http_retries": 0,
+        "websocket_connects": 0,
+        "websocket_reuses": 0,
+        "websocket_fallbacks": 0,
+        "websocket_expired": 0,
+        "websocket_retries": 0,
+        "websocket_delta_requests": 0
+      },
+      "error_types": [],
+      "diagnostic": null,
+      "seconds": 4.56
+    }
+  ]
+}

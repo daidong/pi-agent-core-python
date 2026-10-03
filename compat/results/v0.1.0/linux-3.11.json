@@ -1,0 +1,54 @@
+{
+  "python_series": "3.11",
+  "image": "python:3.11-slim",
+  "image_id": "sha256:bab1b7ef4b450c81002278d035eff85ebe394ae94df904f7a3ba14f7e16e487b",
+  "platform": {
+    "os": "Linux",
+    "machine": "aarch64",
+    "python": "3.11.17"
+  },
+  "image_platform": "linux/arm64",
+  "steps": [
+    {
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "-v",
+        "/Users/daidong/Documents/gitrepos/pi-python:/work",
+        "-w",
+        "/work",
+        "python:3.11-slim",
+        "sh",
+        "-ec",
+        "python -m pip download --only-binary=:all: -d /work/.wheelhouse/3.11 -r requirements-runtime.lock -r requirements-dev.lock"
+      ],
+      "exit_code": 0,
+      "seconds": 3.4395992920035496,
+      "stdout": "Ignoring colorama: markers 'sys_platform == \"win32\"' don't match your environment\nCollecting attrs==26.1.0 (from -r requirements-runtime.lock (line 3))\n  File was already downloaded /work/.wheelhouse/3.11/attrs-26.1.0-py3-none-any.whl\nCollecting jsonschema==4.25.1 (from -r requirements-runtime.lock (line 9))\n  File was already downloaded /work/.wheelhouse/3.11/jsonschema-4.25.1-py3-none-any.whl\nCollecting jsonschema-specifications==2025.9.1 (from -r requirements-runtime.lock (line 13))\n  File was already downloaded /work/.wheelhouse/3.11/jsonschema_specifications-2025.9.1-py3-none-any.whl\nCollecting referencing==0.37.0 (from -r requirements-runtime.lock (line 17))\n  File was already downloaded /work/.wheelhouse/3.11/referencing-0.37.0-py3-none-any.whl\nCollecting rpds-py==2026.6.3 (from -r requirements-runtime.lock (line 23))\n  File was already downloaded /work/.wheelhouse/3.11/rpds_py-2026.6.3-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl\nCollecting typing-extensions==4.16.0 (from -r requirements-runtime.lock (line 143))\n  File was already downloaded /work/.wheelhouse/3.11/typing_extensions-4.16.0-py3-none-any.whl\nCollecting iniconfig==2.3.0 (from -r requirements-dev.lock (line 11))\n  File was already downloaded /work/.wheelhouse/3.11/iniconfig-2.3.0-py3-none-any.whl\nCollecting mypy==1.18.2 (from -r requirements-dev.lock (line 15))\n  File was already downloaded /work/.wheelhouse/3.11/mypy-1.18.2-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl\nCollecting mypy-extensions==1.1.0 (from -r requirements-dev.lock (line 42))\n  File was already downloaded /work/.wheelhouse/3.11/mypy_extensions-1.1.0-py3-none-any.whl\nCollecting packaging==26.3 (from -r requirements-dev.lock (line 46))\n  File was already downloaded /work/.wheelhouse/3.11/packaging-26.3-py3-none-any.whl\nCollecting pathspec==1.1.1 (from -r requirements-dev.lock (line 50))\n  File was already downloaded /work/.wheelhouse/3.11/pathspec-1.1.1-py3-none-any.whl\nCollecting pluggy==1.6.0 (from -r requirements-dev.lock (line 54))\n  File was already downloaded /work/.wheelhouse/3.11/pluggy-1.6.0-py3-none-any.whl\nCollecting pygments==2.21.0 (from -r requirements-dev.lock (line 58))\n  File was already downloaded /work/.wheelhouse/3.11/pygments-2.21.0-py3-none-any.whl\nCollecting pytest==8.4.2 (from -r requirements-dev.lock (line 62))\n  File was already downloaded /work/.wheelhouse/3.11/pytest-8.4.2-py3-none-any.whl\nCollecting pytest-asyncio==1.2.0 (from -r requirements-dev.lock (line 66))\n  File was already downloaded /work/.wheelhouse/3.11/pytest_asyncio-1.2.0-py3-none-any.whl\nCollecting ruff==0.13.3 (from -r requirements-dev.lock (line 191))\n  File was already downloaded /work/.wheelhouse/3.11/ruff-0.13.3-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl\nCollecting types-jsonschema==4.25.1.20250822 (from -r requirements-dev.lock (line 211))\n  File was already downloaded /work/.wheelhouse/3.11/types_jsonschema-4.25.1.20250822-py3-none-any.whl\nSuccessfully downloaded attrs jsonschema jsonschema-specifications referencing rpds-py typing-extensions iniconfig mypy mypy-extensions packaging pathspec pluggy pygments pytest pytest-asyncio ruff types-jsonschema\n",
+      "stderr": "\n[notice] A new release of pip is available: 24.0 -> 26.2.1\n[notice] To update, run: pip install --upgrade pip\n"
+    },
+    {
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "-v",
+        "/Users/daidong/Documents/gitrepos/pi-python:/work",
+        "-w",
+        "/work",
+        "--network",
+        "none",
+        "python:3.11-slim",
+        "sh",
+        "-ec",
+        "\npython -m venv /tmp/verify\n/tmp/verify/bin/pip install --no-index --find-links=/work/.wheelhouse/3.11 /work/dist/*.whl\ncd /tmp\n/tmp/verify/bin/python -c 'import platform,sys,pi_python; print(platform.platform(),sys.version); print(pi_python.__file__)'\n/tmp/verify/bin/python /work/examples/in_memory.py\n/tmp/verify/bin/pip check\n/tmp/verify/bin/pip install --no-index --find-links=/work/.wheelhouse/3.11 -r /work/requirements-dev.lock\ncd /work\n/tmp/verify/bin/python -m pytest -q -o cache_dir=/tmp/pytest-cache\n"
+      ],
+      "exit_code": 0,
+      "seconds": 5.331455791951157,
+      "stdout": "Looking in links: /work/.wheelhouse/3.11\nProcessing ./dist/pi_python_core-0.1.0-py3-none-any.whl\nProcessing ./.wheelhouse/3.11/jsonschema-4.25.1-py3-none-any.whl (from pi-python-core==0.1.0)\nProcessing ./.wheelhouse/3.11/attrs-26.1.0-py3-none-any.whl (from jsonschema==4.25.1->pi-python-core==0.1.0)\nProcessing ./.wheelhouse/3.11/jsonschema_specifications-2025.9.1-py3-none-any.whl (from jsonschema==4.25.1->pi-python-core==0.1.0)\nProcessing ./.wheelhouse/3.11/referencing-0.37.0-py3-none-any.whl (from jsonschema==4.25.1->pi-python-core==0.1.0)\nProcessing ./.wheelhouse/3.11/rpds_py-2026.6.3-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (from jsonschema==4.25.1->pi-python-core==0.1.0)\nProcessing ./.wheelhouse/3.11/typing_extensions-4.16.0-py3-none-any.whl (from referencing>=0.28.4->jsonschema==4.25.1->pi-python-core==0.1.0)\nInstalling collected packages: typing-extensions, rpds-py, attrs, referencing, jsonschema-specifications, jsonschema, pi-python-core\nSuccessfully installed attrs-26.1.0 jsonschema-4.25.1 jsonschema-specifications-2025.9.1 pi-python-core-0.1.0 referencing-0.37.0 rpds-py-2026.6.3 typing-extensions-4.16.0\nLinux-6.12.76-linuxkit-aarch64-with-glibc2.41 3.11.17 (main, Oct  1 2026, 21:56:25) [GCC 14.2.0]\n/tmp/verify/lib/python3.11/site-packages/pi_python/__init__.py\nThe telemetry contains 3 complete records.\nNo broken requirements found.\nLooking in links: /work/.wheelhouse/3.11\nIgnoring colorama: markers 'sys_platform == \"win32\"' don't match your environment\nRequirement already satisfied: attrs==26.1.0 in ./verify/lib/python3.11/site-packages (from -r /work/requirements-dev.lock (line 3)) (26.1.0)\nProcessing /work/.wheelhouse/3.11/iniconfig-2.3.0-py3-none-any.whl (from -r /work/requirements-dev.lock (line 11))\nProcessing /work/.wheelhouse/3.11/mypy-1.18.2-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl (from -r /work/requirements-dev.lock (line 15))\nProcessing /work/.wheelhouse/3.11/mypy_extensions-1.1.0-py3-none-any.whl (from -r /work/requirements-dev.lock (line 42))\nProcessing /work/.wheelhouse/3.11/packaging-26.3-py3-none-any.whl (from -r /work/requirements-dev.lock (line 46))\nProcessing /work/.wheelhouse/3.11/pathspec-1.1.1-py3-none-any.whl (from -r /work/requirements-dev.lock (line 50))\nProcessing /work/.wheelhouse/3.11/pluggy-1.6.0-py3-none-any.whl (from -r /work/requirements-dev.lock (line 54))\nProcessing /work/.wheelhouse/3.11/pygments-2.21.0-py3-none-any.whl (from -r /work/requirements-dev.lock (line 58))\nProcessing /work/.wheelhouse/3.11/pytest-8.4.2-py3-none-any.whl (from -r /work/requirements-dev.lock (line 62))\nProcessing /work/.wheelhouse/3.11/pytest_asyncio-1.2.0-py3-none-any.whl (from -r /work/requirements-dev.lock (line 66))\nRequirement already satisfied: referencing==0.37.0 in ./verify/lib/python3.11/site-packages (from -r /work/requirements-dev.lock (line 69)) (0.37.0)\nRequirement already satisfied: rpds-py==2026.6.3 in ./verify/lib/python3.11/site-packages (from -r /work/requirements-dev.lock (line 73)) (2026.6.3)\nProcessing /work/.wheelhouse/3.11/ruff-0.13.3-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl (from -r /work/requirements-dev.lock (line 191))\nProcessing /work/.wheelhouse/3.11/types_jsonschema-4.25.1.20250822-py3-none-any.whl (from -r /work/requirements-dev.lock (line 211))\nRequirement already satisfied: typing-extensions==4.16.0 in ./verify/lib/python3.11/site-packages (from -r /work/requirements-dev.lock (line 214)) (4.16.0)\nInstalling collected packages: ruff, pygments, pluggy, pathspec, packaging, mypy-extensions, iniconfig, types-jsonschema, pytest, mypy, pytest-asyncio\nSuccessfully installed iniconfig-2.3.0 mypy-1.18.2 mypy-extensions-1.1.0 packaging-26.3 pathspec-1.1.1 pluggy-1.6.0 pygments-2.21.0 pytest-8.4.2 pytest-asyncio-1.2.0 ruff-0.13.3 types-jsonschema-4.25.1.20250822\n........................................................................ [ 69%]\n...............................                                          [100%]\n103 passed in 0.35s\n",
+      "stderr": ""
+    }
+  ],
+  "status": "passed"
+}

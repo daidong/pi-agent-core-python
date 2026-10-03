@@ -1,0 +1,35 @@
+{
+  "id": "C12-system",
+  "classification": "mapped",
+  "source": "packages/agent/test/agent-loop.test.ts; packages/agent/test/agent.test.ts",
+  "prompt": {
+    "role": "system",
+    "content": "more",
+    "sections": {
+      "a": "new",
+      "b": null
+    }
+  },
+  "history": [
+    {
+      "role": "system",
+      "content": "base",
+      "sections": {
+        "a": "one",
+        "b": "two"
+      }
+    }
+  ],
+  "responses": [
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "done"
+        }
+      ],
+      "stop_reason": "stop"
+    }
+  ]
+}
