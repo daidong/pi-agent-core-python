@@ -1,48 +1,50 @@
-# 一页看懂 pi-python
+# pi-python on one page
 
-这个库只做一件事：反复把对话发给模型，执行模型要求的工具，把结果交回模型，直到模型给出回答。理解下面五个概念，就能读懂全部代码。
+**English** | [中文](zh/CONCEPTS.md)
 
-## 五个概念
+This library does one thing: it repeatedly sends the conversation to a model, runs the tools the model asks for, and hands the results back to the model, until the model gives an answer. Understand the five concepts below and you can read all of the code.
 
-| 概念 | 是什么 | 在哪里 |
+## Five concepts
+
+| Concept | What it is | Where |
 |---|---|---|
-| **消息记录** | 一个只追加的消息列表：用户输入、模型回答、工具结果，以及系统消息。系统指令和工具声明也写成系统消息，所以会话中途的每次变化都留在记录里 | `messages.py`、`transcript.py` |
-| **Agent** | 一个会话。保存消息记录、默认配置（模型、选项、工具）、两个输入队列和事件订阅者。一次只运行一个 prompt | `agent.py`、`queues.py` |
-| **Run** | 一次 `prompt` 或 `continue_run` 的执行。持有这次运行的取消令牌、后台任务和工具执行记录，结束时整理成 `RunResult` | `run.py`、`loop.py` |
-| **Provider** | 一个函数：拿到请求，产出一串模型事件，最后一个是完整回答。Agent 不知道背后是 HTTP、WebSocket 还是脚本 | `provider.py`、`providers/` |
-| **Tool** | 名称、说明、参数 schema 和一个执行函数（异步或普通函数均可）。通常用 `@tool` 从带类型标注的函数直接生成。参数先严格校验，再执行；结果写回记录 | `tools.py`、`function_tools.py` |
+| **Transcript** | An append-only list of messages: user input, model answers, tool results, and system messages. System instructions and tool declarations are written as system messages too, so every change made mid-conversation stays in the record | `messages.py`, `transcript.py` |
+| **Agent** | One conversation. It holds the transcript, the default configuration (model, options, tools), two input queues and the event subscribers. It runs one prompt at a time | `agent.py`, `queues.py` |
+| **Run** | One execution of `prompt` or `continue_run`. It holds that run's cancel token, background tasks and tool-execution records, and packages them as a `RunResult` at the end | `run.py`, `loop.py` |
+| **Provider** | A function that takes a request and produces a stream of model events, the last of which is the complete answer. The Agent does not know whether HTTP, WebSocket or a script is behind it | `provider.py`, `providers/` |
+| **Tool** | A name, a description, an argument schema and an execute function (async or plain). Usually generated with `@tool` from a type-annotated function. Arguments are strictly validated before execution, and the result is written back to the transcript | `tools.py`, `function_tools.py` |
 
-模型能力不是第六个概念，而是 Provider 的输入：`ModelInfo` 记录上下文长度、输出上限、推理等级和服务端支持的特性。给真实 Provider 传模型名时，它在内置模型表里查；表里没有就报错，这时传一个 `ModelInfo`。脚本化的 `ScriptedProvider` 不需要模型表。
+Model capabilities are not a sixth concept but an input to the Provider: `ModelInfo` records the context length, output limit, reasoning levels and server-side features. When you give a real Provider a model name, it looks the name up in the built-in model table; if the name is missing, it raises an error, and you pass a `ModelInfo` instead. The scripted `ScriptedProvider` needs no model table.
 
-## 一轮里发生什么
+## What happens in one turn
 
 ```text
 prompt("…")
   │
   ▼
-接纳输入（队列中的指导、工具变化写成系统消息）
+Accept input (queued guidance; tool changes are written as system messages)
   │
   ▼
-请求前钩子 ─► transform_context ─► convert_to_llm
+pre-request hooks ─► transform_context ─► convert_to_llm
   │
   ▼
-Provider 流：start → 各内容块 start/delta/end → done
-  │            （事件先经检查：块要成对，增量要落在打开的块里，
-  │              最终回答要与已结束的块一致；否则本轮失败、不执行工具）
+Provider stream: start → for each content block start/delta/end → done
+  │            (events are checked first: blocks must pair up, deltas must land in an open block,
+  │             and the final answer must match the finished blocks; otherwise the turn fails and no tool runs)
   ▼
-回答写入记录
+Answer written to the transcript
   │
-  ├─ 没有工具调用 ──► 看后续队列 ──► 没有就结束
+  ├─ no tool calls ──► check the follow-up queue ──► end if it is empty
   │
-  └─ 有工具调用 ──► 校验参数 → before_tool_call → 执行 → after_tool_call
+  └─ tool calls ──► validate arguments → before_tool_call → execute → after_tool_call
                      │
                      ▼
-                  结果按调用顺序写入记录 ──► finish_turn ──► 下一轮
+                  results written in call order ──► finish_turn ──► next turn
 ```
 
-钩子都是可选的。模型出错或被取消时，和 Pi 一样，这次回答（连同已经生成的部分）照常记入历史，走完 `finish_turn` 和 `turn_end`，然后运行结束；达到应用设置的上限时也结束。`RunResult.status` 说明原因。
+All hooks are optional. When the model errors or is cancelled, the answer (with whatever was already generated) is recorded in history as usual, just as in Pi; `finish_turn` and `turn_end` run, and then the run ends. The run also ends when it reaches a limit the application has set. `RunResult.status` says why it ended.
 
-## 最小例子
+## Minimal example
 
 ```python
 from pi_python import Agent, AssistantMessage, ScriptedProvider, Tool, ToolCall, ToolResult
@@ -59,15 +61,15 @@ schema = {"type": "object", "properties": {"a": {"type": "integer"}, "b": {"type
 result = await Agent(provider=provider, tools=[Tool("add", "Add", schema, add)]).prompt("2+3?")
 ```
 
-换成真实模型只改 Provider 和模型名：`Agent(provider=AnthropicProvider(api_key=...), model="claude-sonnet-5-5", ...)`。
+To use a real model, change only the Provider and the model name: `Agent(provider=AnthropicProvider(api_key=...), model="claude-sonnet-5-5", ...)`.
 
-## 比 Pi 多出的部分
+## What goes beyond Pi
 
-Pi 把下面这些留给应用；本库为科研和 HPC 场景放进了核心，需要时再读：
+Pi leaves the following to applications; this library puts them in the core for research and HPC use. Read about them when you need them:
 
-- 参数严格校验，不自动把字符串转成数字（需要时写 `prepare_arguments`）；
-- `RunLimits`：取消后的清理期限，以及可选的模型请求数、工具调用数、工具并发数、工具超时和运行总时限（这几项默认都不设，和 Pi 一样由应用决定）；
-- 工具主动报告结果"未知"（例如作业提交后连接断开）时停止运行，等应用核对，不自动重试；取消或超时一个工具不会触发这项保护，只记成普通错误结果；
-- 返回给调用者的状态都是副本，运行中的配置更新在下一轮生效。
+- Strict argument validation, with no automatic conversion of strings to numbers (write `prepare_arguments` if you need it);
+- `RunLimits`: the cleanup deadline after cancellation, plus optional caps on model requests, tool calls and tool concurrency, a tool timeout and a total run time (none of these caps is set by default; as in Pi, the application decides);
+- When a tool reports that its outcome is "unknown" (for example, the connection dropped after a job was submitted), the run stops and waits for the application to reconcile, with no automatic retry. Cancelling a tool, or a tool timing out, does not trigger this guard; it is recorded as an ordinary error result;
+- State returned to callers is always a copy, and configuration updates made during a run take effect at the next turn.
 
-细节见 [API](API.md)，模型接入（含本地模型）见 [PROVIDERS](PROVIDERS.md)，与 Pi 的逐项对照见 [验收映射](../compat/COVERAGE.md)。搭建更完整的 agent 时常用的写法都有可运行的示例：[子 agent](../examples/subagent.py)、[保存与恢复对话](../examples/save_restore.py)、[超长时压缩和出错重试](../examples/recovery.py)、[MCP 工具](../examples/mcp_tools.py)、[本地模型](../examples/local_model.py)。
+Details are in the [API](API.md); model connectors (including local models) are in [PROVIDERS](PROVIDERS.md); the item-by-item comparison with Pi is in the [coverage map](../compat/COVERAGE.md) (Chinese). Common patterns for building fuller agents all have runnable examples: [sub-agents](../examples/subagent.py), [saving and restoring conversations](../examples/save_restore.py), [compaction on overflow and retry on errors](../examples/recovery.py), [MCP tools](../examples/mcp_tools.py), [local models](../examples/local_model.py).

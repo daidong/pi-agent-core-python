@@ -33,7 +33,7 @@ def verify(version):
             f"""
 python -m venv /tmp/verify
 /tmp/verify/bin/pip install --no-index --find-links=/work/.wheelhouse/{version} {WHEEL}
-/tmp/verify/bin/python -c 'import importlib.util,pi_python; from pi_python.providers import OpenAIProvider; assert importlib.util.find_spec("httpx") is None; assert importlib.util.find_spec("jwt") is None; print("core-only import passed")' 
+/tmp/verify/bin/python -c 'import importlib.util,pi_python; from pi_python.providers import OpenAIProvider; assert importlib.util.find_spec("httpx"); assert importlib.util.find_spec("jwt") is None; print("plain install passed")' 
 cd /tmp
 /tmp/verify/bin/python -c 'import platform,sys,pi_python; print(platform.platform(),sys.version); print(pi_python.__file__)'
 /tmp/verify/bin/python /work/examples/in_memory.py

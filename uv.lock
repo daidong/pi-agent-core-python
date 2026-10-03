@@ -470,20 +470,23 @@ wheels = [
 
 [[package]]
 name = "pi-python-core"
-version = "0.8.1"
+version = "0.8.2"
 source = { editable = "." }
 dependencies = [
+    { name = "httpx" },
     { name = "jsonschema" },
+    { name = "websockets" },
 ]
 
 [package.optional-dependencies]
 mcp = [
     { name = "mcp" },
 ]
-providers = [
-    { name = "httpx" },
+oauth = [
     { name = "pyjwt", extra = ["crypto"] },
-    { name = "websockets" },
+]
+providers = [
+    { name = "pyjwt", extra = ["crypto"] },
 ]
 
 [package.dev-dependencies]
@@ -498,13 +501,14 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "httpx", marker = "extra == 'providers'", specifier = ">=0.27,<1" },
+    { name = "httpx", specifier = ">=0.27,<1" },
     { name = "jsonschema", specifier = ">=4.18,<5" },
     { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.10" },
+    { name = "pyjwt", extras = ["crypto"], marker = "extra == 'oauth'", specifier = ">=2.8,<3" },
     { name = "pyjwt", extras = ["crypto"], marker = "extra == 'providers'", specifier = ">=2.8,<3" },
-    { name = "websockets", marker = "extra == 'providers'", specifier = ">=14.2" },
+    { name = "websockets", specifier = ">=14.2" },
 ]
-provides-extras = ["providers", "mcp"]
+provides-extras = ["oauth", "providers", "mcp"]
 
 [package.metadata.requires-dev]
 dev = [

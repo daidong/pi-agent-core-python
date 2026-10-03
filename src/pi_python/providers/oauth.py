@@ -279,7 +279,12 @@ class OAuthClient:
     async def _verify_id_token(
         self, token: Any, clientid: str, nonce: str | None, cancel: CancelToken
     ) -> dict[str, Any]:
-        import jwt
+        try:
+            import jwt
+        except ImportError as exc:
+            raise ImportError(
+                "ChatGPT sign-in needs PyJWT: pip install 'pi-python-core[oauth]'"
+            ) from exc
 
         if not isinstance(token, str) or not token:
             raise ConfigurationError("ChatGPT sign-in lacks ID token")

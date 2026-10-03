@@ -39,7 +39,7 @@
 
 ## 复现与验证附录
 
-- 说明文档：[一页概念](../CONCEPTS.md)、[API](../API.md)、[模型接入与本地模型](../PROVIDERS.md)、[验收映射](../../compat/COVERAGE.md)
+- 说明文档：[一页概念](../zh/CONCEPTS.md)、[API](../zh/API.md)、[模型接入与本地模型](../zh/PROVIDERS.md)、[验收映射](../../compat/COVERAGE.md)
 - 全部检查命令与输出：[verification.json](../../compat/results/v0.7.0/verification.json)，命令 `uv run python scripts/verify.py`
 - 差分结果：[核心](../../compat/results/conformance.json)、[Provider](../../compat/results/provider-conformance.json)、[WebSocket 多轮](../../compat/results/websocket-conformance.json)、[出错判断](../../compat/results/recovery-conformance.upstream.json)（输入 `compat/recovery-cases.json`，命令 `scripts/recovery_conformance.py`）
 - Linux 安装：[3.11](../../compat/results/v0.7.0/linux-3.11.json)、[3.12](../../compat/results/v0.7.0/linux-3.12.json)、[3.13](../../compat/results/v0.7.0/linux-3.13.json)、[3.14](../../compat/results/v0.7.0/linux-3.14.json)，命令 `uv run python scripts/linux_verify.py`

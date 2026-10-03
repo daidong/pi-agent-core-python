@@ -1,7 +1,7 @@
 """Use a local model server through its OpenAI-compatible Chat Completions API.
 
 Works with Ollama, vLLM, llama.cpp server, LM Studio, SGLang and hosted services that
-speak the same API. Needs ``pip install 'pi-python-core[providers]'``.
+speak the same API. Needs only ``pip install pi-python-core``.
 
     python examples/local_model.py                       # offline, with a stand-in server
     python examples/local_model.py --base-url http://localhost:11434/v1 --model qwen3:8b

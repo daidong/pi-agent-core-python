@@ -1,6 +1,6 @@
 # 实施与验证结果（0.5.0 存档）
 
-这一轮按方案 B 向 Pi 的写法靠拢：去掉与上游并存的旧事件写法，让模型能力只有一个来源，拆分过大的 Agent 类，并强制类型标注。执行行为没有变：与固定 Pi 的全部差分输入和真实账号测试都与 0.4 结果一致。公开接口有四处变化，已有代码中如果自己写了 Provider，或使用了模型表之外的模型名，需要按[迁移表](../API.md#05-迁移)修改。
+这一轮按方案 B 向 Pi 的写法靠拢：去掉与上游并存的旧事件写法，让模型能力只有一个来源，拆分过大的 Agent 类，并强制类型标注。执行行为没有变：与固定 Pi 的全部差分输入和真实账号测试都与 0.4 结果一致。公开接口有四处变化，已有代码中如果自己写了 Provider，或使用了模型表之外的模型名，需要按[迁移表](../zh/API.md#05-迁移)修改。
 
 ## 为什么改
 
@@ -16,7 +16,7 @@
 | 模型能力 | 模型表、Claude Provider 的三个覆盖参数、表外默认值三处来源 | 只来自 `ModelInfo`；Agent 可直接接受 `ModelInfo`；Provider 里的"模型未知"分支全部删除 |
 | Agent 结构 | 一个 670 行的类同时管会话、一次运行、队列和清理 | 会话（Agent，348 行）、一次运行（Run，341 行）、输入队列（76 行），对应上游 `agent.ts` 与 `agent-loop.ts` 的分工 |
 | 类型标注 | 约 90 个函数没有标注，主要在 Provider 层 | 全部补齐，mypy 现在拒绝未标注的函数；两处 `__import__` 和多数函数内导入移到文件顶部，只保留三个可选依赖的延迟导入 |
-| 入门文档 | 无 | [一页概念](../CONCEPTS.md)：五个概念、一轮的流程图和可运行的最小例子 |
+| 入门文档 | 无 | [一页概念](../zh/CONCEPTS.md)：五个概念、一轮的流程图和可运行的最小例子 |
 
 补类型时发现一处真实缺口：OpenAI 和代理流没有检查事件中的块位置是否为整数。格式错误的事件以前会产生令人误解的报错，现在明确报"缺少位置"。另外，`message_update` 事件的两种数据格式合并成一种，迁移表里列出了。
 
@@ -34,7 +34,7 @@
 
 ## 仍未覆盖的部分
 
-可靠性机制仍比 Pi 多。它们是有意保留的设计选择，[一页概念](../CONCEPTS.md)最后一节单独列出，不需要时可以不读。
+可靠性机制仍比 Pi 多。它们是有意保留的设计选择，[一页概念](../zh/CONCEPTS.md)最后一节单独列出，不需要时可以不读。
 
 登录和令牌刷新已在 0.5 发布后补测，Claude 与 Codex 均通过，见下一节。OpenAI API key 和 ChatGPT 直接授权仍没有实测；约束采样、后台任务轮询、应用层功能仍未实现。
 
@@ -54,7 +54,7 @@
 
 ## 复现与验证附录
 
-- 说明文档：[一页概念](../CONCEPTS.md)、[API 与 0.5 迁移](../API.md)、[模型接入](../PROVIDERS.md)、[验收映射](../../compat/COVERAGE.md)
+- 说明文档：[一页概念](../zh/CONCEPTS.md)、[API 与 0.5 迁移](../zh/API.md)、[模型接入](../zh/PROVIDERS.md)、[验收映射](../../compat/COVERAGE.md)
 - 全部检查命令与输出：[verification.json](../../compat/results/v0.5.0/verification.json)，命令 `uv run python scripts/verify.py`
 - 差分结果：[核心](../../compat/results/conformance.json)、[Provider](../../compat/results/provider-conformance.json)、[WebSocket 多轮](../../compat/results/websocket-conformance.json)
 - 实测（`scripts/live_providers.py`，不保存凭据或模型正文）：[Claude 会话变更](../../compat/results/live-0.5-session-claude.json)、[Codex 会话变更与增量](../../compat/results/live-0.5-session-codex.json)、[三接入回归](../../compat/results/live-0.5-regression.json)

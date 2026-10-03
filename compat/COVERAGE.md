@@ -48,7 +48,7 @@ D1–D8 保持原设计的含义。D1 严格输入；D2 执行前钩子不能通
 
 新增 Python 合同见 `test_extended_core.py`、`test_providers.py`、`test_oauth.py`。8 个共享网络流输入在 `provider-fixtures/`，实际上游解析器输出和 Python 输出保存在 [provider-conformance.json](results/provider-conformance.json)。它们对比最终内容、签名和停止原因，不等价于所有供应商请求选项或真实账号端到端兼容。
 
-当前边界与明确差异见 [PROVIDERS.md](../docs/PROVIDERS.md)。0.1 的 accepted baseline 保留为历史核心验收记录，新增能力单独记录，不修改固定上游提交。
+当前边界与明确差异见 [PROVIDERS.md](../docs/zh/PROVIDERS.md)。0.1 的 accepted baseline 保留为历史核心验收记录，新增能力单独记录，不修改固定上游提交。
 
 ## 0.3 范围修订
 
@@ -93,7 +93,7 @@ D1–D8 不变。本轮明确记录的差异：WebSocket 帧不带 `stream` 字�
 这一轮的目标是好装、多版本可用、容易在上面搭完整的 agent。按与上游的关系分三类记录。
 
 与上游一致，并有对照证据：
-- **Chat Completions 接入**：逐项移植 `openai-completions.ts`，新增 16 组 Provider 差分（Provider 差分共 50 组），覆盖 Ollama、vLLM、llama.cpp、OpenRouter、DeepSeek 等兼容配置和全部 11 种推理参数格式。与上游的差异见 [PROVIDERS](../docs/PROVIDERS.md#本地模型与-openai-兼容服务)。
+- **Chat Completions 接入**：逐项移植 `openai-completions.ts`，新增 16 组 Provider 差分（Provider 差分共 50 组），覆盖 Ollama、vLLM、llama.cpp、OpenRouter、DeepSeek 等兼容配置和全部 11 种推理参数格式。与上游的差异见 [PROVIDERS](../docs/zh/PROVIDERS.md#本地模型与-openai-兼容服务)。
 - **出错判断**：`is_context_overflow`、`is_retryable_error`、`is_recoverable_length` 移植自 `overflow.ts` 和 `retry.ts`，44 条共享样例与上游函数的实际输出一致（`scripts/recovery_conformance.py`）。另外认识本库自己的错误格式：Python 网络错误名，以及按 HTTP 状态码判断本库的 HTTP 错误；上游格式的文字仍按上游规则判断。
 - **工具 schema**：不再只接受一个子集。与上游一样接受 draft-07 等标准 schema，并按 `format`、`pattern` 校验参数（已用上游校验器对同一 schema 实测）；仍只允许指向 schema 内部的引用。D1 的"不转换类型"不变。
 - **HTTP 错误正文**：与上游一样保留，最多 4000 字符；本库另外把请求所带的凭据替换为 `[redacted]`。

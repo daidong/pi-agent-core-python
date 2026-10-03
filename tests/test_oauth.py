@@ -210,6 +210,12 @@ def test_invalid_token_payloads(bad):
         OAuthClient("openai-chatgpt")._credential(bad, "client")
 
 
+async def test_chatgpt_sign_in_without_pyjwt_names_the_extra(monkeypatch):
+    monkeypatch.setitem(sys.modules, "jwt", None)  # makes `import jwt` fail
+    with pytest.raises(ImportError, match=r"pip install 'pi-python-core\[oauth\]'"):
+        await OAuthClient("openai-chatgpt")._verify_id_token("token", "client", None, CancelToken())
+
+
 async def test_refresh_single_flight_rotates_and_retries_persistence():
     calls = []
     saved = []

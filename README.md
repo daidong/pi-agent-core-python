@@ -1,28 +1,31 @@
 # pi-python-core
 
-一个可嵌入的 Python agent 核心，移植自 [Pi](https://github.com/earendil-works/pi)（固定参照 `v1.0.0`）。它负责一件事：把对话发给模型，执行模型要求的工具，把结果交回模型，直到得到回答。工具就是普通的 Python 函数；模型可以是 Claude、GPT、DeepSeek，也可以是本机或集群上的开源模型。
+**English** | [中文](README.zh-CN.md)
 
-PyPI 上的 `pi-agent-core` 是另一个独立项目，移植的是 2026 年初 pi-mono 中的旧版本。本库对照 Pi v1.0.0 的行为，与上游的实际运行结果逐组比较；并自带 Claude、OpenAI、DeepSeek 和本地模型的接入，不需要安装任何模型 SDK。
+An embeddable Python agent core, ported from [Pi](https://github.com/earendil-works/pi) (pinned to `v1.0.0`). It does one job: send the conversation to a model, run the tools the model asks for, hand the results back, and repeat until the model answers. Tools are plain Python functions; the model can be Claude, GPT, DeepSeek, or an open model running on your own machine or cluster.
 
-## 安装
+`pi-agent-core` on PyPI is a separate project that ports an older version from pi-mono (early 2026). This library follows the behavior of Pi v1.0.0, compared case by case with the upstream code's actual output, and ships its own connectors for Claude, OpenAI, DeepSeek and local models, with no model SDK required.
 
-支持 Python 3.11–3.14（包括无 GIL 的 3.14t）和 PyPy 3.11，不需要 Node 或任何模型 SDK。
+## Install
+
+Python 3.11–3.14 (including free-threaded 3.14t) and PyPy 3.11. No Node.js or model SDK needed.
 
 ```bash
-pip install 'pi-python-core[providers]'      # 或 uv add 'pi-python-core[providers]'
+pip install pi-python-core      # or: uv add pi-python-core
 ```
 
-安装名是 `pi-python-core`，导入名是 `pi_python`。
+You install `pi-python-core` and import `pi_python`.
 
-| 安装选项 | 带来什么 |
+| Option | What it adds |
 |---|---|
-| 不加选项 | 执行核心，只依赖 `jsonschema` |
-| `[providers]` | 真实模型接入：Claude、OpenAI、Codex、DeepSeek，以及任何 OpenAI 兼容服务（Ollama、vLLM、llama.cpp 等） |
-| `[mcp]` | 把 MCP 服务器的工具交给 agent |
+| (none) | The agent core and the built-in model connectors: Claude, OpenAI, Codex, DeepSeek, and any OpenAI-compatible server (Ollama, vLLM, llama.cpp, …) |
+| `[oauth]` | Verifies the identity token when you sign in with a ChatGPT account (`openai-chatgpt`); it brings in the compiled `cryptography` package. Claude subscription and Codex sign-in do not need it |
+| `[providers]` | Same as `[oauth]`; keeps install commands from 0.8.1 and earlier working |
+| `[mcp]` | Gives the agent the tools of MCP servers |
 
-依赖写的是版本范围而不是固定版本，能和大多数已有环境共存。
+Dependencies are version ranges rather than pins, so the package fits into most existing environments.
 
-## 五分钟上手
+## Five-minute start
 
 ```python
 from pi_python import Agent, tool
@@ -38,7 +41,7 @@ result = agent.prompt_sync("How many words are in 'to be or not to be'?")
 print(result.messages[-1].content[0].text)
 ```
 
-`@tool` 从函数签名和文档字符串生成工具；普通函数和 `async` 函数都可以。在异步程序里用 `await agent.prompt(...)`。换成本地模型只改两行：
+`@tool` builds a tool from the function's signature and docstring; both plain and `async` functions work. In async code, use `await agent.prompt(...)`. Switching to a local model changes two lines:
 
 ```python
 from pi_python.providers import OpenAICompletionsProvider
@@ -47,44 +50,44 @@ llm = OpenAICompletionsProvider(base_url="http://localhost:11434/v1", name="olla
 agent = Agent(provider=llm, model=llm.model("qwen3:8b", context_window=40960), tools=[word_count])
 ```
 
-不联网也能先跑起来：`python examples/quickstart.py`。
+To try it offline first: `python examples/quickstart.py`.
 
-## 能做什么
+## What it does
 
-| 需要 | 怎么做 | 示例 |
+| Need | How | Example |
 |---|---|---|
-| 写工具 | `@tool` 装饰普通函数；pydantic 模型、dataclass、枚举、日期等参数自动转换；也接受手写或 MCP 生成的 JSON Schema | [quickstart](examples/quickstart.py) |
-| 接模型 | Claude 与 GPT 的 API key 或订阅登录；DeepSeek；任何 OpenAI 兼容服务 | [local_model](examples/local_model.py)，[provider_chat](examples/provider_chat.py) |
-| 用 MCP 工具 | `async with connect_stdio(...) as tools` | [mcp_tools](examples/mcp_tools.py) |
-| 让一个 agent 调用另一个 | 把子 agent 包成工具，取消会一路传下去 | [subagent](examples/subagent.py) |
-| 中途干预 | `steer` 插入指导，`follow_up` 排队后续任务，`abort` 随时取消（任何线程都可以调用） | |
-| 上下文满了、服务出错 | `is_context_overflow`、`is_retryable_error` 判断原因，`continue_run()` 重试，`transform_context` 压缩 | [recovery](examples/recovery.py) |
-| 保存与恢复对话 | `encode_messages` / `decode_messages`，应用决定存在哪里 | [save_restore](examples/save_restore.py) |
-| 观察与审计 | 订阅事件；执行前后的钩子可以阻止、改写工具调用 | |
+| Write tools | Decorate a plain function with `@tool`; arguments such as pydantic models, dataclasses, enums and dates are converted automatically; hand-written or MCP-generated JSON Schema works too | [quickstart](examples/quickstart.py) |
+| Connect a model | Claude and GPT through an API key or subscription sign-in; DeepSeek; any OpenAI-compatible server | [local_model](examples/local_model.py), [provider_chat](examples/provider_chat.py) |
+| Use MCP tools | `async with connect_stdio(...) as tools` | [mcp_tools](examples/mcp_tools.py) |
+| Let one agent call another | Wrap the sub-agent as a tool; cancellation propagates down | [subagent](examples/subagent.py) |
+| Intervene mid-run | `steer` injects guidance, `follow_up` queues the next task, `abort` cancels at any time (callable from any thread) | |
+| Context full, service errors | `is_context_overflow` and `is_retryable_error` tell you why, `continue_run()` retries, `transform_context` compacts | [recovery](examples/recovery.py) |
+| Save and restore conversations | `encode_messages` / `decode_messages`; your application decides where to store them | [save_restore](examples/save_restore.py) |
+| Observe and audit | Subscribe to events; hooks before and after tool execution can block or rewrite tool calls | |
 
-除 `provider_chat` 需要真实凭据外，示例都能离线运行，不需要 API key；测试会逐个运行它们。
+Apart from `provider_chat`, which needs real credentials, every example runs offline without an API key, and the tests run each one.
 
-## 与 Pi 的关系
+## Relationship to Pi
 
-执行循环、事件顺序、钩子、队列、出错与取消的处理都与 Pi 一致，并用差分验证：同一组输入分别交给固定版本的上游代码和本库运行，逐项比较模型请求、工具调用、事件和最终记录。目前核心循环 25 组、模型接入 50 组、WebSocket 多轮 2 组、出错判断 44 条样例全部一致。
+The run loop, event order, hooks, queues, and the handling of errors and cancellation all match Pi, and this is checked differentially: the same inputs go to the pinned upstream code and to this library, and the model requests, tool calls, events and final transcript are compared item by item. All cases currently agree: 25 for the core loop, 50 for model connectors, 2 for multi-turn WebSocket, and 44 error-classification samples.
 
-有几处是有意的差异，例如工具参数严格校验、不自动转换类型，返回给调用者的状态是副本；另一些是为 Python 用户加的，例如 `@tool`、同步调用、失败后直接 `continue_run()`。逐项记录见[验收映射](compat/COVERAGE.md)。Pi 放在应用层的功能（终端界面、会话文件格式、上下文压缩）不在本库核心里；压缩可以用钩子实现，示例里有完整做法。本项目使用自己的版本号，并非 Pi 官方发行版。
+A few differences are deliberate, such as strict tool-argument validation without type coercion, and returning copies of state to callers. Others are additions for Python users, such as `@tool`, blocking calls, and calling `continue_run()` directly after a failure. Each one is recorded in the [coverage map](compat/COVERAGE.md) (Chinese). Features Pi keeps in its application layer (terminal UI, session file format, context compaction) are not in this core; compaction can be built with hooks, and an example shows the full approach. This project uses its own version numbers and is not an official Pi release.
 
-## 文档
+## Documentation
 
-- [一页看懂：五个概念和一轮的流程](docs/CONCEPTS.md)
-- [公开 API](docs/API.md)
-- [模型接入、订阅登录与本地模型](docs/PROVIDERS.md)
-- [实施与验证结果](docs/IMPLEMENTATION.md)
-- [与 Pi 的逐项对照和有意差异](compat/COVERAGE.md)
-- [参照重建与候选版本验证](reference/README.md)
+- [Concepts on one page: five ideas and one turn](docs/CONCEPTS.md)
+- [Public API](docs/API.md)
+- [Model connectors, subscription sign-in and local models](docs/PROVIDERS.md)
+- [Implementation and verification results](docs/IMPLEMENTATION.md) (Chinese)
+- [Item-by-item comparison with Pi, and deliberate differences](compat/COVERAGE.md) (Chinese)
+- [Rebuilding the reference and checking release candidates](reference/README.md) (Chinese)
 
-## 开发
+## Development
 
 ```bash
-uv sync --locked --extra providers --extra mcp
+uv sync --locked --extra oauth --extra mcp
 uv run pytest -q
-uv run python scripts/verify.py      # 全部检查，含与上游的差分（需要 Node）
+uv run python scripts/verify.py      # every check, including the comparison with upstream (needs Node)
 ```
 
-CI 配置在 `.github/workflows/ci.yml`，每次推送都在 GitHub Actions 上运行，覆盖 Linux 上的各个 Python 版本（含 3.14t 和 PyPy）以及 macOS 和 Windows。
+CI is defined in `.github/workflows/ci.yml` and runs on GitHub Actions for every push: each Python version on Linux (including 3.14t and PyPy), plus macOS and Windows.

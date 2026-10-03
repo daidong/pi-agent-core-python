@@ -1,6 +1,6 @@
 # 实施与验证结果（0.6.0 存档）
 
-这一轮对照固定的上游 Pi `v1.0.0`，检查了"模型出错"和"运行被取消"两条路径。我们发现本库有三处做法与上游不同，却没有写进文档；另外，取消一个正在运行的工具会让整个 Agent 再也不能用。0.6 把这些都改成上游的做法，并把所有运行上限交给应用设置。依赖旧的取消行为或默认上限的应用会看到不同结果，需要按[迁移表](../API.md#06-迁移)检查。
+这一轮对照固定的上游 Pi `v1.0.0`，检查了"模型出错"和"运行被取消"两条路径。我们发现本库有三处做法与上游不同，却没有写进文档；另外，取消一个正在运行的工具会让整个 Agent 再也不能用。0.6 把这些都改成上游的做法，并把所有运行上限交给应用设置。依赖旧的取消行为或默认上限的应用会看到不同结果，需要按[迁移表](../zh/API.md#06-迁移)检查。
 
 ## 要解决的问题
 
@@ -42,7 +42,7 @@ Python 边界上还保留几处与上游不同的取消行为。例如：工具�
 
 ## 复现与验证附录
 
-- 说明文档：[一页概念](../CONCEPTS.md)、[API 与 0.6 迁移](../API.md#06-迁移)、[模型接入](../PROVIDERS.md)、[验收映射](../../compat/COVERAGE.md)
+- 说明文档：[一页概念](../zh/CONCEPTS.md)、[API 与 0.6 迁移](../zh/API.md#06-迁移)、[模型接入](../zh/PROVIDERS.md)、[验收映射](../../compat/COVERAGE.md)
 - 全部检查命令与输出：[verification.json](../../compat/results/v0.6.0/verification.json)，命令 `uv run python scripts/verify.py`
 - 差分结果：[核心](../../compat/results/conformance.json)、[Provider](../../compat/results/provider-conformance.json)、[WebSocket 多轮](../../compat/results/websocket-conformance.json)；输入由 `scripts/make_fixtures.py` 生成，上游一侧由 `reference/runner.ts` 运行
 - Linux 安装：[3.11](../../compat/results/v0.6.0/linux-3.11.json)、[3.12](../../compat/results/v0.6.0/linux-3.12.json)、[3.13](../../compat/results/v0.6.0/linux-3.13.json)，命令 `uv run python scripts/linux_verify.py`

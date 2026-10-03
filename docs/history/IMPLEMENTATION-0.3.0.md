@@ -40,7 +40,7 @@ OpenAI API key、ChatGPT 直接 OAuth、新登录和刷新尚未做本次账号�
 
 ## 复现与验证附录
 
-- [API 合同与迁移](../API.md)、[Provider、模型表与网络配置](../PROVIDERS.md)、[实际接入示例](../../examples/provider_chat.py)
+- [API 合同与迁移](../zh/API.md)、[Provider、模型表与网络配置](../zh/PROVIDERS.md)、[实际接入示例](../../examples/provider_chat.py)
 - [检查命令与完整输出](../../compat/results/v0.3.0/verification.json)：`uv run python scripts/verify.py`
 - [核心差分](../../compat/results/conformance.json)、[Provider 差分](../../compat/results/v0.3.0/provider-conformance.json)
 - [最终账号联调](../../compat/results/live-final-matrix.json)、[最终 WebSocket 复用](../../compat/results/live-websocket-final.json)：由 `scripts/live_providers.py` 显式读取指定账号来源；不进入 CI，不保存凭据或模型正文

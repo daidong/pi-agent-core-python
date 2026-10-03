@@ -36,7 +36,7 @@ def provider(model: str | None):
     if model:
         if not os.environ.get("ANTHROPIC_API_KEY"):
             raise SystemExit("--model needs ANTHROPIC_API_KEY; omit --model to run offline")
-        from pi_python.providers import AnthropicProvider  # needs the [providers] extra
+        from pi_python.providers import AnthropicProvider
 
         return AnthropicProvider(api_key=os.environ["ANTHROPIC_API_KEY"])
     # Offline: a scripted model that calls both tools, then answers.

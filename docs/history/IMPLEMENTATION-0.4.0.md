@@ -30,7 +30,7 @@ OpenAI 和 Codex 只能原位表达新增工具；删除工具时与上游一样
 
 最后一项还修了 0.3 的一个缺陷：服务端关闭空闲连接后，0.3 仍在旧连接上发送，请求直接失败；0.4 先检查连接状态再复用。
 
-有几处行为对已有代码可见。`provider_thinking_level` 现在只在使用强度标记的 Claude 模型上记录，需要请求等级时应读 `thinking_level`。Claude 开启推理时会返回推理摘要文字。由多个文本块组成的系统消息改用单个换行连接，这是 0.3 与上游不一致的地方。`auto` 传输在有会话编号时也复用连接，与上游相同。详细说明见 [API](../API.md#04-会话变更与上下文估算) 和 [模型接入](../PROVIDERS.md#会话中途的变更)。
+有几处行为对已有代码可见。`provider_thinking_level` 现在只在使用强度标记的 Claude 模型上记录，需要请求等级时应读 `thinking_level`。Claude 开启推理时会返回推理摘要文字。由多个文本块组成的系统消息改用单个换行连接，这是 0.3 与上游不一致的地方。`auto` 传输在有会话编号时也复用连接，与上游相同。详细说明见 [API](../zh/API.md#会话变更与上下文估算) 和 [模型接入](../zh/PROVIDERS.md#会话中途的变更)。
 
 ## 验证结果
 
@@ -58,7 +58,7 @@ Claude 的推理题答案正确，但仍没有遵守"只输出数字"，与 0.3 
 
 ## 复现与验证附录
 
-- 实现说明：[API](../API.md)、[模型接入与会话变更](../PROVIDERS.md)、[验收映射](../../compat/COVERAGE.md)
+- 实现说明：[API](../zh/API.md)、[模型接入与会话变更](../zh/PROVIDERS.md)、[验收映射](../../compat/COVERAGE.md)
 - 全部检查命令与输出：[verification.json](../../compat/results/v0.4.0/verification.json)，命令 `uv run python scripts/verify.py`
 - 差分结果：[核心](../../compat/results/conformance.json)、[Provider](../../compat/results/provider-conformance.json)、[WebSocket 多轮](../../compat/results/websocket-conformance.json)；输入由 `scripts/make_provider_fixtures.py` 生成，WebSocket 参照运行器为 `reference/websocket-runner.ts`
 - 0.3 在新输入上的结果：[against-0.4-fixtures.json](../../compat/results/v0.3.0/against-0.4-fixtures.json)

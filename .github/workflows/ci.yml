@@ -39,7 +39,7 @@ jobs:
           uv venv -p 3.11 /tmp/installed
           uv pip install -p /tmp/installed/bin/python dist/pi_python_core-*-py3-none-any.whl
           cd /tmp
-          /tmp/installed/bin/python -c 'import importlib.util; assert importlib.util.find_spec("httpx") is None'
+          /tmp/installed/bin/python -c 'import importlib.util as u; assert u.find_spec("httpx") and u.find_spec("websockets"); assert u.find_spec("jwt") is None'
           /tmp/installed/bin/python "$GITHUB_WORKSPACE/examples/in_memory.py"
   # Install requirements are ranges; the lower bounds must keep working.
   lowest-dependencies:

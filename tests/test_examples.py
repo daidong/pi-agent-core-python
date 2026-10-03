@@ -24,8 +24,6 @@ CASES = {
 def test_example_runs_offline(name):
     if name == "mcp_tools.py" and importlib.util.find_spec("mcp") is None:
         pytest.skip("needs the [mcp] extra")
-    if name == "local_model.py" and importlib.util.find_spec("httpx") is None:
-        pytest.skip("needs the [providers] extra")
     env = {k: v for k, v in os.environ.items() if not k.endswith("_API_KEY")}
     out = subprocess.run(
         [sys.executable, str(EXAMPLES / name)], capture_output=True, text=True, timeout=60, env=env

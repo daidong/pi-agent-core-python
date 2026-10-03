@@ -1,4 +1,4 @@
-"""Opt-in network providers; install pi-python-core[providers] for transports."""
+"""Network providers. ChatGPT sign-in (OAuthClient) also needs pi-python-core[oauth]."""
 
 from .anthropic import AnthropicProvider
 from .completions import OpenAICompletionsProvider

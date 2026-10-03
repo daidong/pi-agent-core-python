@@ -28,9 +28,11 @@
 
 0.8.0 发布时 macOS 和 Windows 还没有实际运行过。之后 CI 在 GitHub 上首次运行，发现了 Windows 和 PyPy 上的问题；0.8.1 只包含这些修复，见[验收映射](../compat/COVERAGE.md#081-跨平台修复)。
 
+0.8.2 调整了安装选项，执行行为没有变化：`httpx` 和 `websockets` 成为默认依赖，`pip install pi-python-core` 装完即可连接模型；只有 ChatGPT 账号登录需要的 PyJWT 放进 `[oauth]`，`[providers]` 保留为它的别名，缺少时报错会写明要装哪个选项。用户文档改为中英双语：英文是默认版本，中文在 `README.zh-CN.md` 和 `docs/zh/`；验证记录仍只有中文。
+
 ## 复现与验证附录
 
-- 说明文档：[一页概念](CONCEPTS.md)、[API](API.md)、[模型接入与本地模型](PROVIDERS.md)、[验收映射](../compat/COVERAGE.md)
+- 说明文档：[一页概念](zh/CONCEPTS.md)、[API](zh/API.md)、[模型接入与本地模型](zh/PROVIDERS.md)、[验收映射](../compat/COVERAGE.md)
 - 全部检查命令与输出：[verification.json](../compat/results/verification.json)，命令 `uv run python scripts/verify.py`
 - 差分结果：[核心](../compat/results/conformance.json)、[Provider](../compat/results/provider-conformance.json)、[WebSocket 多轮](../compat/results/websocket-conformance.json)、[出错判断](../compat/results/recovery-conformance.upstream.json)
 - Linux 安装：[3.11](../compat/results/linux-3.11.json)、[3.12](../compat/results/linux-3.12.json)、[3.13](../compat/results/linux-3.13.json)、[3.14](../compat/results/linux-3.14.json)，命令 `uv run python scripts/linux_verify.py`
