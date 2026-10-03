@@ -26,7 +26,7 @@
 - Chat Completions 接入尚未连接真实的本地模型服务；
 - 真实账号联调没有重跑。
 
-0.8.0 发布时 macOS 和 Windows 还没有实际运行过。之后 CI 在 GitHub 上首次运行，发现并修复了 Windows 和 PyPy 上的问题，见[验收映射](../compat/COVERAGE.md#080-之后的跨平台修复)。
+0.8.0 发布时 macOS 和 Windows 还没有实际运行过。之后 CI 在 GitHub 上首次运行，发现了 Windows 和 PyPy 上的问题；0.8.1 只包含这些修复，见[验收映射](../compat/COVERAGE.md#081-跨平台修复)。
 
 ## 复现与验证附录
 

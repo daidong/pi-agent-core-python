@@ -111,7 +111,7 @@ Python 新增，上游核心没有对应：
 
 验证（0.7.0 发布时）：Python 测试 308 项；核心差分 25 组、Provider 差分 50 组、WebSocket 差分 2 组、出错判断 44 条，全部与上游一致。Docker 内 Python 3.11–3.14 断网安装 wheel，各 304 项通过（4 项 MCP 测试因锁文件不含 MCP SDK 而跳过）；本机安装后 3.14t 308 项、PyPy 3.11 304 项通过。依赖取最低版本（jsonschema 4.18、httpx 0.27、websockets 14.2、PyJWT 2.8）和最新版本都通过；MCP 适配在 SDK 1.10（它要求 jsonschema 4.20 以上）和 2.3 上都测过。macOS 和 Windows 只写进了 CI 配置，还没有实际运行；本机也没有运行中的本地模型服务，Chat Completions 接入尚未连接真实服务器。
 
-## 0.8.0 之后的跨平台修复
+## 0.8.1 跨平台修复
 
 CI 第一次在 GitHub 上运行，Linux 和 macOS 全部通过，另外发现两处只在特定平台出现的问题：
 

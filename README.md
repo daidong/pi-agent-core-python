@@ -2,14 +2,17 @@
 
 一个可嵌入的 Python agent 核心，移植自 [Pi](https://github.com/earendil-works/pi)（固定参照 `v1.0.0`）。它负责一件事：把对话发给模型，执行模型要求的工具，把结果交回模型，直到得到回答。工具就是普通的 Python 函数；模型可以是 Claude、GPT、DeepSeek，也可以是本机或集群上的开源模型。
 
+PyPI 上的 `pi-agent-core` 是另一个独立项目，移植的是 2026 年初 pi-mono 中的旧版本。本库对照 Pi v1.0.0 的行为，与上游的实际运行结果逐组比较；并自带 Claude、OpenAI、DeepSeek 和本地模型的接入，不需要安装任何模型 SDK。
+
 ## 安装
 
-支持 Python 3.11–3.14（包括无 GIL 的 3.14t）和 PyPy 3.11，不需要 Node 或任何模型 SDK。尚未发布到 PyPI，先从源码或本地构建的 wheel 安装：
+支持 Python 3.11–3.14（包括无 GIL 的 3.14t）和 PyPy 3.11，不需要 Node 或任何模型 SDK。
 
 ```bash
-uv sync --locked --extra providers          # 在源码目录里
-python -m pip install 'dist/pi_python_core-0.8.0-py3-none-any.whl[providers]'
+pip install 'pi-python-core[providers]'      # 或 uv add 'pi-python-core[providers]'
 ```
+
+安装名是 `pi-python-core`，导入名是 `pi_python`。
 
 | 安装选项 | 带来什么 |
 |---|---|

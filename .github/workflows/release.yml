@@ -1,0 +1,38 @@
+name: release
+# Pushing a tag such as v0.8.1 builds, tests and publishes that version to PyPI.
+# PyPI trusts this workflow file (trusted publishing), so no token is stored here.
+on:
+  push:
+    tags: ['v*']
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Tag matches the package version
+        run: test "v$(grep -m1 '^version = ' pyproject.toml | cut -d'"' -f2)" = "$GITHUB_REF_NAME"
+      - run: uv sync --locked --extra providers --extra mcp
+      - run: uv run pytest -q
+      # Builds the sdist, then the wheel from the sdist, so both are exercised.
+      - run: uv build
+      - name: Installed wheel works without optional dependencies
+        run: |
+          uv venv -p 3.11 /tmp/installed
+          uv pip install -p /tmp/installed/bin/python dist/pi_python_core-*-py3-none-any.whl
+          cd /tmp && /tmp/installed/bin/python "$GITHUB_WORKSPACE/examples/in_memory.py"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

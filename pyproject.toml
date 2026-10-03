@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pi-python-core"
-version = "0.8.0"
+version = "0.8.1"
 description = "An embeddable asyncio agent core with opt-in Claude and OpenAI providers"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -30,6 +30,9 @@ dev = ["pytest==8.4.2", "pytest-asyncio==1.2.0", "ruff==0.13.3", "mypy==1.18.2",
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/pi_python"]
+
+[tool.hatch.build.targets.sdist]
+include = ["/src", "/tests", "/examples", "/compat", "/docs", "/README.md", "/LICENSE", "/NOTICE"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

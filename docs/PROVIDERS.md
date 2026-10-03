@@ -5,9 +5,9 @@
 ## 安装和 API key
 
 ```bash
+pip install 'pi-python-core[providers]'
+# 在源码目录里：
 uv sync --locked --extra providers
-# 安装 wheel 时选择可选依赖：
-python -m pip install 'dist/pi_python_core-0.8.0-py3-none-any.whl[providers]'
 ```
 
 ```python
