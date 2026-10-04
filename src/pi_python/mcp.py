@@ -1,7 +1,8 @@
 """Use the tools of an MCP server as Agent tools.
 
 `mcp_tools(session)` wraps every tool of a connected session from the official `mcp` SDK
-(1.x or 2.x); `connect_stdio(...)` also starts a stdio server and closes it afterwards.
+(1.x or 2.x); `connect_stdio(...)` also starts a stdio server and closes it afterwards, and
+`connect_http(...)` connects to a streamable HTTP server.
 The conversion follows Pi's MCP adapter: text and images pass through, embedded text and
 image resources are unwrapped, other blocks become short text placeholders, and MCP's
 `isError` marks a failed call. Install with ``pip install 'pi-python-core[mcp]'``.
@@ -16,7 +17,7 @@ import json
 import re
 import warnings
 from collections.abc import AsyncIterator, Iterable, Mapping, Sequence
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 from typing import Any
 
 from .errors import ConfigurationError
@@ -177,11 +178,93 @@ async def connect_stdio(
                     tools = await mcp_tools(session, prefix=prefix, names=names)
                 yield tools
     except BaseExceptionGroup as group:
-        # The SDK's task groups wrap a single failure ("Connection closed", a timeout,
-        # or an error from the caller's block), sometimes twice; raise that failure itself.
-        error: BaseException = group
-        while isinstance(error, BaseExceptionGroup) and len(error.exceptions) == 1:
-            error = error.exceptions[0]
-        if error is group:
-            raise
-        raise error from None
+        _raise_single(group)
+
+
+@asynccontextmanager
+async def connect_http(
+    url: str,
+    *,
+    headers: Mapping[str, str] | None = None,
+    prefix: str | None = None,
+    names: Iterable[str] | None = None,
+    init_timeout: float = 30.0,
+) -> AsyncIterator[list[Tool]]:
+    """Connect to a streamable HTTP MCP server, yield its tools, and disconnect afterwards.
+
+    ``async with connect_http("https://example.org/mcp", headers={...}) as tools: ...``
+
+    The legacy SSE transport is not supported, as in Pi.
+    """
+    try:
+        from mcp import ClientSession  # type: ignore[import-not-found,unused-ignore]
+        from mcp.client import streamable_http as transport  # type: ignore[import-not-found,unused-ignore]
+    except ImportError as exc:
+        raise ImportError(
+            "connect_http needs the MCP SDK: pip install 'pi-python-core[mcp]'"
+        ) from exc
+    from mcp.shared._httpx_utils import create_mcp_http_client  # type: ignore[import-not-found,unused-ignore]
+
+    origin = _origin(url)
+
+    async def same_origin(request: Any) -> None:
+        # Some SDK 1.x versions follow redirects to any origin, which would send the
+        # headers (often an API key) there. Redirects within the server's origin, such
+        # as /mcp to /mcp/, still work. SDK 2.x applies the same rule itself.
+        target = _origin(str(request.url))
+        if target != origin and target != ("https", *origin[1:]):
+            raise ConnectionError(
+                f"MCP server at {origin[1]} redirected to another origin ({target[1]});"
+                " not following"
+            )
+
+    def client_without_redirects(*args: Any, **kwargs: Any) -> Any:
+        client = create_mcp_http_client(*args, **kwargs)
+        hooks = dict(client.event_hooks)
+        hooks["request"] = [*hooks.get("request", []), same_origin]
+        client.event_hooks = hooks
+        return client
+
+    try:
+        async with AsyncExitStack() as stack:
+            if hasattr(transport, "streamable_http_client"):  # SDK 2.x and late 1.x
+                client = await stack.enter_async_context(
+                    client_without_redirects(headers=dict(headers or {}))
+                )
+                streams = await stack.enter_async_context(
+                    transport.streamable_http_client(url, http_client=client)
+                )
+            else:
+                streams = await stack.enter_async_context(
+                    transport.streamablehttp_client(  # type: ignore[attr-defined,unused-ignore]
+                        url,
+                        headers=dict(headers or {}),
+                        httpx_client_factory=client_without_redirects,
+                    )
+                )
+            session = await stack.enter_async_context(ClientSession(streams[0], streams[1]))
+            async with asyncio.timeout(init_timeout):
+                await session.initialize()
+                tools = await mcp_tools(session, prefix=prefix, names=names)
+            yield tools
+    except BaseExceptionGroup as group:
+        _raise_single(group)
+
+
+def _origin(url: str) -> tuple[str, str, int | None]:
+    from urllib.parse import urlsplit
+
+    parts = urlsplit(url)
+    default = {"http": 80, "https": 443}.get(parts.scheme)
+    return parts.scheme, parts.hostname or "", parts.port or default
+
+
+def _raise_single(group: BaseExceptionGroup) -> None:
+    # The SDK's task groups wrap a single failure ("Connection closed", a timeout, or an
+    # error from the caller's block), sometimes twice; raise that failure itself.
+    error: BaseException = group
+    while isinstance(error, BaseExceptionGroup) and len(error.exceptions) == 1:
+        error = error.exceptions[0]
+    if error is group:
+        raise group
+    raise error from None

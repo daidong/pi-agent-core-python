@@ -42,4 +42,14 @@ def pixel() -> Image:
 
 
 if __name__ == "__main__":
-    server.run()
+    import sys
+
+    if sys.argv[1:2] == ["--http"]:  # streamable HTTP on 127.0.0.1:<port>/mcp
+        port = int(sys.argv[2])
+        try:
+            server.run(transport="streamable-http", host="127.0.0.1", port=port)
+        except TypeError:  # MCP SDK 1.x takes the address from the server's settings
+            server.settings.host, server.settings.port = "127.0.0.1", port
+            server.run(transport="streamable-http")
+    else:
+        server.run()

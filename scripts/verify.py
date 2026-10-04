@@ -38,6 +38,8 @@ COMMANDS = [
     ["uv", "run", "python", "scripts/provider_conformance.py"],
     ["uv", "run", "python", "scripts/websocket_conformance.py"],
     ["uv", "run", "python", "scripts/recovery_conformance.py"],
+    ["uv", "run", "python", "scripts/plugin_conformance.py"],
+    ["uv", "run", "python", "examples/plugin_demo.py"],
     ["uv", "run", "python", "examples/provider_chat.py", "--help"],
     ["uv", "build"],
 ]

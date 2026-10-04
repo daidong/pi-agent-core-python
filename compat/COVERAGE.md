@@ -36,7 +36,7 @@
 
 D1–D8 保持原设计的含义。D1 严格输入；D2 执行前钩子不能通过原地修改参数改变调用；D3 资源预算；D4 Python 取消及未知结果；D5 状态复制；D6 输出检查；D7 诊断、原始结果和完整流校验；D8 文本与工具子集。每项有独立 Python 断言，不以 skip 代替验收。
 
-范围外项目：真实模型 SDK、图片/音频/专有推理、OAuth、MCP 客户端、TUI/CLI、持久化与崩溃恢复、子 agent 管理器、Slurm/PBS，以及真实 HPC/科研任务效果。模型侧不支持的内容显式拒绝。上游真实模型 e2e、代理和其他应用测试未运行；它们不计入通过数。
+范围外项目：真实模型 SDK、图片/音频/专有推理、OAuth、MCP 客户端、TUI/CLI、持久化与崩溃恢复、子 agent 管理器、Slurm/PBS，以及真实 HPC/科研任务效果。（后来的版本加入了其中几项的可选模块，核心仍不包含它们：0.7 起有 MCP 适配，0.9 起插件模块提供 Pi 示例扩展里的 `subagent` 工具，见下面各版本的小节。）模型侧不支持的内容显式拒绝。上游真实模型 e2e、代理和其他应用测试未运行；它们不计入通过数。
 
 ## 已知验收边界
 
@@ -117,3 +117,31 @@ CI 第一次在 GitHub 上运行，Linux 和 macOS 全部通过，另外发现�
 
 - **Windows 读错文本文件。** Windows 默认按 cp1252 读文本，含中文的测试数据被读坏。库、compat、测试和示例里的文本读写现在都明确使用 UTF-8；库读取内置模型表时也一样（该文件目前全是 ASCII，以前没有出错）。凭据文件 `0o600` 权限的检查只在 POSIX 上进行，Windows 没有这种权限位。
 - **PyPy 在极深的 schema 上崩溃。** 以前靠 `RecursionError` 拒绝嵌套过深的工具 schema。CPython 上实际上限随 schema 写法变化（`anyOf` 嵌套 81 层，`items` 嵌套 122 层），PyPy 的 JIT 偶尔在报错之前就撑爆底层栈，进程段错误退出。现在注册时先用非递归方式计数，对象和数组嵌套超过 100 层就报 `ConfigurationError`，在所有解释器上相同。上游 Pi 没有这项限制，属于本库新增的差异。代价是：嵌套超过 100 层、以前在 CPython 上能通过的 schema 现在被拒绝。以前子 schema 的嵌套最多能到 197 层，`default`、`const` 等数据值里的嵌套能到约 1000 层。
+
+## 0.9 新增：插件
+
+0.9 加了可选模块 `pi_python.plugins`。它读取 Pi coding-agent 的 package 格式（技能、提示模板、子 agent 定义、`mcp.json` 和扩展代码），再据此构造普通的 Agent。执行循环没有改动。核心只改了一处：把后置钩子应用部分更新（`ToolResultUpdate`）的代码提取成函数 `apply_result_update`，供插件模块复用，行为不变。按与上游的关系分三类记录。
+
+与上游一致，并有对照证据（命令 `scripts/plugin_conformance.py`，运行器 `reference/plugin-runner.ts`，输入 `compat/plugin-cases.json` 和 `compat/plugin-fixtures/`，测试 `tests/test_plugin_conformance.py`）：
+- **提示模板**：`substituteArgs` 38 条、`parseCommandArgs` 11 条、`expandPromptTemplate` 10 条，与上游函数的实际输出一致；读取 `prompts/` 目录得到的名字、描述、参数提示和正文与 `loadPromptTemplates` 一致。
+- **技能**：用一个 13 项的技能目录对照 `loadSkillsFromDir`，覆盖合法技能、名字不合规、缺少描述、禁止模型调用、深层嵌套、技能目录下不再查找、隐藏目录、顶层松散的 `.md`、YAML 写错和描述过长。加载的技能和警告一致；YAML 语法错误的警告文字不同，只比较出现在哪个文件。`formatSkillsForPrompt` 输出的 `<available_skills>` 部分逐字一致，开头的说明改为使用 `read_skill` 工具。`/skill:name` 的展开格式照 `agent-session.ts` 的 `_expandSkillCommand` 移植；它是私有方法，没有做差分。
+- **frontmatter**：10 条共享样例与 Pi 的 `parseFrontmatter` 一致。另外用 Pi 依赖的 `yaml` 库，对本机 2056 个真实的技能、子 agent 和命令文件做了一次比对（不在 CI 里）：两边都能解析的 2034 个结果完全相同；13 个未加引号、含 `: ` 的描述，YAML 报错而本库接受；4 个含 `{{TITLE}}` 的页面模板本库拒绝；5 个两边都拒绝。
+- **多个处理函数怎样合并**：照 `runner.ts` 的 `emitToolCall`、`emitToolResult`、`emitContext`、`emitBeforeProviderRequest` 等移植。只有 Python 测试，没有共享差分：这些规则在 coding-agent 的扩展运行器里，不在固定参照的核心测试范围内。
+- **子 agent 工具**：参数、三种模式、并行上限（8 个任务，同时 4 个）、并行汇总里每个回答 50 KiB 的截断和结果文字，照示例扩展 `examples/extensions/subagent` 移植，只有 Python 测试。
+
+本库新增，或与上游做法不同：
+- 上游由命令行程序发现和加载 package（`pi install`、`settings.json`、项目信任）。本库没有应用程序，由应用代码指定加载哪些插件，不自动发现。已安装的插件通过 entry point 组 `pi_python.plugins` 注册，对应 `pi install npm:...`。
+- 插件代码是 Python 的 `setup(api)`，对应 Pi 扩展的工厂函数。`PluginAPI` 只保留与界面无关的部分（工具、系统提示、钩子、事件、MCP），没有命令、快捷键、渲染器等终端界面接口；另加了 `service`（应用提供的对象）、`options`（按插件分开的设置）、`add_check`（自检）和 `on_close`。
+- 插件处理函数出错时交给 `on_error`，默认写日志；上游交给 `emitError`，显示在界面上。`before_tool_call` 与上游一样，出错时让这次调用失败。应用自己的钩子保持核心行为，不做隔离。
+- 模型用 `read_skill` 工具读取技能（上游让模型用通用的 `read` 工具）。它只能读技能目录里的文件，单个文件不超过 256 KiB。
+- 子 agent 在同一进程、同一事件循环里运行（上游为每个子 agent 启动一个 pi 子进程），使用主 agent 的 Provider 和合并后的全部钩子。上游的子进程会加载同样的扩展，所以插件的处理函数同样作用于子 agent，这一点与上游一致。不指定模型时，子 agent 用调用那一刻主 agent 的模型（上游从设置里取默认模型）。没有上游的 `agentScope`、`cwd` 参数和项目级 agent 的确认步骤。
+- MCP：工具名为 `mcp__<服务器>__<工具>`，但工具名里的 `-` 保留（上游换成 `_`）。字符串里只展开 `${PLUGIN_ROOT}`、`${PYTHON}` 和环境变量，前两个是本库新增；不支持 `!命令`。不支持 OAuth、`exposure` / `toolExposure` 和单次请求超时，这些设置会被忽略并给出警告。新增 `pi_python.mcp.connect_http`，连接 streamable HTTP 服务器；在 MCP SDK 1.10、1.30 和 2.3 上测过。
+- 技能查找不读 `.gitignore`、`.ignore`、`.fdignore`；同一目录里的条目按名字排序（上游按文件系统返回的顺序）；经符号链接回到已经找过的目录时不再进入。
+- 发布前的安全审查加了几处上游没有的保护：`read_skill` 在访问文件系统之前，先按文字拒绝绝对路径、盘符和网络路径（Windows 上解析 `//主机/共享` 时就会连接该主机），`SKILL.md` 也受 256 KiB 上限约束；MCP 的 header 和 URL 不得含控制字符，取自环境变量的值在警告里显示为 `***`；`connect_http` 只在同一源内跟随重定向（MCP SDK 1.10 会跟随到任何源，并把自定义 header 一起带过去）；frontmatter 超过 64 KiB 或嵌套超过 64 层时不予读取；子 agent 运行带着主 agent 的 `RunLimits`。接力步数仍和上游一样不设上限。
+- frontmatter 由内置的小解析器读取，不依赖 YAML 库（比对结果见上）。
+
+已知差异与限制：
+- 没有上游的项目信任机制。插件文档写明只应加载可信的插件；因为不会自动发现插件，只有应用代码点名的插件才会运行。
+- 子 agent 定义里 Claude Code 格式的其他字段（如 `color`）会被忽略。
+
+验证结果见 [实施与验证结果](../docs/IMPLEMENTATION.md)。

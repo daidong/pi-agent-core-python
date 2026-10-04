@@ -72,4 +72,4 @@ Pi 把下面这些留给应用；本库为科研和 HPC 场景放进了核心，
 - 工具主动报告结果"未知"（例如作业提交后连接断开）时停止运行，等应用核对，不自动重试；取消或超时一个工具不会触发这项保护，只记成普通错误结果；
 - 返回给调用者的状态都是副本，运行中的配置更新在下一轮生效。
 
-细节见 [API](API.md)，模型接入（含本地模型）见 [PROVIDERS](PROVIDERS.md)，与 Pi 的逐项对照见 [验收映射](../../compat/COVERAGE.md)。搭建更完整的 agent 时常用的写法都有可运行的示例：[子 agent](../../examples/subagent.py)、[保存与恢复对话](../../examples/save_restore.py)、[超长时压缩和出错重试](../../examples/recovery.py)、[MCP 工具](../../examples/mcp_tools.py)、[本地模型](../../examples/local_model.py)。
+细节见 [API](API.md)，模型接入（含本地模型）见 [PROVIDERS](PROVIDERS.md)，与 Pi 的逐项对照见 [验收映射](../../compat/COVERAGE.md)。搭建更完整的 agent 时常用的写法都有可运行的示例：[子 agent](../../examples/subagent.py)、[保存与恢复对话](../../examples/save_restore.py)、[超长时压缩和出错重试](../../examples/recovery.py)、[MCP 工具](../../examples/mcp_tools.py)、[本地模型](../../examples/local_model.py)。想把工具、说明、钩子、技能和子 agent 打包成可以安装、可以分享的单元，见 [插件](PLUGINS.md)；插件只是组装上面这些概念，不引入新的概念。

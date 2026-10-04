@@ -1,6 +1,6 @@
 {
-  "platform": "macOS-26.7-arm64-arm-64bit",
-  "python": "3.11.14 (main, Oct 10 2025, 12:55:50) [Clang 20.1.4 ]",
+  "platform": "macOS-26.7-arm64-arm-64bit-Mach-O",
+  "python": "3.14.0 (main, Oct 10 2025, 12:54:13) [Clang 20.1.4 ]",
   "versions": {
     "node": "v24.4.1",
     "npm": "11.4.2",
@@ -18,9 +18,9 @@
         "mcp"
       ],
       "exit_code": 0,
-      "seconds": 0.018277083057910204,
+      "seconds": 0.021038709091953933,
       "stdout": "",
-      "stderr": "Resolved 47 packages in 3ms\nAudited 44 packages in 4ms\n"
+      "stderr": "Resolved 47 packages in 3ms\nAudited 44 packages in 3ms\n"
     },
     {
       "command": [
@@ -35,7 +35,7 @@
         "scripts"
       ],
       "exit_code": 0,
-      "seconds": 0.061642165994271636,
+      "seconds": 0.06494950002525002,
       "stdout": "All checks passed!\n",
       "stderr": ""
     },
@@ -53,8 +53,8 @@
         "scripts"
       ],
       "exit_code": 0,
-      "seconds": 0.024616790935397148,
-      "stdout": "78 files already formatted\n",
+      "seconds": 0.02588170801755041,
+      "stdout": "89 files already formatted\n",
       "stderr": ""
     },
     {
@@ -65,8 +65,8 @@
         "src/pi_python"
       ],
       "exit_code": 0,
-      "seconds": 0.5379232910927385,
-      "stdout": "Success: no issues found in 32 source files\n",
+      "seconds": 0.35578474996145815,
+      "stdout": "Success: no issues found in 37 source files\n",
       "stderr": ""
     },
     {
@@ -77,8 +77,8 @@
         "-q"
       ],
       "exit_code": 0,
-      "seconds": 8.16056429198943,
-      "stdout": "........................................................................ [ 23%]\n........................................................................ [ 46%]\n........................................................................ [ 70%]\n........................................................................ [ 93%]\n....................                                                     [100%]\n308 passed in 7.87s\n",
+      "seconds": 11.12525479204487,
+      "stdout": "........................................................................ [ 18%]\n........................................................................ [ 36%]\n........................................................................ [ 54%]\n........................................................................ [ 72%]\n........................................................................ [ 90%]\n......................................                                   [100%]\n398 passed in 10.69s\n",
       "stderr": ""
     },
     {
@@ -89,7 +89,7 @@
         "examples/in_memory.py"
       ],
       "exit_code": 0,
-      "seconds": 0.08732129097916186,
+      "seconds": 0.10870087496004999,
       "stdout": "The telemetry contains 3 complete records.\n",
       "stderr": ""
     },
@@ -104,8 +104,8 @@
         "test/agent.test.ts"
       ],
       "exit_code": 0,
-      "seconds": 1.044483624980785,
-      "stdout": "\n> @earendil-works/pi-agent-core@1.0.0 test\n> vitest --run test/agent-loop.test.ts test/agent.test.ts\n\n\n RUN  v4.1.11 /Users/daidong/Documents/gitrepos/pi-python/reference/pi/packages/agent\n\n\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\n\n Test Files  2 passed (2)\n      Tests  77 passed (77)\n   Start at  08:43:23\n   Duration  637ms (transform 432ms, setup 0ms, import 838ms, tests 170ms, environment 0ms)\n\n",
+      "seconds": 1.1702424169052392,
+      "stdout": "\n> @earendil-works/pi-agent-core@1.0.0 test\n> vitest --run test/agent-loop.test.ts test/agent.test.ts\n\n\n RUN  v4.1.11 /Users/daidong/Documents/gitrepos/pi-python/reference/pi/packages/agent\n\n\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\n\n Test Files  2 passed (2)\n      Tests  77 passed (77)\n   Start at  00:19:15\n   Duration  758ms (transform 566ms, setup 0ms, import 1.06s, tests 171ms, environment 0ms)\n\n",
       "stderr": ""
     },
     {
@@ -121,8 +121,8 @@
         "test/openai-codex-stream.test.ts"
       ],
       "exit_code": 0,
-      "seconds": 0.9827986669261009,
-      "stdout": "\n> @earendil-works/pi-ai@1.0.0 test\n> vitest --run test/transcript-tool-changes.test.ts test/validation.test.ts test/anthropic-mid-conversation-effort.test.ts test/openai-codex-stream.test.ts\n\n\n RUN  v4.1.11 /Users/daidong/Documents/gitrepos/pi-python/reference/pi/packages/ai\n\n\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\n\n Test Files  4 passed (4)\n      Tests  70 passed (70)\n   Start at  08:43:24\n   Duration  708ms (transform 794ms, setup 0ms, import 1.39s, tests 208ms, environment 0ms)\n\n",
+      "seconds": 1.1117059160023928,
+      "stdout": "\n> @earendil-works/pi-ai@1.0.0 test\n> vitest --run test/transcript-tool-changes.test.ts test/validation.test.ts test/anthropic-mid-conversation-effort.test.ts test/openai-codex-stream.test.ts\n\n\n RUN  v4.1.11 /Users/daidong/Documents/gitrepos/pi-python/reference/pi/packages/ai\n\n\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\n\n Test Files  4 passed (4)\n      Tests  70 passed (70)\n   Start at  00:19:16\n   Duration  816ms (transform 907ms, setup 0ms, import 1.59s, tests 244ms, environment 0ms)\n\n",
       "stderr": ""
     },
     {
@@ -133,7 +133,7 @@
         "scripts/conformance.py"
       ],
       "exit_code": 0,
-      "seconds": 4.403297041077167,
+      "seconds": 4.8161368750734255,
       "stdout": "C01-text: passed []\nC02-tool: passed []\nC03-sequential: passed []\nC04-parallel: passed []\nC05-one-sequential: passed []\nC06-one-failure: passed []\nC07-unknown: passed []\nC08-prepare: passed []\nC09-before-error: passed []\nC09-block: passed []\nC09-replace: passed []\nC10-length: passed []\nC11-transform: passed []\nC12-system: passed []\nC13-steering: passed []\nC14-followup-all: passed []\nC14-followup-one: passed []\nC15-prepare: passed []\nC16-continue: passed []\nC16-end: passed []\nC16-mixed: passed []\nC16-terminate: passed []\nC19-abort-stream: passed []\nC19-abort-tools: passed []\nC24-provider-error: passed []\n",
       "stderr": ""
     },
@@ -145,7 +145,7 @@
         "scripts/provider_conformance.py"
       ],
       "exit_code": 0,
-      "seconds": 12.377592624980025,
+      "seconds": 13.814684083103202,
       "stdout": "anthropic-oauth.json passed\nanthropic-request-cache-long.json passed\nanthropic-request-cache-none.json passed\nanthropic-request-replay.json passed\nanthropic-request-tools-image.json passed\nanthropic-text.json passed\nanthropic-thinking.json passed\nanthropic-tool.json passed\ncodex-request-tools-image.json passed\ncodex-text.json passed\ncompletions-compat-strict.json passed\ncompletions-deepseek.json passed\ncompletions-format-ant-ling.json passed\ncompletions-format-baseten.json passed\ncompletions-format-string-thinking.json passed\ncompletions-format-together.json passed\ncompletions-format-zai.json passed\ncompletions-midconvo-tools.json passed\ncompletions-moonshot-usage.json passed\ncompletions-openai-off.json passed\ncompletions-openrouter.json passed\ncompletions-qwen-length.json passed\ncompletions-reasoning-content.json passed\ncompletions-request-replay.json passed\ncompletions-text.json passed\ncompletions-tool-stream.json passed\nopenai-incomplete.json passed\nopenai-request-cache-long.json passed\nopenai-request-cache-none.json passed\nopenai-request-reasoning.json passed\nopenai-request-replay.json passed\nopenai-request-tools-image.json passed\nopenai-text.json passed\nopenai-thinking-backfill.json passed\nopenai-thinking.json passed\nopenai-tool.json passed\nproxy-text.json passed\nproxy-thinking-tool.json passed\nsession-anthropic-collapse-budget.json passed\nsession-anthropic-native-tools.json passed\nsession-anthropic-oauth-effort.json passed\nsession-anthropic-redefinition.json passed\nsession-anthropic-server-fallback.json passed\nsession-anthropic-thinking-off.json passed\nsession-codex-tool-search.json passed\nsession-openai-additional-tools.json passed\nsession-openai-collapse.json passed\nsession-openai-explicit-cache-long.json passed\nsession-openai-explicit-cache-none.json passed\nsession-openai-removal.json passed\n",
       "stderr": ""
     },
@@ -157,7 +157,7 @@
         "scripts/websocket_conformance.py"
       ],
       "exit_code": 0,
-      "seconds": 0.34515154198743403,
+      "seconds": 0.42606441595125943,
       "stdout": "codex-continuation-lost-state.json passed\ncodex-continuation-tool-loop.json passed\n",
       "stderr": ""
     },
@@ -169,8 +169,32 @@
         "scripts/recovery_conformance.py"
       ],
       "exit_code": 0,
-      "seconds": 0.1610687499633059,
+      "seconds": 0.1813259170157835,
       "stdout": "recovery classifiers: 44/44 match upstream \n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/plugin_conformance.py"
+      ],
+      "exit_code": 0,
+      "seconds": 0.39384091598913074,
+      "stdout": ".......                                                                  [100%]\n7 passed in 0.05s\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "examples/plugin_demo.py"
+      ],
+      "exit_code": 0,
+      "seconds": 0.11929479194805026,
+      "stdout": "loaded: lab_tools 0.1.0\ncheck: counts_duplicates passed\nprompt: Find duplicate events in events.csv using a 30 second window. Read the dedup-window skill first.\ntools used: ['read_skill', 'subagent']\nanswer: The reviewer found 2 duplicate rows.\n",
       "stderr": ""
     },
     {
@@ -182,8 +206,8 @@
         "--help"
       ],
       "exit_code": 0,
-      "seconds": 0.08836879208683968,
-      "stdout": "usage: provider_chat.py [-h] --provider\n                        {anthropic,openai,openai-codex,openai-chatgpt,deepseek}\n                        --model MODEL [--prompt PROMPT]\n                        [--credential-file CREDENTIAL_FILE] [--login]\n                        [--device]\n                        [--thinking {off,minimal,low,medium,high,xhigh,max}]\n                        [--transport {sse,websocket,websocket-cached,auto}]\n                        [--session-id SESSION_ID]\n\nExplicit API/OAuth example. Invoke --help; never imported by the core.\n\noptions:\n  -h, --help            show this help message and exit\n  --provider {anthropic,openai,openai-codex,openai-chatgpt,deepseek}\n  --model MODEL         Model ID enabled for this account\n  --prompt PROMPT\n  --credential-file CREDENTIAL_FILE\n                        App-owned OAuth file (never reuse another client file)\n  --login\n  --device              Codex device authorization instead of browser callback\n  --thinking {off,minimal,low,medium,high,xhigh,max}\n  --transport {sse,websocket,websocket-cached,auto}\n  --session-id SESSION_ID\n                        Required for websocket-cached\n",
+      "seconds": 0.10245537490118295,
+      "stdout": "usage: provider_chat.py [-h]\n                        --provider {anthropic,openai,openai-codex,openai-chatgpt,deepseek}\n                        --model MODEL [--prompt PROMPT]\n                        [--credential-file CREDENTIAL_FILE] [--login]\n                        [--device]\n                        [--thinking {off,minimal,low,medium,high,xhigh,max}]\n                        [--transport {sse,websocket,websocket-cached,auto}]\n                        [--session-id SESSION_ID]\n\nExplicit API/OAuth example. Invoke --help; never imported by the core.\n\noptions:\n  -h, --help            show this help message and exit\n  --provider {anthropic,openai,openai-codex,openai-chatgpt,deepseek}\n  --model MODEL         Model ID enabled for this account\n  --prompt PROMPT\n  --credential-file CREDENTIAL_FILE\n                        App-owned OAuth file (never reuse another client file)\n  --login\n  --device              Codex device authorization instead of browser callback\n  --thinking {off,minimal,low,medium,high,xhigh,max}\n  --transport {sse,websocket,websocket-cached,auto}\n  --session-id SESSION_ID\n                        Required for websocket-cached\n",
       "stderr": ""
     },
     {
@@ -192,9 +216,9 @@
         "build"
       ],
       "exit_code": 0,
-      "seconds": 0.9028916249517351,
+      "seconds": 1.1796516249887645,
       "stdout": "",
-      "stderr": "Building source distribution...\nBuilding wheel from source distribution...\nSuccessfully built dist/pi_python_core-0.8.0.tar.gz\nSuccessfully built dist/pi_python_core-0.8.0-py3-none-any.whl\n"
+      "stderr": "Building source distribution...\nBuilding wheel from source distribution...\nSuccessfully built dist/pi_python_core-0.9.0.tar.gz\nSuccessfully built dist/pi_python_core-0.9.0-py3-none-any.whl\n"
     }
   ],
   "status": "passed"

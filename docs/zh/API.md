@@ -157,7 +157,25 @@ async with connect_stdio("uvx", ["mcp-server-fetch"], prefix="web") as tools:
     await agent.prompt("Summarize https://example.org")
 ```
 
-需要 `pip install 'pi-python-core[mcp]'`，兼容官方 MCP SDK 1.10 及以上和 2.x。`connect_stdio` 启动一个 stdio MCP 服务器，退出 `async with` 时关闭它。已经自己建立了 `ClientSession` 时，用 `await mcp_tools(session, prefix=None, names=None)` 包装它的工具。转换方式与 Pi 的 MCP 适配相同：文本和图片直接转换；嵌入的文本或图片资源取出内容；音频、资源链接和二进制资源换成简短的文字说明；只有结构化结果时转成 JSON 文本，同时作为 `structured_content`；MCP 的 `isError` 成为工具错误；进度通知成为 `tool_execution_update` 事件。工具名加上前缀后只保留字母、数字、`_` 和 `-`，最长 64 个字符。schema 无法使用的工具会发出警告并跳过，不影响同一服务器的其他工具。用 Python MCP SDK 2.3 写的 stdio 服务器在 PyPy 上无法启动（缺少 `fcntl.F_DUPFD_CLOEXEC`），这是 SDK 本身的限制；客户端一侧不受影响。
+需要 `pip install 'pi-python-core[mcp]'`，兼容官方 MCP SDK 1.10 及以上和 2.x。`connect_stdio` 启动一个 stdio MCP 服务器，退出 `async with` 时关闭它。`connect_http(url, headers=None, prefix=None, names=None)` 用同样的方式连接 streamable HTTP 服务器；和 Pi 一样，不支持旧的 SSE 传输方式。它只在服务器的同一源内跟随重定向，header 不会被发到其他源。它在 MCP SDK 1.10、1.30 和 2.3 上测过。已经自己建立了 `ClientSession` 时，用 `await mcp_tools(session, prefix=None, names=None)` 包装它的工具。转换方式与 Pi 的 MCP 适配相同：文本和图片直接转换；嵌入的文本或图片资源取出内容；音频、资源链接和二进制资源换成简短的文字说明；只有结构化结果时转成 JSON 文本，同时作为 `structured_content`；MCP 的 `isError` 成为工具错误；进度通知成为 `tool_execution_update` 事件。工具名加上前缀后只保留字母、数字、`_` 和 `-`，最长 64 个字符。schema 无法使用的工具会发出警告并跳过，不影响同一服务器的其他工具。用 Python MCP SDK 2.3 写的 stdio 服务器在 PyPy 上无法启动（缺少 `fcntl.F_DUPFD_CLOEXEC`），这是 SDK 本身的限制；客户端一侧不受影响。
+
+## 插件
+
+`pi_python.plugins` 负责加载插件。插件是一组有名字的附加内容：工具、系统提示文字、钩子、技能、提示模板、子 agent 和 MCP 服务器，格式沿用 Pi 的 package。`async with load_plugins([...], services=..., options=...) as plugins:` 加载插件，`plugins.agent(...)` 构造一个带上全部插件内容的 Agent。怎样编写、发布插件，以及多个插件怎样合在一起，见 [插件指南](PLUGINS.md)。
+
+| 名称 | 作用 |
+|---|---|
+| `load_plugins(sources, services=None, options=None, on_error=None)` | 返回 `PluginSet`；用 `async with` 打开，普通脚本里用 `with` |
+| `PluginSet.agent(**Agent 的参数)` | 在你的配置上加入插件的系统提示文字、工具、钩子和事件监听，返回 Agent |
+| `PluginSet.expand(text)` | 展开 `/skill:name 参数` 和 `/模板名 参数`，其他文字原样返回 |
+| `PluginSet.system_prompt(base)`、`.tools`、`.hooks(base)`、`.skill_tool()`、`.subagent_tool(tools=(), hooks=None, provider=None, stream_fn=None, model=None, limits=None)` | 各个部分，供自己构造 Agent 时使用。不给 `model` 时，子 agent 用调用那一刻主 agent 的模型；`limits` 作用于每次子 agent 运行 |
+| `await PluginSet.check()` | 运行插件的自检，返回 `CheckResult(plugin, name, passed, detail)` 列表 |
+| `PluginSet.skills`、`.prompts`、`.agents`、`.plugins`、`.diagnostics` | 加载了什么：`Skill(name, description, path, plugin, disable_model_invocation)`、`PromptTemplate(name, description, content, path, plugin, argument_hint)`、`AgentDefinition`、`Plugin`，以及警告文字 |
+| `Plugin(name, setup=None, root=None, version=None, source="code")` | 在代码里定义的插件。`root=None` 表示没有资源目录；通过入口点导出的 `Plugin` 则表示导出它的那个包的目录 |
+| `PluginAPI` | 插件的 `setup(api)` 收到的对象 |
+| `AgentDefinition(name, description, system_prompt="", tools=None, model=None, options={}, provider=None, path=None, plugin="")` | 一个子 agent；`path` 和 `plugin` 记录定义的来源 |
+| `discover_plugins()` | 以 `InstalledPlugin(name, target, distribution, version)` 列出已安装的插件，不导入它们；插件注册在入口点组 `ENTRY_POINT_GROUP`（`"pi_python.plugins"`）里 |
+| `PluginFailure`、`PluginWarning` | 插件处理函数出错时 `on_error` 收到的报告（不是异常）；某项资源被跳过时的警告 |
 
 ## 消息与编码
 

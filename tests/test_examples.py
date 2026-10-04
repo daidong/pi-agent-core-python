@@ -17,6 +17,7 @@ CASES = {
     "recovery.py": "context full: compacted",
     "mcp_tools.py": "answer: 19 + 23 = 42",
     "local_model.py": "answer: The sum is 42.",
+    "plugin_demo.py": "answer: The reviewer found 2 duplicate rows.",
 }
 
 

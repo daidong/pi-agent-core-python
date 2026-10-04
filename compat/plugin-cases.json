@@ -1,0 +1,424 @@
+{
+ "substitute": [
+  [
+   "Test: $ARGUMENTS",
+   [
+    "a",
+    "b",
+    "c"
+   ]
+  ],
+  [
+   "Test: $@",
+   [
+    "a",
+    "b",
+    "c"
+   ]
+  ],
+  [
+   "$ARGUMENTS",
+   [
+    "$1",
+    "$ARGUMENTS"
+   ]
+  ],
+  [
+   "$@",
+   [
+    "$100",
+    "$1"
+   ]
+  ],
+  [
+   "$1: $ARGUMENTS",
+   [
+    "prefix",
+    "a",
+    "b"
+   ]
+  ],
+  [
+   "Test: $ARGUMENTS",
+   []
+  ],
+  [
+   "Test: $1",
+   []
+  ],
+  [
+   "$@ and $ARGUMENTS",
+   [
+    "a",
+    "b"
+   ]
+  ],
+  [
+   "$1 $2 $3 $4 $5",
+   [
+    "a",
+    "b"
+   ]
+  ],
+  [
+   "$ARGUMENTS",
+   [
+    "日本語",
+    "🎉",
+    "café"
+   ]
+  ],
+  [
+   "$1 $2",
+   [
+    "line1\nline2",
+    "tab\tthere"
+   ]
+  ],
+  [
+   "$1$2",
+   [
+    "a",
+    "b"
+   ]
+  ],
+  [
+   "$0",
+   [
+    "a",
+    "b"
+   ]
+  ],
+  [
+   "$1.5",
+   [
+    "a"
+   ]
+  ],
+  [
+   "pre$@",
+   [
+    "a",
+    "b"
+   ]
+  ],
+  [
+   "$ARGUMENTS",
+   [
+    "a",
+    "",
+    "c"
+   ]
+  ],
+  [
+   "$A $$ $ $ARGS",
+   [
+    "a"
+   ]
+  ],
+  [
+   "$arguments $Arguments $ARGUMENTS",
+   [
+    "a",
+    "b"
+   ]
+  ],
+  [
+   "$10 $12 $15",
+   [
+    "val0",
+    "val1",
+    "val2",
+    "val3",
+    "val4",
+    "val5",
+    "val6",
+    "val7",
+    "val8",
+    "val9",
+    "val10",
+    "val11",
+    "val12",
+    "val13",
+    "val14"
+   ]
+  ],
+  [
+   "Price: \\$100",
+   []
+  ],
+  [
+   "List exactly ${1:-7} next steps",
+   []
+  ],
+  [
+   "List exactly ${1:-7} next steps",
+   [
+    "3"
+   ]
+  ],
+  [
+   "Mode: ${1:-brief}",
+   [
+    ""
+   ]
+  ],
+  [
+   "${1:-7}",
+   [
+    "$ARGUMENTS"
+   ]
+  ],
+  [
+   "${1:-$ARGUMENTS}",
+   [
+    "a",
+    "b"
+   ]
+  ],
+  [
+   "${3:-$ARGUMENTS}",
+   [
+    "a",
+    "b"
+   ]
+  ],
+  [
+   "${@:-none}",
+   []
+  ],
+  [
+   "${ARGUMENTS:-none}",
+   [
+    "x"
+   ]
+  ],
+  [
+   "${0:-zero}",
+   [
+    "a"
+   ]
+  ],
+  [
+   "${@:2}",
+   [
+    "a",
+    "b",
+    "c",
+    "d"
+   ]
+  ],
+  [
+   "${@:2:2}",
+   [
+    "a",
+    "b",
+    "c",
+    "d"
+   ]
+  ],
+  [
+   "${@:0}",
+   [
+    "a",
+    "b"
+   ]
+  ],
+  [
+   "${@:99}",
+   [
+    "a",
+    "b"
+   ]
+  ],
+  [
+   "${@:2:0}",
+   [
+    "a",
+    "b",
+    "c"
+   ]
+  ],
+  [
+   "${@:2} vs $@",
+   [
+    "a",
+    "b",
+    "c"
+   ]
+  ],
+  [
+   "${1:-a}}",
+   []
+  ],
+  [
+   "${1:-}",
+   []
+  ],
+  [
+   "${@:1:x}",
+   [
+    "a"
+   ]
+  ]
+ ],
+ "parse_args": [
+  "",
+  "a b c",
+  "  spaced   out  ",
+  "\"quoted arg\" plain",
+  "'single quoted' x",
+  "mixed\"quote\"s",
+  "\"unterminated quote",
+  "tab\tsep\nnewline",
+  "a \"\" b",
+  "日本語 'c d'",
+  "--flag=\"x y\""
+ ],
+ "expand": [
+  {
+   "text": "/review src/a.py",
+   "templates": [
+    {
+     "name": "review",
+     "content": "Review $1 ($@)"
+    },
+    {
+     "name": "x-y",
+     "content": "${@:2}|$1"
+    }
+   ]
+  },
+  {
+   "text": "/review",
+   "templates": [
+    {
+     "name": "review",
+     "content": "Review $1 ($@)"
+    },
+    {
+     "name": "x-y",
+     "content": "${@:2}|$1"
+    }
+   ]
+  },
+  {
+   "text": "/review   'two words'  b",
+   "templates": [
+    {
+     "name": "review",
+     "content": "Review $1 ($@)"
+    },
+    {
+     "name": "x-y",
+     "content": "${@:2}|$1"
+    }
+   ]
+  },
+  {
+   "text": "/missing a",
+   "templates": [
+    {
+     "name": "review",
+     "content": "Review $1 ($@)"
+    },
+    {
+     "name": "x-y",
+     "content": "${@:2}|$1"
+    }
+   ]
+  },
+  {
+   "text": "review a",
+   "templates": [
+    {
+     "name": "review",
+     "content": "Review $1 ($@)"
+    },
+    {
+     "name": "x-y",
+     "content": "${@:2}|$1"
+    }
+   ]
+  },
+  {
+   "text": "/x-y one two three",
+   "templates": [
+    {
+     "name": "review",
+     "content": "Review $1 ($@)"
+    },
+    {
+     "name": "x-y",
+     "content": "${@:2}|$1"
+    }
+   ]
+  },
+  {
+   "text": "/review\nmultiline arg",
+   "templates": [
+    {
+     "name": "review",
+     "content": "Review $1 ($@)"
+    },
+    {
+     "name": "x-y",
+     "content": "${@:2}|$1"
+    }
+   ]
+  },
+  {
+   "text": " /review a",
+   "templates": [
+    {
+     "name": "review",
+     "content": "Review $1 ($@)"
+    },
+    {
+     "name": "x-y",
+     "content": "${@:2}|$1"
+    }
+   ]
+  },
+  {
+   "text": "/",
+   "templates": [
+    {
+     "name": "review",
+     "content": "Review $1 ($@)"
+    },
+    {
+     "name": "x-y",
+     "content": "${@:2}|$1"
+    }
+   ]
+  },
+  {
+   "text": "/review\ta",
+   "templates": [
+    {
+     "name": "review",
+     "content": "Review $1 ($@)"
+    },
+    {
+     "name": "x-y",
+     "content": "${@:2}|$1"
+    }
+   ]
+  }
+ ],
+ "frontmatter": [
+  "---\nname: a\ndescription: x\n---\nBody\n",
+  "No frontmatter\n",
+  "﻿---\r\nname: crlf\r\n---\r\n\r\nBody\r\n",
+  "---\nname: unterminated\nbody",
+  "---\n---\nEmpty frontmatter",
+  "---\nname: a\ntools: read, bash\nlist: [x, 'y z']\nflag: true\nn: 3\nf: 2.5\nnone: ~\n---\n",
+  "---\ndescription: >\n  folded\n  text\n\n  para\nother: |\n  lit\n    eral\n---\nb",
+  "---\nmeta:\n  author: me\n  tags:\n    - a\n    - b\n---\n",
+  "---\nname: x\n---body-on-marker-line\n",
+  "---\nname: x\n----\nafter\n"
+ ],
+ "skills_dir": "compat/plugin-fixtures/skills",
+ "prompts_dir": "compat/plugin-fixtures/prompts"
+}

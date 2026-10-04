@@ -49,3 +49,11 @@ uv run python scripts/provider_conformance.py
 ```
 
 新增测试不请求外部模型；真实 OAuth 和付费模型调用尚待账号联调。
+
+## 插件资源对照
+
+`plugin-runner.ts` 导入固定源码里 coding-agent 的 `substituteArgs`、`parseCommandArgs`、`expandPromptTemplate`、`loadPromptTemplates`、`loadSkillsFromDir`、`formatSkillsForPrompt` 和 `parseFrontmatter`，在 `compat/plugin-cases.json` 与 `compat/plugin-fixtures/` 上运行，输出保存在 `compat/results/plugins.upstream.json`。`scripts/plugin_conformance.py` 重新生成这份输出并运行 `tests/test_plugin_conformance.py` 比较。
+
+```bash
+uv run python scripts/plugin_conformance.py
+```

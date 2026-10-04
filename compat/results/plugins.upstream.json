@@ -1,0 +1,277 @@
+{
+ "substitute": [
+  "Test: a b c",
+  "Test: a b c",
+  "$1 $ARGUMENTS",
+  "$100 $1",
+  "prefix: prefix a b",
+  "Test: ",
+  "Test: ",
+  "a b and a b",
+  "a b   ",
+  "日本語 🎉 café",
+  "line1\nline2 tab\tthere",
+  "ab",
+  "",
+  "a.5",
+  "prea b",
+  "a  c",
+  "$A $$ $ $ARGS",
+  "$arguments $Arguments a b",
+  "val9 val11 val14",
+  "Price: \\",
+  "List exactly 7 next steps",
+  "List exactly 3 next steps",
+  "Mode: brief",
+  "$ARGUMENTS",
+  "a",
+  "$ARGUMENTS",
+  "none",
+  "x",
+  "zero",
+  "b c d",
+  "b c",
+  "a b",
+  "",
+  "",
+  "b c vs a b c",
+  "a}",
+  "",
+  "${@:1:x}"
+ ],
+ "parse_args": [
+  [],
+  [
+   "a",
+   "b",
+   "c"
+  ],
+  [
+   "spaced",
+   "out"
+  ],
+  [
+   "quoted arg",
+   "plain"
+  ],
+  [
+   "single quoted",
+   "x"
+  ],
+  [
+   "mixedquotes"
+  ],
+  [
+   "unterminated quote"
+  ],
+  [
+   "tab",
+   "sep",
+   "newline"
+  ],
+  [
+   "a",
+   "b"
+  ],
+  [
+   "日本語",
+   "c d"
+  ],
+  [
+   "--flag=x y"
+  ]
+ ],
+ "expand": [
+  "Review src/a.py (src/a.py)",
+  "Review  ()",
+  "Review two words (two words b)",
+  "/missing a",
+  "review a",
+  "two three|one",
+  "Review multiline (multiline arg)",
+  " /review a",
+  "/",
+  "Review a (a)"
+ ],
+ "frontmatter": [
+  {
+   "frontmatter": {
+    "name": "a",
+    "description": "x"
+   },
+   "body": "Body"
+  },
+  {
+   "frontmatter": {},
+   "body": "No frontmatter\n"
+  },
+  {
+   "frontmatter": {
+    "name": "crlf"
+   },
+   "body": "Body"
+  },
+  {
+   "frontmatter": {},
+   "body": "---\nname: unterminated\nbody"
+  },
+  {
+   "frontmatter": {},
+   "body": "Empty frontmatter"
+  },
+  {
+   "frontmatter": {
+    "name": "a",
+    "tools": "read, bash",
+    "list": [
+     "x",
+     "y z"
+    ],
+    "flag": true,
+    "n": 3,
+    "f": 2.5,
+    "none": null
+   },
+   "body": ""
+  },
+  {
+   "frontmatter": {
+    "description": "folded text\npara\n",
+    "other": "lit\n  eral\n"
+   },
+   "body": "b"
+  },
+  {
+   "frontmatter": {
+    "meta": {
+     "author": "me",
+     "tags": [
+      "a",
+      "b"
+     ]
+    }
+   },
+   "body": ""
+  },
+  {
+   "frontmatter": {
+    "name": "x"
+   },
+   "body": "body-on-marker-line"
+  },
+  {
+   "frontmatter": {
+    "name": "x"
+   },
+   "body": "-\nafter"
+  }
+ ],
+ "skills": {
+  "skills": [
+   {
+    "name": "alpha",
+    "description": "Analyze CSV files. Use when a task reads or cleans tabular data.",
+    "path": "compat/plugin-fixtures/skills/alpha/SKILL.md",
+    "disable_model_invocation": false
+   },
+   {
+    "name": "Beta_Bad--name-",
+    "description": "Has an invalid name: still loaded",
+    "path": "compat/plugin-fixtures/skills/beta/SKILL.md",
+    "disable_model_invocation": false
+   },
+   {
+    "name": "delta",
+    "description": "Only by explicit command, never by the model.\n",
+    "path": "compat/plugin-fixtures/skills/delta/SKILL.md",
+    "disable_model_invocation": true
+   },
+   {
+    "name": "longdesc",
+    "description": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "path": "compat/plugin-fixtures/skills/longdesc/SKILL.md",
+    "disable_model_invocation": false
+   },
+   {
+    "name": "skills",
+    "description": "A loose markdown skill at the top level.",
+    "path": "compat/plugin-fixtures/skills/loose.md",
+    "disable_model_invocation": false
+   },
+   {
+    "name": "epsilon",
+    "description": "Deeply nested skill.\nSecond line.\n",
+    "path": "compat/plugin-fixtures/skills/nested/group/epsilon/SKILL.md",
+    "disable_model_invocation": false
+   },
+   {
+    "name": "noname",
+    "description": "Uses its directory name. <xml> & \"quotes\"",
+    "path": "compat/plugin-fixtures/skills/noname/SKILL.md",
+    "disable_model_invocation": false
+   },
+   {
+    "name": "zeta",
+    "description": "Zeta stops the search below it.",
+    "path": "compat/plugin-fixtures/skills/zeta/SKILL.md",
+    "disable_model_invocation": false
+   }
+  ],
+  "diagnostics": [
+   {
+    "type": "warning",
+    "message": "name contains invalid characters (must be lowercase a-z, 0-9, hyphens only)",
+    "path": "compat/plugin-fixtures/skills/beta/SKILL.md"
+   },
+   {
+    "type": "warning",
+    "message": "name must not start or end with a hyphen",
+    "path": "compat/plugin-fixtures/skills/beta/SKILL.md"
+   },
+   {
+    "type": "warning",
+    "message": "name must not contain consecutive hyphens",
+    "path": "compat/plugin-fixtures/skills/beta/SKILL.md"
+   },
+   {
+    "type": "warning",
+    "message": "Flow sequence in block collection must be sufficiently indented and end with a ] at line 2, column 1:\n\nname: [unclosed\ndescription: broken\n^\n",
+    "path": "compat/plugin-fixtures/skills/broken/SKILL.md"
+   },
+   {
+    "type": "warning",
+    "message": "description is required",
+    "path": "compat/plugin-fixtures/skills/gamma/SKILL.md"
+   },
+   {
+    "type": "warning",
+    "message": "description exceeds 1024 characters (1100)",
+    "path": "compat/plugin-fixtures/skills/longdesc/SKILL.md"
+   }
+  ]
+ },
+ "skills_prompt": "\n\nThe following skills provide specialized instructions for specific tasks.\nUse the read tool to load a skill's file when the task matches its description.\nWhen a skill file references a relative path, resolve it against the skill directory (parent of SKILL.md / dirname of the path) and use that absolute path in tool commands.\n\n<available_skills>\n  <skill>\n    <name>alpha</name>\n    <description>Analyze CSV files. Use when a task reads or cleans tabular data.</description>\n    <location><ROOT>/compat/plugin-fixtures/skills/alpha/SKILL.md</location>\n  </skill>\n  <skill>\n    <name>Beta_Bad--name-</name>\n    <description>Has an invalid name: still loaded</description>\n    <location><ROOT>/compat/plugin-fixtures/skills/beta/SKILL.md</location>\n  </skill>\n  <skill>\n    <name>longdesc</name>\n    <description>xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</description>\n    <location><ROOT>/compat/plugin-fixtures/skills/longdesc/SKILL.md</location>\n  </skill>\n  <skill>\n    <name>skills</name>\n    <description>A loose markdown skill at the top level.</description>\n    <location><ROOT>/compat/plugin-fixtures/skills/loose.md</location>\n  </skill>\n  <skill>\n    <name>epsilon</name>\n    <description>Deeply nested skill.\nSecond line.\n</description>\n    <location><ROOT>/compat/plugin-fixtures/skills/nested/group/epsilon/SKILL.md</location>\n  </skill>\n  <skill>\n    <name>noname</name>\n    <description>Uses its directory name. &lt;xml&gt; &amp; &quot;quotes&quot;</description>\n    <location><ROOT>/compat/plugin-fixtures/skills/noname/SKILL.md</location>\n  </skill>\n  <skill>\n    <name>zeta</name>\n    <description>Zeta stops the search below it.</description>\n    <location><ROOT>/compat/plugin-fixtures/skills/zeta/SKILL.md</location>\n  </skill>\n</available_skills>",
+ "prompts": [
+  {
+   "name": "plan",
+   "description": "Plan the work for $1, then list ${@:2} as constraints.",
+   "argument_hint": "<topic>",
+   "content": "Plan the work for $1, then list ${@:2} as constraints.",
+   "path": "compat/plugin-fixtures/prompts/plan.md"
+  },
+  {
+   "name": "review",
+   "description": "Review a file",
+   "argument_hint": "<file> [focus]",
+   "content": "Review $1 with focus on ${2:-correctness}.\nAll: $@",
+   "path": "compat/plugin-fixtures/prompts/review.md"
+  },
+  {
+   "name": "summarize",
+   "description": "Summarize the following text in three bullet points, keeping...",
+   "argument_hint": null,
+   "content": "Summarize the following text in three bullet points, keeping every number: $ARGUMENTS\n",
+   "path": "compat/plugin-fixtures/prompts/summarize.md"
+  }
+ ]
+}

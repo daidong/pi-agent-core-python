@@ -157,7 +157,25 @@ async with connect_stdio("uvx", ["mcp-server-fetch"], prefix="web") as tools:
     await agent.prompt("Summarize https://example.org")
 ```
 
-Requires `pip install 'pi-python-core[mcp]'` and works with the official MCP SDK 1.10 and later, including 2.x. `connect_stdio` starts a stdio MCP server and closes it when the `async with` block exits. If you already have a `ClientSession`, wrap its tools with `await mcp_tools(session, prefix=None, names=None)`. Conversion follows Pi's MCP adapter: text and images convert directly; embedded text or image resources are unpacked; audio, resource links and binary resources become short text descriptions; a result with only structured content becomes JSON text and is also kept as `structured_content`; MCP's `isError` becomes a tool error; progress notifications become `tool_execution_update` events. After the prefix is added, tool names keep only letters, digits, `_` and `-`, up to 64 characters. A tool whose schema cannot be used is skipped with a warning, without affecting the server's other tools. A stdio server written with Python MCP SDK 2.3 cannot start on PyPy (`fcntl.F_DUPFD_CLOEXEC` is missing); this is a limitation of the SDK itself, and the client side is unaffected.
+Requires `pip install 'pi-python-core[mcp]'` and works with the official MCP SDK 1.10 and later, including 2.x. `connect_stdio` starts a stdio MCP server and closes it when the `async with` block exits. `connect_http(url, headers=None, prefix=None, names=None)` connects to a streamable HTTP server in the same way; the legacy SSE transport is not supported, as in Pi. It follows redirects only within the server's origin, so headers are never sent to another one. It is tested with MCP SDK 1.10, 1.30 and 2.3. If you already have a `ClientSession`, wrap its tools with `await mcp_tools(session, prefix=None, names=None)`. Conversion follows Pi's MCP adapter: text and images convert directly; embedded text or image resources are unpacked; audio, resource links and binary resources become short text descriptions; a result with only structured content becomes JSON text and is also kept as `structured_content`; MCP's `isError` becomes a tool error; progress notifications become `tool_execution_update` events. After the prefix is added, tool names keep only letters, digits, `_` and `-`, up to 64 characters. A tool whose schema cannot be used is skipped with a warning, without affecting the server's other tools. A stdio server written with Python MCP SDK 2.3 cannot start on PyPy (`fcntl.F_DUPFD_CLOEXEC` is missing); this is a limitation of the SDK itself, and the client side is unaffected.
+
+## Plugins
+
+`pi_python.plugins` loads plugins: named bundles of tools, system prompt text, hooks, skills, prompt templates, subagents and MCP servers, in the format of Pi's packages. `async with load_plugins([...], services=..., options=...) as plugins:` loads them, and `plugins.agent(...)` builds an Agent with everything they contribute. The [plugin guide](PLUGINS.md) covers writing, distributing and combining plugins.
+
+| Name | Purpose |
+|---|---|
+| `load_plugins(sources, services=None, options=None, on_error=None)` | Returns a `PluginSet`; open it with `async with`, or `with` in plain scripts |
+| `PluginSet.agent(**agent_arguments)` | An Agent with the plugins' system prompt text, tools, hooks and listeners added to yours |
+| `PluginSet.expand(text)` | Expands `/skill:name args` and `/template args`; other text is unchanged |
+| `PluginSet.system_prompt(base)`, `.tools`, `.hooks(base)`, `.skill_tool()`, `.subagent_tool(tools=(), hooks=None, provider=None, stream_fn=None, model=None, limits=None)` | The parts, for building an Agent yourself. Without `model`, a subagent uses the calling agent's model at the time of the call; `limits` apply to each subagent run |
+| `await PluginSet.check()` | Runs the plugins' self-checks; returns `CheckResult(plugin, name, passed, detail)` items |
+| `PluginSet.skills`, `.prompts`, `.agents`, `.plugins`, `.diagnostics` | What was loaded: `Skill(name, description, path, plugin, disable_model_invocation)`, `PromptTemplate(name, description, content, path, plugin, argument_hint)`, `AgentDefinition`, `Plugin`, and the warning texts |
+| `Plugin(name, setup=None, root=None, version=None, source="code")` | A plugin defined in code. `root=None` means no resource directory; for a `Plugin` exported through an entry point it means the exporting package's directory |
+| `PluginAPI` | What a plugin's `setup(api)` receives |
+| `AgentDefinition(name, description, system_prompt="", tools=None, model=None, options={}, provider=None, path=None, plugin="")` | A subagent; `path` and `plugin` record where a definition came from |
+| `discover_plugins()` | Installed plugins as `InstalledPlugin(name, target, distribution, version)`, without importing them; they register in the entry point group `ENTRY_POINT_GROUP` (`"pi_python.plugins"`) |
+| `PluginFailure`, `PluginWarning` | What `on_error` receives when a plugin handler fails (a report, not an exception); the warning for a resource that was skipped |
 
 ## Messages and encoding
 

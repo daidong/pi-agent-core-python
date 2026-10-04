@@ -321,6 +321,28 @@ class ToolResultUpdate:
     nested_calls: dict[str, Any] | None = None
 
 
+def apply_result_update(result: ToolResult, update: ToolResultUpdate) -> None:
+    """Apply an after-hook's partial update in place, field by field.
+
+    New content without new structured content clears the old structured content,
+    which may no longer match the text.
+    """
+    if update.content is not None:
+        result.content = deepcopy(update.content)
+        result.structured_content = deepcopy(update.structured_content)
+    elif update.structured_content is not None:
+        result.structured_content = deepcopy(update.structured_content)
+    if update.details is not None:
+        result.details = deepcopy(update.details)
+    if update.is_error is not None:
+        result.is_error = update.is_error
+    for metadata_key in ("usage", "nested_calls"):
+        if getattr(update, metadata_key) is not None:
+            setattr(result, metadata_key, deepcopy(getattr(update, metadata_key)))
+    if update.terminate is not None:
+        result.terminate = update.terminate
+
+
 @dataclass
 class ToolContext:
     run_id: str
@@ -510,20 +532,7 @@ async def run_tool_call(
         if outcome._settled:
             return outcome
         if isinstance(replacement, ToolResultUpdate):
-            if replacement.content is not None:
-                result.content = replacement.content
-                result.structured_content = replacement.structured_content
-            elif replacement.structured_content is not None:
-                result.structured_content = replacement.structured_content
-            if replacement.details is not None:
-                result.details = replacement.details
-            if replacement.is_error is not None:
-                result.is_error = replacement.is_error
-            for metadata_key in ("usage", "nested_calls"):
-                if getattr(replacement, metadata_key) is not None:
-                    setattr(result, metadata_key, deepcopy(getattr(replacement, metadata_key)))
-            if replacement.terminate is not None:
-                result.terminate = replacement.terminate
+            apply_result_update(result, replacement)
         elif replacement is not None:
             if not isinstance(replacement, ToolResult):
                 raise TypeError("after_tool_call must return ToolResult, ToolResultUpdate or None")

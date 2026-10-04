@@ -21,7 +21,7 @@ pip install pi-python-core      # 或 uv add pi-python-core
 | 不加选项 | 执行核心和内置模型接入：Claude、OpenAI、Codex、DeepSeek，以及任何 OpenAI 兼容服务（Ollama、vLLM、llama.cpp 等） |
 | `[oauth]` | 用 ChatGPT 账号登录（`openai-chatgpt`）时校验身份令牌，会带进需要编译的 `cryptography`。Claude 订阅和 Codex 登录不需要它 |
 | `[providers]` | 与 `[oauth]` 相同，让 0.8.1 及以前的安装命令仍然可用 |
-| `[mcp]` | 把 MCP 服务器的工具交给 agent |
+| `[mcp]` | 把 MCP 服务器的工具交给 agent，插件声明的 MCP 服务器也需要它 |
 
 依赖写的是版本范围而不是固定版本，能和大多数已有环境共存。
 
@@ -58,8 +58,9 @@ agent = Agent(provider=llm, model=llm.model("qwen3:8b", context_window=40960), t
 |---|---|---|
 | 写工具 | `@tool` 装饰普通函数；pydantic 模型、dataclass、枚举、日期等参数自动转换；也接受手写或 MCP 生成的 JSON Schema | [quickstart](examples/quickstart.py) |
 | 接模型 | Claude 与 GPT 的 API key 或订阅登录；DeepSeek；任何 OpenAI 兼容服务 | [local_model](examples/local_model.py)，[provider_chat](examples/provider_chat.py) |
-| 用 MCP 工具 | `async with connect_stdio(...) as tools` | [mcp_tools](examples/mcp_tools.py) |
-| 让一个 agent 调用另一个 | 把子 agent 包成工具，取消会一路传下去 | [subagent](examples/subagent.py) |
+| 用 MCP 工具 | `async with connect_stdio(...) as tools`；远程服务器用 `connect_http(url)` | [mcp_tools](examples/mcp_tools.py) |
+| 让一个 agent 调用另一个 | 把子 agent 包成工具，取消会一路传下去；插件也可以用 Markdown 定义子 agent | [subagent](examples/subagent.py) |
+| 打包和分享能力 | 插件把工具、说明、钩子、技能、提示模板、子 agent 和 MCP 服务器打成一组；用 `load_plugins` 按名字或路径加载，再用 `plugins.agent(...)` 构造 agent | [plugin_demo](examples/plugin_demo.py) |
 | 中途干预 | `steer` 插入指导，`follow_up` 排队后续任务，`abort` 随时取消（任何线程都可以调用） | |
 | 上下文满了、服务出错 | `is_context_overflow`、`is_retryable_error` 判断原因，`continue_run()` 重试，`transform_context` 压缩 | [recovery](examples/recovery.py) |
 | 保存与恢复对话 | `encode_messages` / `decode_messages`，应用决定存在哪里 | [save_restore](examples/save_restore.py) |
@@ -69,15 +70,16 @@ agent = Agent(provider=llm, model=llm.model("qwen3:8b", context_window=40960), t
 
 ## 与 Pi 的关系
 
-执行循环、事件顺序、钩子、队列、出错与取消的处理都与 Pi 一致，并用差分验证：同一组输入分别交给固定版本的上游代码和本库运行，逐项比较模型请求、工具调用、事件和最终记录。目前核心循环 25 组、模型接入 50 组、WebSocket 多轮 2 组、出错判断 44 条样例全部一致。
+执行循环、事件顺序、钩子、队列、出错与取消的处理都与 Pi 一致，并用差分验证：同一组输入分别交给固定版本的上游代码和本库运行，逐项比较模型请求、工具调用、事件和最终记录。目前核心循环 25 组、模型接入 50 组、WebSocket 多轮 2 组、出错判断 44 条样例全部一致。插件里技能、提示模板和文件头元数据的规则，也用同样的方法和 Pi 的 coding-agent 代码对照。
 
-有几处是有意的差异，例如工具参数严格校验、不自动转换类型，返回给调用者的状态是副本；另一些是为 Python 用户加的，例如 `@tool`、同步调用、失败后直接 `continue_run()`。逐项记录见[验收映射](compat/COVERAGE.md)。Pi 放在应用层的功能（终端界面、会话文件格式、上下文压缩）不在本库核心里；压缩可以用钩子实现，示例里有完整做法。本项目使用自己的版本号，并非 Pi 官方发行版。
+有几处是有意的差异，例如工具参数严格校验、不自动转换类型，返回给调用者的状态是副本；另一些是为 Python 用户加的，例如 `@tool`、同步调用、失败后直接 `continue_run()`。逐项记录见[验收映射](compat/COVERAGE.md)。Pi 放在应用层的功能（终端界面、会话文件格式、上下文压缩）不在本库核心里；压缩可以用钩子实现，示例里有完整做法。插件是从应用层取来的唯一一块：一个可选模块，读取 Pi 的 package 格式，再据此构造普通的 Agent。本项目使用自己的版本号，并非 Pi 官方发行版。
 
 ## 文档
 
 - [一页看懂：五个概念和一轮的流程](docs/zh/CONCEPTS.md)
 - [公开 API](docs/zh/API.md)
 - [模型接入、订阅登录与本地模型](docs/zh/PROVIDERS.md)
+- [插件：技能、提示模板、子 agent 和 MCP 服务器](docs/zh/PLUGINS.md)
 - [实施与验证结果](docs/IMPLEMENTATION.md)
 - [与 Pi 的逐项对照和有意差异](compat/COVERAGE.md)
 - [参照重建与候选版本验证](reference/README.md)

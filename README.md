@@ -21,7 +21,7 @@ You install `pi-python-core` and import `pi_python`.
 | (none) | The agent core and the built-in model connectors: Claude, OpenAI, Codex, DeepSeek, and any OpenAI-compatible server (Ollama, vLLM, llama.cpp, …) |
 | `[oauth]` | Verifies the identity token when you sign in with a ChatGPT account (`openai-chatgpt`); it brings in the compiled `cryptography` package. Claude subscription and Codex sign-in do not need it |
 | `[providers]` | Same as `[oauth]`; keeps install commands from 0.8.1 and earlier working |
-| `[mcp]` | Gives the agent the tools of MCP servers |
+| `[mcp]` | Gives the agent the tools of MCP servers, including those a plugin declares |
 
 Dependencies are version ranges rather than pins, so the package fits into most existing environments.
 
@@ -58,8 +58,9 @@ To try it offline first: `python examples/quickstart.py`.
 |---|---|---|
 | Write tools | Decorate a plain function with `@tool`; arguments such as pydantic models, dataclasses, enums and dates are converted automatically; hand-written or MCP-generated JSON Schema works too | [quickstart](examples/quickstart.py) |
 | Connect a model | Claude and GPT through an API key or subscription sign-in; DeepSeek; any OpenAI-compatible server | [local_model](examples/local_model.py), [provider_chat](examples/provider_chat.py) |
-| Use MCP tools | `async with connect_stdio(...) as tools` | [mcp_tools](examples/mcp_tools.py) |
-| Let one agent call another | Wrap the sub-agent as a tool; cancellation propagates down | [subagent](examples/subagent.py) |
+| Use MCP tools | `async with connect_stdio(...) as tools`, or `connect_http(url)` for a remote server | [mcp_tools](examples/mcp_tools.py) |
+| Let one agent call another | Wrap the sub-agent as a tool; cancellation propagates down. Plugins can also define subagents in Markdown | [subagent](examples/subagent.py) |
+| Package and share capabilities | A plugin bundles tools, instructions, hooks, skills, prompt templates, subagents and MCP servers; load it by name or path with `load_plugins` and build the agent with `plugins.agent(...)` | [plugin_demo](examples/plugin_demo.py) |
 | Intervene mid-run | `steer` injects guidance, `follow_up` queues the next task, `abort` cancels at any time (callable from any thread) | |
 | Context full, service errors | `is_context_overflow` and `is_retryable_error` tell you why, `continue_run()` retries, `transform_context` compacts | [recovery](examples/recovery.py) |
 | Save and restore conversations | `encode_messages` / `decode_messages`; your application decides where to store them | [save_restore](examples/save_restore.py) |
@@ -69,15 +70,16 @@ Apart from `provider_chat`, which needs real credentials, every example runs off
 
 ## Relationship to Pi
 
-The run loop, event order, hooks, queues, and the handling of errors and cancellation all match Pi, and this is checked differentially: the same inputs go to the pinned upstream code and to this library, and the model requests, tool calls, events and final transcript are compared item by item. All cases currently agree: 25 for the core loop, 50 for model connectors, 2 for multi-turn WebSocket, and 44 error-classification samples.
+The run loop, event order, hooks, queues, and the handling of errors and cancellation all match Pi, and this is checked differentially: the same inputs go to the pinned upstream code and to this library, and the model requests, tool calls, events and final transcript are compared item by item. All cases currently agree: 25 for the core loop, 50 for model connectors, 2 for multi-turn WebSocket, and 44 error-classification samples. The plugin rules for skills, prompt templates and frontmatter are compared the same way against Pi's coding-agent code.
 
-A few differences are deliberate, such as strict tool-argument validation without type coercion, and returning copies of state to callers. Others are additions for Python users, such as `@tool`, blocking calls, and calling `continue_run()` directly after a failure. Each one is recorded in the [coverage map](compat/COVERAGE.md) (Chinese). Features Pi keeps in its application layer (terminal UI, session file format, context compaction) are not in this core; compaction can be built with hooks, and an example shows the full approach. This project uses its own version numbers and is not an official Pi release.
+A few differences are deliberate, such as strict tool-argument validation without type coercion, and returning copies of state to callers. Others are additions for Python users, such as `@tool`, blocking calls, and calling `continue_run()` directly after a failure. Each one is recorded in the [coverage map](compat/COVERAGE.md) (Chinese). Features Pi keeps in its application layer (terminal UI, session file format, context compaction) are not in this core; compaction can be built with hooks, and an example shows the full approach. Plugins are the one piece taken from that layer: an optional module that reads Pi's package format and builds an ordinary Agent from it. This project uses its own version numbers and is not an official Pi release.
 
 ## Documentation
 
 - [Concepts on one page: five ideas and one turn](docs/CONCEPTS.md)
 - [Public API](docs/API.md)
 - [Model connectors, subscription sign-in and local models](docs/PROVIDERS.md)
+- [Plugins: skills, prompt templates, subagents and MCP servers](docs/PLUGINS.md)
 - [Implementation and verification results](docs/IMPLEMENTATION.md) (Chinese)
 - [Item-by-item comparison with Pi, and deliberate differences](compat/COVERAGE.md) (Chinese)
 - [Rebuilding the reference and checking release candidates](reference/README.md) (Chinese)

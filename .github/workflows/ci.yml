@@ -41,6 +41,14 @@ jobs:
           cd /tmp
           /tmp/installed/bin/python -c 'import importlib.util as u; assert u.find_spec("httpx") and u.find_spec("websockets"); assert u.find_spec("jwt") is None'
           /tmp/installed/bin/python "$GITHUB_WORKSPACE/examples/in_memory.py"
+  # The [mcp] extra allows SDK 1.10 and later; the lock file holds 2.x, so check the 1.x
+  # code paths (HTTP client, redirect rule, stdio servers) on the oldest supported SDK.
+  mcp-sdk-1:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv run --isolated --python 3.12 --extra providers --group dev --with 'mcp>=1.10,<1.11' pytest -q tests/test_mcp.py tests/test_plugins.py
   # Install requirements are ranges; the lower bounds must keep working.
   lowest-dependencies:
     runs-on: ubuntu-latest
@@ -67,3 +75,4 @@ jobs:
       - run: npm test --prefix reference/pi/packages/ai -- test/transcript-tool-changes.test.ts test/validation.test.ts
       - run: uv run python scripts/conformance.py
       - run: uv run python scripts/provider_conformance.py
+      - run: uv run python scripts/plugin_conformance.py
