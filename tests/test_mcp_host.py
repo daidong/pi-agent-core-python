@@ -76,9 +76,11 @@ def wire(kind, mode):
         ]
         return ("".join(f"data: {json.dumps(v)}\n\n" for v in chunks) + "data: [DONE]\n\n").encode()
     source = "tool" if mode == "thinking-tool" else "text" if mode == "json" else mode
-    values = json.loads((FIXTURES / f"{kind}-{source}.json").read_text())["events"]
+    values = json.loads((FIXTURES / f"{kind}-{source}.json").read_text(encoding="utf-8"))["events"]
     if mode == "thinking-tool":
-        thinking = json.loads((FIXTURES / f"{kind}-thinking.json").read_text())["events"]
+        thinking = json.loads((FIXTURES / f"{kind}-thinking.json").read_text(encoding="utf-8"))[
+            "events"
+        ]
         if kind == "openai":
             prefix = [v for v in thinking if v.get("output_index") == 0]
             for value in values:
