@@ -6,6 +6,9 @@ An embeddable Python agent core, ported from [Pi](https://github.com/earendil-wo
 
 `pi-agent-core` on PyPI is a separate project that ports an older version from pi-mono (early 2026). This library follows the behavior of Pi v1.0.0, compared case by case with the upstream code's actual output, and ships its own connectors for Claude, OpenAI, DeepSeek and local models, with no model SDK required.
 
+**Using a coding agent?** Start with the [library integration guide](docs/CODING_AGENTS.md).
+To build an extension, follow the [plugin development workflow and complete example](docs/PLUGIN_DEVELOPMENT.md).
+
 ## Install
 
 Python 3.11–3.14 (including free-threaded 3.14t) and PyPy 3.11. No Node.js or model SDK needed.
@@ -77,6 +80,8 @@ A few differences are deliberate, such as strict tool-argument validation withou
 
 ## Documentation
 
+- [Coding agents: integrate the library, run an offline example, and verify behavior](docs/CODING_AGENTS.md)
+- [Plugin development: scaffold, readiness checks, packaging, and installed verification](docs/PLUGIN_DEVELOPMENT.md)
 - [Concepts on one page: five ideas and one turn](docs/CONCEPTS.md)
 - [Public API](docs/API.md)
 - [Model connectors, subscription sign-in and local models](docs/PROVIDERS.md)

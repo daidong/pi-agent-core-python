@@ -2,6 +2,8 @@
 
 [English](../PLUGINS.md) | **中文**
 
+需要完整的起步包、离线验证和 wheel 安装步骤时，先读[插件开发流程](PLUGIN_DEVELOPMENT.md)。
+
 插件是给 agent 的一组附加内容，打包成一个有名字的单元：工具、写进系统提示的说明、钩子、技能、提示模板、子 agent 和 MCP 服务器。打包成插件后，可以用 pip 安装，可以在几个项目之间共用，也可以整组打开或关掉。插件不会让 agent 获得原本没有的能力。它只是把你本来要手工写进 `Agent(...)` 的工具、系统提示和钩子组装好，agent 的执行循环本身不变。
 
 格式沿用 Pi 的 package。Pi 的一个 package 对应这里的一个插件，package 里的 TypeScript 扩展代码对应插件的 Python `setup` 函数。技能、提示模板和子 agent 定义用的是和 Pi 相同的 Markdown 文件，大多可以直接拷过来用。

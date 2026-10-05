@@ -2,6 +2,9 @@
 
 **English** | [中文](zh/PLUGINS.md)
 
+For a complete starter package with an offline test and wheel installation steps,
+follow the [plugin development workflow](PLUGIN_DEVELOPMENT.md).
+
 A plugin is a named bundle of additions to an agent: tools, instructions for the system prompt, hooks, skills, prompt templates, subagents and MCP servers. Packing them into a plugin lets you install them with pip, share them between projects, and switch them on or off as a unit. A plugin gives the agent nothing it could not do before. It assembles the tools, system prompt and hooks that you would otherwise wire into `Agent(...)` by hand, and the agent loop itself is unchanged.
 
 The format follows Pi's packages. A Pi package corresponds to a plugin here, and the TypeScript extension code inside a Pi package corresponds to the plugin's Python `setup` function. Skills, prompt templates and subagent definitions are the same Markdown files Pi uses, so most of them can be copied over unchanged.
