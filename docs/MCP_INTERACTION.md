@@ -328,6 +328,40 @@ plus tool calls. They do not certify every model or gateway's private format. Wi
 extension, explicit reasoning settings and known Responses Providers fail before generation;
 other unrepresentable responses fail explicitly rather than losing signatures.
 
+### Optional incremental request transport
+
+`SamplingHandler(incremental=True)` (the default when `retain_state=True`) also
+advertises the pi-python experimental capability `io.pi-python/sampling-delta-v1`.
+`SamplingProvider` uses it only when advertised; an older host or worker keeps the
+complete-request path. Disable it with `incremental=False`. Feature discovery exposes
+`sampling-delta-v1`; callback/plugin readiness exposes `sampling.delta`. This does not
+change the MCP protocol version or require business code to manage a cache.
+
+The first request sends the full visible history, system prompt and tool declarations.
+A successful result acknowledges an opaque request reference. Subsequent requests can
+send only the changed suffix and references to unchanged `systemPrompt` and `tools`.
+For example, after sending one user message, the next request can carry just the new
+assistant answer and user follow-up. The host reconstructs the full request **before**
+validation, policy hooks, authorization and Provider generation. JSON booleans and
+numbers are compared distinctly. Changed or removed tools/system prompts and branched
+histories are supported. Assistant-state integrity checks remain in force.
+
+On the wire, the existing sampling-v1 metadata gains `delta: {}` to prime a base, or
+`delta: {base, prefix, reuse}` thereafter. `prefix` counts unchanged wire messages;
+`reuse` names only present, unchanged `systemPrompt`/`tools` fields. Result metadata
+adds `request_ref`. Bases are retained in the same outer-call scope and must match the
+conversation and profile. Missing, expired, foreign and malformed references fail
+before model access; they never trigger an automatic model replay. Concurrent branches
+may use any acknowledged base in that scope. Scope exit also clears the server's cache.
+
+The host retains wire projections until scope teardown and shares unchanged internal
+blocks/static fields. This adds scoped cache memory, including message-list references;
+it is not a zero-copy or bounded-peak-memory claim. Mutable schemas/arguments and original
+assistant state remain isolated from Provider mutation. Visible projections omit private
+reasoning/diagnostics directly, and the host caches visible content for integrity checks.
+The Provider still receives full history. Reduced MCP bytes do not establish reduced
+Provider tokens, latency or total allocations; full conversion/validation still runs.
+
 ### Host-approved request profiles
 
 ```python

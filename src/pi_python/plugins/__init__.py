@@ -43,6 +43,8 @@ from ..hooks import Hooks
 from ..limits import RunLimits
 from ..models import ModelInfo
 from ..sync import run_sync
+from ..tasks import TaskScope
+from ..features import _names, require_features
 from ..tools import Tool, ToolContext, ToolResult, invoke
 from .._mcp_interaction import MCPCallbacks
 from ._compose import (
@@ -126,6 +128,7 @@ class Plugin:
     root: str | os.PathLike[str] | None = None
     version: str | None = None
     source: str = "code"
+    requires: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -262,6 +265,16 @@ class PluginAPI:
         self._tools.append(made)
         return made
 
+    def task_scope(self) -> TaskScope:
+        """Create owned asynchronous work, automatically closed with this plugin.
+
+        Register resources needed by that work before creating the scope: close
+        callbacks run in reverse registration order.
+        """
+        scope = TaskScope()
+        self.on_close(scope.aclose)
+        return scope
+
     def add_system_prompt(self, text: str) -> None:
         """Append instructions to the system prompt of agents built from this set."""
         if text.strip():
@@ -375,6 +388,7 @@ class PluginAPI:
                 "sampling.tools",
                 "sampling.host_state",
                 "sampling.profiles",
+                "sampling.delta",
                 "elicitation.form",
             }
             for cap in required
@@ -541,6 +555,13 @@ class PluginSet:
         resolved = [_resolve(source) for source in self._sources]
         seen: set[str] = set()
         for plugin in resolved:
+            plugin.requires = _names(plugin.requires)
+            if plugin.root is not None:
+                requirement_root = Path(plugin.root).expanduser().resolve()
+                plugin.requires = _names(
+                    (*plugin.requires, *_directory_requirements(requirement_root))
+                )
+            require_features(plugin.requires, where=f"Plugin {plugin.name!r}")
             if plugin.name in seen:
                 raise ConfigurationError(f"Two plugins are named {plugin.name!r}")
             seen.add(plugin.name)
@@ -1070,9 +1091,11 @@ def _module_name(path: Path) -> str:
 def _from_path(path: Path) -> Plugin:
     path = path.expanduser().resolve()
     if path.is_dir():
+        requirements = _directory_requirements(path)
+        require_features(requirements, where=f"Plugin {path.name!r}")
         code = path / "plugin.py"
         if not code.is_file():
-            return Plugin(path.name, None, path, source=str(path))
+            return Plugin(path.name, None, path, source=str(path), requires=requirements)
         # The directory becomes a package, so plugin.py can import its neighbours
         # with relative imports (``from .ops import dedup``).
         package = _module_name(path)
@@ -1085,7 +1108,14 @@ def _from_path(path: Path) -> Plugin:
         except Exception as exc:
             exc.add_note(f"while importing plugin {path.name!r} from {code}")
             raise
-        return Plugin(path.name, _setup_of(module, code), path, _version_of(module), str(path))
+        return Plugin(
+            path.name,
+            _setup_of(module, code),
+            path,
+            _version_of(module),
+            str(path),
+            _names((*requirements, *_requirements_of(module))),
+        )
     if path.is_file() and path.suffix == ".py":
         name = _module_name(path)
         loaded = sys.modules.get(name)
@@ -1100,7 +1130,14 @@ def _from_path(path: Path) -> Plugin:
                 sys.modules.pop(name, None)
                 exc.add_note(f"while importing plugin {path.stem!r} from {path}")
                 raise
-        return Plugin(path.stem, _setup_of(loaded, path), None, _version_of(loaded), str(path))
+        return Plugin(
+            path.stem,
+            _setup_of(loaded, path),
+            None,
+            _version_of(loaded),
+            str(path),
+            _requirements_of(loaded),
+        )
     if not path.exists():
         raise ConfigurationError(f"Plugin path {path} does not exist")
     raise ConfigurationError(f"A plugin path must be a directory or a .py file: {path}")
@@ -1116,6 +1153,25 @@ def _setup_of(module: ModuleType, where: Path | str) -> Callable[[PluginAPI], An
 def _version_of(module: ModuleType) -> str | None:
     version = getattr(module, "__version__", None)
     return version if isinstance(version, str) else None
+
+
+def _requirements_of(target: Any) -> tuple[str, ...]:
+    return _names(getattr(target, "__requires__", ()))
+
+
+def _directory_requirements(path: Path) -> tuple[str, ...]:
+    manifest = path / "pi-plugin.json"
+    if not manifest.exists():
+        return ()
+    try:
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+    except (ValueError, OSError) as exc:
+        raise ConfigurationError(f"Invalid plugin manifest: {manifest}") from exc
+    if not isinstance(data, dict) or set(data) - {"requires"}:
+        raise ConfigurationError(
+            f"Plugin manifest must be an object with only 'requires': {manifest}"
+        )
+    return _names(data.get("requires", ()))
 
 
 def _from_entry_point(name: str) -> Plugin:
@@ -1149,9 +1205,9 @@ def _from_entry_point(name: str) -> Plugin:
         setup = getattr(target, "setup", None)
         if setup is None and package_dir is None:
             raise ConfigurationError(f"{source} has no setup(api) function and no directory")
-        return Plugin(name, setup, package_dir, version, source)
+        return Plugin(name, setup, package_dir, version, source, _requirements_of(target))
     if callable(target):
-        return Plugin(name, target, package_dir, version, source)
+        return Plugin(name, target, package_dir, version, source, _requirements_of(target))
     raise ConfigurationError(f"{source} is not a module, a setup function or a Plugin")
 
 

@@ -543,7 +543,7 @@ async def test_protocol_mismatch_is_rejected_and_form_only_is_advertised(monkeyp
         assert caps == {
             "sampling": {},
             "elicitation": {"form": {}},
-            "experimental": {"io.pi-python/sampling-v1": {}},
+            "experimental": {"io.pi-python/sampling-v1": {}, "io.pi-python/sampling-delta-v1": {}},
         }
         return types.InitializeResult(
             protocol_version="2025-06-18",

@@ -303,3 +303,27 @@ Pi 的命令行程序负责查找和加载 package；本库没有应用程序，
 - MCP 服务器不支持 OAuth、工具暴露模式、单次请求超时和 `!命令` 形式的值。
 
 逐项对照见 [验收映射](../../compat/COVERAGE.md)。完整的插件示例在 [examples/plugins/lab_tools](../../examples/plugins/lab_tools)，[examples/plugin_demo.py](../../examples/plugin_demo.py) 可以离线运行它。
+
+
+## 声明框架能力要求
+
+目录插件可以添加 `pi-plugin.json`：
+
+```json
+{"requires": ["plugin-requires-v1", "task-scope-v1", "loop-portal-v1"]}
+```
+
+加载器在导入 `plugin.py` 前检查此文件。能力不足时会在插件导入和初始化前拒绝加载。
+文件只接受 `requires` 字段，值为非空字符串集合。严格或普通加载都会拒绝未知能力。
+不声明要求的旧插件仍可加载。
+
+代码插件可以写 `Plugin("example", setup, requires=("task-scope-v1",))`。
+单个 Python 文件、入口点模块或函数可以声明 `__requires__`。
+这些 Python 声明在导入后、任何插件初始化前检查；需要导入前检查时使用目录声明。
+根目录声明与 Python 声明会合并，归一化结果保存在 `Plugin.requires`。
+旧框架可能忽略声明文件，因此安装约束仍应选择提供 `plugin-requires-v1` 的构建。
+
+`api.task_scope()` 创建任务作用域并自动注册关闭回调。
+先注册任务依赖资源的关闭回调，再创建作用域，因为关闭按注册顺序逆序执行。
+不要在受管任务中关闭插件。作用域不取得宿主 Provider 或事件循环的所有权。
+具体调用方式见 [API 文档](API.md)。

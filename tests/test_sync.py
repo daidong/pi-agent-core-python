@@ -62,3 +62,76 @@ def test_ctrl_c_aborts_the_run_then_raises():
     )
     out = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30)
     assert out.stdout.strip() == "interrupted aborted partial False", out.stderr
+
+
+async def test_portal_preserves_loop_context_results_and_errors():
+    from contextvars import ContextVar
+
+    marker = ContextVar("marker", default="none")
+    loop = asyncio.get_running_loop()
+    async with LoopPortal() as portal:
+
+        async def call(value):
+            assert asyncio.get_running_loop() is loop
+            assert marker.get() == "worker"
+            if value == "fail":
+                raise ValueError("expected")
+            return value
+
+        def worker():
+            marker.set("worker")
+            assert portal.call(call, 42) == 42
+            with pytest.raises(ValueError, match="expected"):
+                portal.call(call, "fail")
+
+        await asyncio.to_thread(worker)
+        with pytest.raises(RuntimeError, match="event-loop thread"):
+            portal.call(call, 0)
+    with pytest.raises(RuntimeError, match="closed"):
+        await asyncio.to_thread(portal.call, call, 0)
+    assert loop.is_running()
+
+
+async def test_portal_close_cancels_work_and_unblocks_worker():
+    started = asyncio.Event()
+    cleaned = []
+    portal = LoopPortal()
+
+    async def work():
+        started.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            await asyncio.sleep(0)
+            cleaned.append(True)
+
+    caller = asyncio.create_task(asyncio.to_thread(portal.call, work))
+    await started.wait()
+    await portal.aclose()
+    with pytest.raises(asyncio.CancelledError):
+        await caller
+    assert cleaned == [True]
+
+
+async def test_portal_timeout_cancels_and_close_joins_cleanup():
+    started, cleaning, finish = asyncio.Event(), asyncio.Event(), asyncio.Event()
+    portal = LoopPortal()
+
+    async def work():
+        started.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            cleaning.set()
+            await finish.wait()
+
+    caller = asyncio.create_task(asyncio.to_thread(portal.call, work, timeout=0.05))
+    await started.wait()
+    with pytest.raises(TimeoutError):
+        await caller
+    await cleaning.wait()
+    closer = asyncio.create_task(portal.aclose())
+    await asyncio.sleep(0)
+    assert not closer.done()
+    finish.set()
+    await closer

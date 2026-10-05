@@ -308,3 +308,30 @@ Pi's command-line application finds and loads packages; this library has no appl
 - MCP servers have no OAuth, tool exposure modes, per-request timeouts or `!command` values.
 
 The item-by-item comparison is in the [coverage map](../compat/COVERAGE.md) (Chinese). A complete plugin is in [examples/plugins/lab_tools](../examples/plugins/lab_tools), and [examples/plugin_demo.py](../examples/plugin_demo.py) runs it offline.
+
+
+## Declaring required framework features
+
+A directory can include `pi-plugin.json`:
+
+```json
+{"requires": ["plugin-requires-v1", "task-scope-v1", "loop-portal-v1"]}
+```
+
+The loader checks this manifest **before importing `plugin.py`**, so a missing API
+fails with a capability error before plugin imports or setup. Only `requires` is
+accepted; its value is a collection of nonempty strings. Unknown features fail in
+both strict and ordinary loading. Plugins without a declaration remain compatible.
+
+For code plugins, use `Plugin("example", setup, requires=("task-scope-v1",))`.
+Python files and entry-point modules/functions can expose `__requires__` instead.
+Those declarations are checked after import, before any setup; use the directory
+manifest when pre-import validation is needed. A root manifest and Python
+requirements are combined. The resolved `Plugin.requires` contains the normalized
+requirements. A framework predating this facility may ignore a manifest; package
+constraints still need to select a build that implements `plugin-requires-v1`.
+
+`api.task_scope()` creates a `TaskScope` and registers its `aclose` callback.
+Register resources used by tasks first, then create the scope: cleanup callbacks
+run in reverse order. Do not call plugin shutdown from an owned task. This owns
+application tasks, not the host's Provider or event loop. See [the API guide](API.md#owned-tasks-and-calls-from-worker-threads).

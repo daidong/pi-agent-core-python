@@ -1,9 +1,10 @@
 """Blocking entry points for plain scripts.
 
-All blocking calls share one private event loop in a daemon thread. Agents, providers and
+``run_sync`` calls share one private event loop in a daemon thread. Agents, providers and
 their cached connections therefore stay on the same loop from one call to the next, which
 separate ``asyncio.run`` calls would break. Code that already runs an event loop (servers,
 notebooks with top-level await) should await the async API instead.
+``LoopPortal`` instead submits work from worker threads to a borrowed existing loop.
 """
 
 from __future__ import annotations
@@ -14,7 +15,78 @@ import threading
 from collections.abc import Awaitable, Callable
 from typing import Any, TypeVar
 
+from .tasks import TaskScope
+
 T = TypeVar("T")
+
+
+class LoopPortal:
+    """Blocking calls from worker threads onto an existing asyncio event loop.
+
+    Construct and close on the owning loop, normally with ``async with``. ``call``
+    accepts an async callable and its arguments, so rejected or cancelled queued
+    calls never leave an unawaited coroutine. It preserves the submitting thread's
+    context variables. Closing cancels and joins submitted async work, but never
+    stops the borrowed loop. Blocking calls from any event-loop thread are refused.
+    """
+
+    def __init__(self) -> None:
+        self.loop = asyncio.get_running_loop()
+        self._scope = TaskScope()
+
+    async def __aenter__(self) -> LoopPortal:
+        if asyncio.get_running_loop() is not self.loop:
+            raise RuntimeError("LoopPortal must be opened on its owning event loop")
+        await self._scope.__aenter__()
+        return self
+
+    async def __aexit__(self, *args: Any) -> None:
+        await self.aclose()
+
+    async def aclose(self) -> None:
+        if asyncio.get_running_loop() is not self.loop:
+            raise RuntimeError("LoopPortal must be closed on its owning event loop")
+        await self._scope.aclose()
+
+    def call(
+        self,
+        function: Callable[..., Awaitable[T]],
+        *args: Any,
+        timeout: float | None = None,
+        **kwargs: Any,
+    ) -> T:
+        """Submit and block; timeout/interruption requests cancellation of async work.
+
+        A timeout bounds the blocking wait, not asynchronous cleanup. Keep the portal
+        alive until ``aclose`` finishes to guarantee that cleanup has completed.
+        """
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            pass
+        else:
+            raise RuntimeError("LoopPortal.call cannot block an event-loop thread")
+        if self._scope.closed or self.loop.is_closed() or not self.loop.is_running():
+            raise RuntimeError("LoopPortal is closed or its event loop is not running")
+
+        async def invoke() -> T:
+            # Check on the owning loop too: aclose may race with submission.
+            if self._scope.closed:
+                raise RuntimeError("LoopPortal is closed")
+            return await self._scope.run(function(*args, **kwargs))
+
+        coroutine = invoke()
+        try:
+            future = asyncio.run_coroutine_threadsafe(coroutine, self.loop)
+        except BaseException:
+            coroutine.close()
+            raise
+        try:
+            return future.result(timeout)
+        finally:
+            if not future.done():
+                future.cancel()
+
 
 _lock = threading.Lock()
 _loop: asyncio.AbstractEventLoop | None = None

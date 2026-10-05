@@ -18,11 +18,13 @@ from jsonschema.exceptions import SchemaError
 
 from ._mcp_host import (
     SAMPLING_EXTENSION,
+    SAMPLING_DELTA_EXTENSION,
     SamplingProfile,
     SamplingRetryPolicy,
     SamplingObservation,
     SamplingFailure,
     _SamplingState,
+    _json_equal,
     visible_message,
 )
 from ._mcp_sampling import from_sampling, from_sampling_result, to_sampling, to_sampling_result
@@ -37,6 +39,7 @@ from .messages import AssistantMessage, CustomMessage, validate_json
 from .models import ModelInfo
 from .provider import ModelEvent, ModelRequest, Provider
 from .stream import checked_events
+from .tasks import _cancel, _join
 from .tools import ToolContext
 
 PROTOCOL_VERSION = "2025-11-25"
@@ -70,9 +73,11 @@ async def _cancel_tasks(tasks: list[asyncio.Task[Any]]) -> None:
     import anyio
 
     for task in tasks:
-        task.cancel()
+        _cancel(task)
     with anyio.CancelScope(shield=True):
-        await asyncio.gather(*tasks, return_exceptions=True)
+        # AnyIO shielding alone does not shield direct asyncio.Task.cancel().
+        # Join without forwarding repeated cancellation into child cleanup.
+        await _join(tasks)
 
 
 async def _await_cancel(awaitable: Awaitable[T], cancel: CancelToken) -> T:
@@ -158,6 +163,7 @@ class SamplingHandler:
         authorize: Callable[[MCPRequestContext, ModelRequest], Awaitable[bool]] | None = None,
         profiles: Mapping[str, SamplingProfile] | None = None,
         retain_state: bool = True,
+        incremental: bool = True,
         prepare: Callable[[MCPRequestContext, str, ModelRequest], Awaitable[None]] | None = None,
         observe: Callable[[SamplingObservation], Awaitable[None]] | None = None,
         retry: SamplingRetryPolicy | None = None,
@@ -183,6 +189,7 @@ class SamplingHandler:
         self.allow_temperature, self.tool_choice_format = allow_temperature, tool_choice_format
         self.authorize = authorize
         self.retain_state, self.prepare, self.observe = retain_state, prepare, observe
+        self.incremental = incremental and retain_state
         self.retry = retry or SamplingRetryPolicy()
         self.profiles = deepcopy(dict(profiles or {}))
         if "default" in self.profiles:
@@ -221,11 +228,12 @@ class SamplingHandler:
         if extension is not None:
             if not self.retain_state or context._state is None:
                 raise UnsupportedCapabilityError("Host sampling state is unavailable")
-            if not isinstance(extension, dict) or set(extension) != {
-                "profile",
-                "conversation",
-                "history",
-            }:
+            required = {"profile", "conversation", "history"}
+            if (
+                not isinstance(extension, dict)
+                or not required <= set(extension)
+                or set(extension) - required - {"delta"}
+            ):
                 raise UnsupportedCapabilityError("Invalid sampling extension")
             profile_name, conversation = extension["profile"], extension["conversation"]
             if (
@@ -244,6 +252,14 @@ class SamplingHandler:
         ):
             raise UnsupportedCapabilityError(
                 "This Provider/mode requires the sampling host-state extension"
+            )
+        delta = extension is not None and "delta" in extension
+        if delta:
+            assert extension is not None
+            if not self.incremental or context._state is None:
+                raise UnsupportedCapabilityError("Host sampling delta is unavailable")
+            data = context._state.expand_request(
+                data, extension["delta"], conversation, profile_name
             )
         request = from_sampling(data)
         if extension is not None:
@@ -333,16 +349,20 @@ class SamplingHandler:
             choice == "required" and not response.tool_calls
         ):
             raise ProviderProtocolError("Provider did not honor sampling tool choice")
+        visible = visible_message(response) if extension is not None else response
         result = to_sampling_result(
-            visible_message(response) if extension is not None else response,
-            params.tools is not None or params.tool_choice is not None,
+            visible,
+            "tools" in data or "toolChoice" in data,
             request.model,
         )
         from_sampling_result(result.model_dump(by_alias=True, exclude_none=True))
         if extension is not None:
             assert context._state is not None
-            ref = context._state.save(conversation, profile_name, response)
+            ref = context._state.save(conversation, profile_name, response, visible)
             result.meta = {SAMPLING_EXTENSION: {"ref": ref}}
+            if delta:
+                context._state.save_request(ref, conversation, profile_name, data)
+                result.meta[SAMPLING_EXTENSION]["request_ref"] = ref
         return result
 
     async def _generate(
@@ -609,6 +629,8 @@ class MCPCallbacks:
                 result.append("sampling.tools")
             if self.sampling.retain_state:
                 result.extend(("sampling.host_state", "sampling.profiles"))
+                if self.sampling.incremental:
+                    result.append("sampling.delta")
         if self.elicitation is not None:
             result.append("elicitation.form")
         return tuple(result)
@@ -645,15 +667,20 @@ class _Interaction:
             finally:
                 self.scope = None
                 scope.token.cancel("Outer MCP tool call ended")
-                await _cancel_tasks(list(scope.tasks))
-                scope.state.clear()
+                try:
+                    await _cancel_tasks(list(scope.tasks))
+                finally:
+                    scope.state.clear()
 
     async def aclose(self) -> None:
         self.closed = True
-        if self.scope:
-            self.scope.token.cancel("MCP connection closed")
-            await _cancel_tasks(list(self.scope.tasks))
-            self.scope.state.clear()
+        scope = self.scope
+        if scope:
+            scope.token.cancel("MCP connection closed")
+            try:
+                await _cancel_tasks(list(scope.tasks))
+            finally:
+                scope.state.clear()
 
     async def sampling(self, context: Any, params: Any) -> Any:
         return await self._dispatch("sampling", context, params)
@@ -772,6 +799,11 @@ class _Interaction:
                         request.params.capabilities.experimental = {
                             **(request.params.capabilities.experimental or {}),
                             SAMPLING_EXTENSION: {},
+                            **(
+                                {SAMPLING_DELTA_EXTENSION: {}}
+                                if interaction.callbacks.sampling.incremental
+                                else {}
+                            ),
                         }
                     if request.params.capabilities.elicitation:
                         request.params.capabilities.elicitation = types.ElicitationCapability(
@@ -827,6 +859,7 @@ class SamplingProvider:
         self.context, self.max_tokens, self.timeout = context, max_tokens, timeout
         self.profile, self.require_host_state = profile, require_host_state
         self._conversation = uuid4().hex
+        self._bases: dict[str, tuple[str, dict[str, Any]]] = {}
         self._open = False
         self._used = False
         self._tasks: set[asyncio.Task[Any]] = set()
@@ -844,7 +877,10 @@ class SamplingProvider:
 
     async def __aexit__(self, *args: Any) -> None:
         self._open = False
-        await _cancel_tasks(list(self._tasks))
+        try:
+            await _cancel_tasks(list(self._tasks))
+        finally:
+            self._bases.clear()
 
     async def stream(self, request: ModelRequest, cancel: CancelToken) -> AsyncIterator[ModelEvent]:
         from mcp import types
@@ -858,7 +894,10 @@ class SamplingProvider:
             capabilities
             and SAMPLING_EXTENSION in (getattr(capabilities, "experimental", None) or {})
         )
-        outgoing = _copy_request(request)
+        # to_sampling creates owned wire values, including tool arguments and
+        # schemas. Copy only the options container we modify, not the history a
+        # second time (nor any bound host callback owner).
+        outgoing = replace(request, options=dict(request.options))
         selected = outgoing.options.pop("sampling_profile", self.profile or "default")
         if selected != "default" and not extended:
             raise UnsupportedCapabilityError("MCP host has not enabled sampling profiles")
@@ -879,13 +918,33 @@ class SamplingProvider:
                     "history": history,
                 }
             }
+        delta = extended and SAMPLING_DELTA_EXTENSION in (capabilities.experimental or {})
+        full_data = data
+        has_tools = "tools" in data or "toolChoice" in data
+        if delta:
+            delta_data: dict[str, Any] = {}
+            base = self._bases.get(selected)
+            if base is not None:
+                base_ref, previous = base
+                prefix = 0
+                for old, new in zip(previous["messages"], data["messages"]):
+                    if not _json_equal(old, new):
+                        break
+                    prefix += 1
+                reuse = [
+                    key
+                    for key in ("systemPrompt", "tools")
+                    if key in data and _json_equal(data[key], previous.get(key))
+                ]
+                delta_data = {"base": base_ref, "prefix": prefix, "reuse": reuse}
+                data = {key: value for key, value in data.items() if key not in reuse}
+                data["messages"] = data["messages"][prefix:]
+            data["_meta"][SAMPLING_EXTENSION]["delta"] = delta_data
         params = types.CreateMessageRequestParams.model_validate(data)
         capabilities = self.context.session.client_capabilities
         if not capabilities or capabilities.sampling is None:
             raise UnsupportedCapabilityError("MCP host has not enabled sampling")
-        if (
-            params.tools is not None or params.tool_choice is not None
-        ) and capabilities.sampling.tools is None:
+        if has_tools and capabilities.sampling.tools is None:
             raise UnsupportedCapabilityError("MCP host has not enabled sampling.tools")
 
         async def sample() -> Any:
@@ -896,7 +955,7 @@ class SamplingProvider:
                     return await self.context.session.send_request(
                         request=types.CreateMessageRequest(params=params),
                         result_type=types.CreateMessageResultWithTools
-                        if params.tools is not None or params.tool_choice is not None
+                        if has_tools
                         else types.CreateMessageResult,
                         metadata=ServerMessageMetadata(related_request_id=self.context.request_id),
                     )
@@ -915,6 +974,11 @@ class SamplingProvider:
         self._tasks.add(task)
         try:
             result = await _await_cancel(task, cancel)
+            # Scope exit may have joined a completed inner task while this
+            # enclosing stream was still unwinding _await_cancel's cleanup.
+            cancel.raise_if_cancelled()
+            if not self._open:
+                raise ConfigurationError("SamplingProvider scope ended before its response")
             result_data = result.model_dump(by_alias=True, exclude_none=True)
             meta = result_data.pop("_meta", {})
             message = from_sampling_result(result_data)
@@ -923,6 +987,11 @@ class SamplingProvider:
                 if not isinstance(ref, str) or not ref:
                     raise ProviderProtocolError("Missing host sampling state reference")
                 message.response_id = ref
+                if delta:
+                    request_ref = meta.get(SAMPLING_EXTENSION, {}).get("request_ref")
+                    if not isinstance(request_ref, str) or not request_ref:
+                        raise ProviderProtocolError("Missing host sampling delta reference")
+                    self._bases[selected] = (request_ref, full_data)
             elif meta:
                 raise UnsupportedCapabilityError("Unnegotiated sampling response metadata")
             yield ModelEvent.done(message)

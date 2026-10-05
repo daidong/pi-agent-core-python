@@ -233,3 +233,37 @@ OpenAI 可在最终响应中补回 encrypted_content。若可见推理和其余�
 Provider 重放历史时按上游规则跳过 `error` / `aborted` 回答；跨模型的推理转为普通文本，签名丢弃；一条系统消息位于工具调用和结果之间时移到结果之后。会话历史本身不变。
 
 MCP 的宿主配置、用量观察、重试策略和构建能力标识见 [MCP 交互文档](MCP_INTERACTION.md#真实-provider配置选择与计量)。
+
+
+## 任务生命周期与同步线程桥接
+
+`TaskScope` 管理传给 `await scope.run(awaitable, cancel=token)` 的异步任务。
+每次调用在独立子任务中运行。调用方或取消令牌中止时，框架取消子任务并等待清理。
+`await scope.aclose()` 拒绝新调用，取消并等待现有任务，包括等待应用锁的任务。
+使用 `async with TaskScope() as scope`，或通过插件的 `api.task_scope()` 注册自动关闭。
+执行异常只交给对应调用方，不影响其他调用，也不会在关闭时再次抛出。
+任务必须配合取消；框架不会强制终止线程或隐式设置期限。任务不能关闭包含自己的作用域。
+一个作用域只能用于首次使用它的事件循环。
+
+`LoopPortal` 让同步工作线程把异步调用交给已有事件循环。它与自行创建后台循环的
+`run_sync` 不同。必须在连接所属循环创建并关闭桥接对象：
+
+```python
+import asyncio
+from pi_python import LoopPortal
+
+async def request(connection):
+    async with LoopPortal() as portal:
+        return await asyncio.to_thread(portal.call, connection.fetch, "item")
+```
+
+`portal.call(async_function, *args, timeout=None, **kwargs)` 接收异步函数而非已创建的协程，
+将结果或异常返回工作线程，并保留该线程的上下文变量。任何事件循环线程内的阻塞调用都会被拒绝。
+关闭会取消并等待已提交的异步工作，但不关闭借用的循环。
+超时限制阻塞等待时间，并请求取消异步工作；清理完成由 `aclose()` 保证。
+关闭完成前应保持所属循环运行，工作线程本身仍由应用管理。
+
+`FEATURES` 声明当前构建提供的版本化 API，`require_features(names, where="Application")`
+在能力缺失或名称未知时抛出 `ConfigurationError`。这些标记不表示可选依赖已经安装，
+也不代表 MCP 对端能力、凭据或宿主授权。原有 `MCP_FEATURES` 保持兼容，是其子集。
+插件可声明所需能力，由加载器统一校验，见 [插件文档](PLUGINS.md)。

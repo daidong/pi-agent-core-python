@@ -52,6 +52,10 @@ jobs:
           cd /tmp
           /tmp/installed/bin/python "$GITHUB_WORKSPACE/examples/mcp_interactive.py"
           /tmp/installed/bin/python -m pytest -q -o pythonpath= \
+            "$GITHUB_WORKSPACE/tests/test_tasks.py" \
+            "$GITHUB_WORKSPACE/tests/test_sync.py" \
+            "$GITHUB_WORKSPACE/tests/test_features.py" \
+            "$GITHUB_WORKSPACE/tests/test_mcp_delta.py" \
             "$GITHUB_WORKSPACE/tests/test_completions.py" \
             "$GITHUB_WORKSPACE/tests/test_mcp_interaction.py::test_form_rejects_sensitive_and_unsupported_schema_before_ui" \
             "$GITHUB_WORKSPACE/tests/test_mcp_interaction.py::test_plugin_readiness_revokes_capabilities_after_disconnect" \
@@ -72,7 +76,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-      - run: uv run --isolated --python 3.11 --extra mcp-interactive --with 'mcp==2.3.0' pytest -q tests/test_mcp_interaction.py tests/test_mcp_host.py tests/test_mcp_process.py
+      - run: uv run --isolated --python 3.11 --extra mcp-interactive --with 'mcp==2.3.0' pytest -q tests/test_mcp_interaction.py tests/test_mcp_host.py tests/test_mcp_process.py tests/test_mcp_delta.py
       - run: uv run --isolated --python 3.11 --extra mcp-interactive --with 'mcp==2.3.0' python examples/mcp_interactive.py
   # Install requirements are ranges; the lower bounds must keep working.
   lowest-dependencies:

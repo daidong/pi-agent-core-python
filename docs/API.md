@@ -235,3 +235,43 @@ OpenAI may add encrypted_content back in the final response. If the visible reas
 When replaying history, Providers skip `error` / `aborted` answers following upstream's rules; reasoning from a different model is converted to plain text and its signature is dropped; a system message that sits between a tool call and its result is moved after the result. The session history itself is unchanged.
 
 Host sampling profiles, usage observation, retry policy, and build feature markers are documented in [MCP interactions](MCP_INTERACTION.md#real-providers-profiles-accounting-and-retries).
+
+
+## Owned tasks and calls from worker threads
+
+`TaskScope` owns the asynchronous calls passed to `await scope.run(awaitable,
+cancel=token)`. Each call runs in a child task. Cancelling the caller or token
+cancels that task and waits for its cleanup. `await scope.aclose()` rejects new
+calls, cancels active calls, and joins them, including calls waiting on an
+application lock. Use `async with TaskScope() as scope`, or a plugin's
+`api.task_scope()` to register automatic cleanup. Exceptions go to the individual
+caller. Closing does not re-raise a completed call's error. Work must cooperate
+with cancellation; this API does not terminate threads or impose a deadline.
+An owned task cannot close its own scope. A scope is bound to its first event loop.
+
+`LoopPortal` submits async work from a synchronous worker thread onto an **existing**
+event loop. This differs from `run_sync`, which owns a separate background loop.
+Create and close the portal on the loop that owns the connection:
+
+```python
+import asyncio
+from pi_python import LoopPortal
+
+async def request(connection):
+    async with LoopPortal() as portal:
+        # A callable is passed, not a coroutine created in the worker thread.
+        return await asyncio.to_thread(portal.call, connection.fetch, "item")
+```
+
+`portal.call(async_function, *args, timeout=None, **kwargs)` returns the result or
+raises the error in the worker thread, preserving its context variables. Blocking
+an event-loop thread is rejected. Closing cancels and joins submitted work without
+closing the borrowed loop. A timeout bounds the blocking wait and requests async
+cancellation; `aclose()` waits for that cleanup. Keep the owning loop running until
+the portal has closed. Application threads themselves remain application-owned.
+
+`FEATURES` is the immutable set of versioned APIs provided by the current build.
+`require_features(names, where="Application")` raises `ConfigurationError` for
+unknown or unavailable features. It does not validate installed optional packages,
+MCP peer capabilities, credentials, or host authorization. `MCP_FEATURES` remains
+available and is a subset. Plugin declarations are described in [Plugins](PLUGINS.md#declaring-required-framework-features).
