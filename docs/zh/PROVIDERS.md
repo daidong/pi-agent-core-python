@@ -213,3 +213,7 @@ HTTP 失败时，错误文字带上服务器返回的正文，与上游一样最
 本机没有运行中的本地模型服务，Chat Completions 接入尚未连接真实服务器验证；它的请求和解析由上面的差分以及模拟服务器测试覆盖。
 
 仍未实现供应商约束采样（OpenAI grammar 工具与严格 JSON schema 工具）、Gemini/Vertex、Bedrock、Mistral 和 Azure 的原生接口、后台 deferred 轮询、音视频生成、模型目录自动更新，以及完整 pi-mono 应用。未知输出显式报错。严格参数验证、状态副本、未知工具结果不重放属于设计选择，单独记在验收映射中。
+
+OpenAI Responses、Anthropic 和 Chat Completions 在上游未报告用量时，会在
+`AssistantMessage.diagnostics` 加入 `{"type": "usage_unavailable"}`。为兼容旧接口保留的
+归一化默认零值不代表实测消耗；MCP 的用量观察事件在此情况下返回 `usage=None`。

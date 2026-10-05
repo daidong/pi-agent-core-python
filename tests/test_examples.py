@@ -1,6 +1,7 @@
 """Every example runs offline, with no credentials in the environment."""
 
 import importlib.util
+from importlib.metadata import version
 import os
 import subprocess
 import sys
@@ -16,6 +17,7 @@ CASES = {
     "save_restore.py": "answer after restore: The deadline is Friday.",
     "recovery.py": "context full: compacted",
     "mcp_tools.py": "answer: 19 + 23 = 42",
+    "mcp_interactive.py": '"model_reply": "[report] [ready]"',
     "local_model.py": "answer: The sum is 42.",
     "plugin_demo.py": "answer: The reviewer found 2 duplicate rows.",
 }
@@ -25,6 +27,12 @@ CASES = {
 def test_example_runs_offline(name):
     if name == "mcp_tools.py" and importlib.util.find_spec("mcp") is None:
         pytest.skip("needs the [mcp] extra")
+    if name == "mcp_interactive.py" and (
+        importlib.util.find_spec("mcp") is None
+        or tuple(int(n) for n in version("mcp").split(".")[:2]) < (2, 3)
+        or sys.implementation.name != "cpython"
+    ):
+        pytest.skip("needs the [mcp-interactive] extra and CPython stdio server")
     env = {k: v for k, v in os.environ.items() if not k.endswith("_API_KEY")}
     out = subprocess.run(
         [sys.executable, str(EXAMPLES / name)], capture_output=True, text=True, timeout=60, env=env
@@ -35,4 +43,7 @@ def test_example_runs_offline(name):
 
 def test_every_example_is_covered():
     scripts = {p.name for p in EXAMPLES.glob("*.py")} - {"provider_chat.py"}  # needs credentials
-    assert scripts <= set(CASES)
+    # The interactive host launches this companion server in a separate process.
+    companions = {"mcp_interactive_server.py": "mcp_interactive.py"}
+    assert set(companions.values()) <= set(CASES)
+    assert scripts <= set(CASES) | companions.keys()

@@ -9,6 +9,7 @@ left unset are detected from the provider name and base URL exactly as upstream 
 from __future__ import annotations
 
 import json
+import math
 import re
 import uuid
 from collections.abc import AsyncGenerator
@@ -332,6 +333,17 @@ def _append_detail(details: list[dict[str, Any]], detail: dict[str, Any]) -> Non
             _assign_from(last, detail, "index")
         return
     details.append(dict(detail))
+
+
+def _has_usage(raw: Any) -> bool:
+    """Empty/partial gateway counters are unknown, including truthy JSON objects."""
+    return isinstance(raw, dict) and all(
+        isinstance(value := raw.get(key), (int, float))
+        and not isinstance(value, bool)
+        and (not isinstance(value, float) or math.isfinite(value))
+        and value >= 0
+        for key in ("prompt_tokens", "completion_tokens")
+    )
 
 
 def _usage(raw: Any) -> dict[str, Any]:
@@ -919,6 +931,7 @@ class OpenAICompletionsProvider(RemoteProvider):
         raw_stop: str | None = None
         finished = False
         usage = _usage({})
+        usage_available = False
         response_id: str | None = None
         response_model: str | None = None
         announced = ended = False
@@ -942,15 +955,26 @@ class OpenAICompletionsProvider(RemoteProvider):
                 served = chunk.get("model")
                 if isinstance(served, str) and served and served != model.id:
                     response_model = response_model or served
-                if _truthy(chunk.get("usage")):
-                    usage = _usage(chunk["usage"])
                 choices = chunk.get("choices")
                 choice = choices[0] if isinstance(choices, list) and choices else None
+                # Prefer complete top-level counters, then choice-level counters
+                # (Moonshot). Empty/partial trailing chunks cannot erase a known
+                # measurement. Preserve normalized partial fields for direct callers.
+                candidates = [chunk.get("usage")]
+                if isinstance(choice, dict):
+                    candidates.append(choice.get("usage"))
+                measured = next((raw for raw in candidates if _has_usage(raw)), None)
+                if measured is not None:
+                    usage = _usage(measured)
+                    usage_available = True
+                elif not usage_available:
+                    partial = next(
+                        (raw for raw in candidates if isinstance(raw, dict) and raw), None
+                    )
+                    if partial is not None:
+                        usage = _usage(partial)
                 if not isinstance(choice, dict):
                     continue
-                # Some providers (e.g. Moonshot) report usage on the choice instead.
-                if not _truthy(chunk.get("usage")) and _truthy(choice.get("usage")):
-                    usage = _usage(choice["usage"])
                 if _truthy(choice.get("finish_reason")):
                     raw_stop = str(choice["finish_reason"])
                     stop, message = _stop_reason(choice["finish_reason"])
@@ -1083,6 +1107,7 @@ class OpenAICompletionsProvider(RemoteProvider):
                 request.model,
                 usage,
                 api=API,
+                diagnostics=None if usage_available else [{"type": "usage_unavailable"}],
                 thinking_level=request.options.get("reasoning"),
                 response_id=response_id,
                 response_model=response_model,

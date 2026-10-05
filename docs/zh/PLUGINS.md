@@ -210,6 +210,72 @@ You check deduplication results. Report the number only.
 
 `mcp.json` 里写错的一项，例如用了没有设置的环境变量，会被跳过并给出警告；同样的错误出现在 `add_mcp_server` 里时，会报 `ConfigurationError`。启动或连接失败的服务器也会被跳过并给出警告，其他内容照常加载。本库不支持的设置，如 `timeout`、`exposure`、`oauth`，会被忽略并给出警告；超时请用 `RunLimits(tool_timeout=...)`。和 Pi 一样，不接受 SSE 传输方式。使用 MCP 需要 `pip install 'pi-python-core[mcp]'`。不用插件时，`pi_python.mcp.connect_http(url, headers=...)` 连接 HTTP 服务器，用法和启动本地服务器的 `connect_stdio` 一样。
 
+在 POSIX 系统上，stdio 配置还接受 `"process_scope": true`，适用于 `mcp.json`
+和 `api.add_mcp_server`。连接关闭时会清理残留进程组及继承归属的嵌套 pi-python
+stdio 连接。该字段必须是布尔值，HTTP 配置不接受它。
+取消行为和平台限制见 [进程归属](MCP_INTERACTION.md)。
+
+两种传输方式都支持 `call_metadata`。它是一个 JSON 对象，作为 MCP 工具请求的
+`_meta` 发送，不会进入工具 schema 或模型填写的参数。运行上下文通过插件 options 传入：
+
+```python
+def setup(api):
+    api.add_mcp_server("sandbox", {
+        "url": api.options["url"],
+        "call_metadata": {"context_id": api.options["context_id"]},
+    })
+```
+
+应用向 `load_plugins` 传入 `options={"sandbox-plugin": {"url": sandbox_url, "context_id": task_id}}`。
+注册服务器时保存元数据副本，每次调用再独立复制。字符串原样保留，不展开环境变量。
+框架不解释 `context_id`。不同任务上下文应分别加载插件集；注册后修改 options
+不会改变已有连接的上下文。`mcp.json` 也接受同名字段。不使用插件时，向
+`connect_stdio`、`connect_http` 或 `mcp_tools` 传入 `call_metadata` 即可。
+进度标识和通知仍由 SDK 管理。如果 SDK 的 `ClientSession.call_tool` 不支持 `meta`，
+配置元数据（包括空字典 `{}`）会抛出 `ConfigurationError` 并终止加载。
+未配置元数据时仍兼容旧 SDK。
+
+## 严格加载与就绪检查
+
+MCP 服务还可以请求宿主模型和用户表单。宿主通过
+`load_plugins(..., mcp_callbacks={(插件名, 服务名): MCPCallbacks(...)})` 授权。
+服务 JSON 可以声明 `required_capabilities`，但不能放回调对象或自行获得能力。
+详见 [MCP 交互](MCP_INTERACTION.md#插件授权和就绪检查)。
+
+`load_plugins(..., strict=True)` 将任何加载诊断视为失败，包括插件资源被跳过、
+配置项不受支持，以及 MCP 连接失败。失败时抛出 `ConfigurationError`，
+关闭已启动的连接并执行插件的资源清理。默认仍允许带警告加载。
+严格加载不会自动运行自检，也不会猜测应用需要哪些能力。
+
+使用 `readiness()` 执行已登记的自检，并核对明确要求的能力：
+
+```python
+async with load_plugins(["sandbox-plugin"], options=options, strict=True) as plugins:
+    status = await plugins.readiness(
+        required_tools=["mcp__sandbox__execute"],
+        required_skills=["sandbox-rules"],
+        required_mcp_servers=["sandbox"],
+        required_checks=[("sandbox-plugin", "health")],
+    )
+    status.require_ready()  # 不满足要求时，抛出 ConfigurationError 并列出原因
+    agent = plugins.agent(provider=provider)
+```
+
+返回的 `ReadinessResult` 分别记录是否已加载（`loaded`）、缺少的工具/技能/MCP 服务、
+缺少的自检，以及实际执行的自检结果。自检用 `(插件名, 自检名)` 标识。
+与 `all(c.passed for c in await plugins.check())` 不同，要求的自检没有登记时，
+`ready` 为假。如果没有要求任何自检，空自检列表可以通过；已登记的自检仍全部执行，
+任何一项失败都会使 `ready` 为假。
+
+工具要求检查插件提供的工具，包括自动生成的 `read_skill` 和 `subagent`，不包括后来
+另外传给 `Agent` 的工具。MCP 服务必须当前已连接；被禁用或连接失败的配置不算存在。
+每次 `readiness()` 都会并发 ping MCP 会话，每个服务最多等待 `mcp_timeout` 秒（默认 5 秒）。
+失败或超时的服务及其能力不计入本次快照；后续 ping 成功时恢复可用状态。
+这是检查时的快照，不是持续监控；ping 只验证协议响应，业务功能仍须登记相应自检。
+宽松模式下，诊断信息会随结果返回，但本身不会使就绪检查失败。
+在上下文管理器内部调用 `require_ready()`，失败退出时会关闭资源。
+插件集打开前或关闭后，`loaded` 和 `ready` 都为假。
+
 ## 多个插件处理同一个钩子
 
 几个插件可以处理同一个钩子。处理函数的运行顺序是：你自己的钩子，然后按加载顺序运行各插件的，同一插件内按登记顺序。结果的合并方式和 Pi 的扩展运行器相同：

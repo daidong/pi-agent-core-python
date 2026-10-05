@@ -22,6 +22,7 @@ pip install pi-python-core      # 或 uv add pi-python-core
 | `[oauth]` | 用 ChatGPT 账号登录（`openai-chatgpt`）时校验身份令牌，会带进需要编译的 `cryptography`。Claude 订阅和 Codex 登录不需要它 |
 | `[providers]` | 与 `[oauth]` 相同，让 0.8.1 及以前的安装命令仍然可用 |
 | `[mcp]` | 把 MCP 服务器的工具交给 agent，插件声明的 MCP 服务器也需要它 |
+| `[mcp-interactive]` | 允许 MCP 服务请求宿主模型调用及用户表单，支持配置选择、计量与重试。见 [MCP 交互](docs/zh/MCP_INTERACTION.md) |
 
 依赖写的是版本范围而不是固定版本，能和大多数已有环境共存。
 
@@ -87,7 +88,7 @@ agent = Agent(provider=llm, model=llm.model("qwen3:8b", context_window=40960), t
 ## 开发
 
 ```bash
-uv sync --locked --extra oauth --extra mcp
+uv sync --locked --extra oauth --extra mcp-interactive
 uv run pytest -q
 uv run python scripts/verify.py      # 全部检查，含与上游的差分（需要 Node）
 ```

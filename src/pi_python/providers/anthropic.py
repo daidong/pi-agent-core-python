@@ -661,6 +661,7 @@ class AnthropicProvider(RemoteProvider):
                 self.name,
                 request.model,
                 normalize_usage(usage, self.name),
+                diagnostics=None if usage else [{"type": "usage_unavailable"}],
                 api="anthropic-messages",
                 provider_thinking_level=effort,
                 thinking_level=request.options.get("reasoning"),

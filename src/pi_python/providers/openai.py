@@ -616,6 +616,7 @@ class OpenAIProvider(RemoteProvider):
             request.model,
             normalize_usage(final_response.get("usage", {}), self.name),
             api=self.api,
+            diagnostics=None if final_response.get("usage") else [{"type": "usage_unavailable"}],
             thinking_level=request.options.get("reasoning"),
             response_id=final_response.get("id"),
             response_model=final_response.get("model")

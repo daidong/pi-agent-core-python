@@ -22,6 +22,7 @@ You install `pi-python-core` and import `pi_python`.
 | `[oauth]` | Verifies the identity token when you sign in with a ChatGPT account (`openai-chatgpt`); it brings in the compiled `cryptography` package. Claude subscription and Codex sign-in do not need it |
 | `[providers]` | Same as `[oauth]`; keeps install commands from 0.8.1 and earlier working |
 | `[mcp]` | Gives the agent the tools of MCP servers, including those a plugin declares |
+| `[mcp-interactive]` | Lets MCP services request host model calls and user forms; includes sampling profiles, metering and retries. See [MCP interaction](docs/MCP_INTERACTION.md) |
 
 Dependencies are version ranges rather than pins, so the package fits into most existing environments.
 
@@ -87,7 +88,7 @@ A few differences are deliberate, such as strict tool-argument validation withou
 ## Development
 
 ```bash
-uv sync --locked --extra oauth --extra mcp
+uv sync --locked --extra oauth --extra mcp-interactive
 uv run pytest -q
 uv run python scripts/verify.py      # every check, including the comparison with upstream (needs Node)
 ```

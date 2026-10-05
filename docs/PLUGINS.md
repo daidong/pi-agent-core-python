@@ -210,6 +210,77 @@ A server with a `command` is started over stdio, with optional `args`, `env` and
 
 An invalid entry in `mcp.json`, such as one that uses an unset variable, is skipped with a warning; the same mistake in `add_mcp_server` raises `ConfigurationError`. A server that fails to start or connect is also skipped with a warning, and everything else still loads. Settings this library does not support, such as `timeout`, `exposure` and `oauth`, are ignored with a warning; use `RunLimits(tool_timeout=...)` for timeouts. The SSE transport is rejected, as in Pi. MCP needs `pip install 'pi-python-core[mcp]'`. Outside plugins, `pi_python.mcp.connect_http(url, headers=...)` connects to an HTTP server the same way `connect_stdio` starts a local one.
 
+Stdio entries also accept `"process_scope": true` on POSIX. This applies to both
+`mcp.json` and `api.add_mcp_server`: the connection owns surviving process groups
+and inherited nested pi-python stdio connections until it closes. The value must be
+a boolean and is not accepted for HTTP. See [process ownership](MCP_INTERACTION.md)
+for cancellation behavior and platform limits.
+
+Both transports accept `call_metadata`, a JSON object sent as the MCP tool request's
+`_meta`, separate from the tool schema and model arguments. Supply runtime values
+through plugin options:
+
+```python
+def setup(api):
+    api.add_mcp_server("sandbox", {
+        "url": api.options["url"],
+        "call_metadata": {"context_id": api.options["context_id"]},
+    })
+```
+
+The application passes `options={"sandbox-plugin": {"url": sandbox_url, "context_id": task_id}}`
+to `load_plugins`. Metadata is copied at registration and for every call. Strings stay
+literal, without environment expansion. The framework does not interpret `context_id`.
+Load a separate plugin set for each task context; changing options after registration
+does not retarget a connection. `mcp.json` accepts the same field. Without plugins,
+pass `call_metadata` to `connect_stdio`, `connect_http`, or `mcp_tools`.
+The SDK still manages progress tokens and notifications. If `ClientSession.call_tool`
+lacks `meta`, configuring metadata (even `{}`) raises `ConfigurationError` and aborts
+loading. Omitting metadata keeps older SDKs supported.
+
+## Strict loading and readiness
+
+MCP services can also request host models and user forms. The host grants these with
+`load_plugins(..., mcp_callbacks={(plugin_name, server_name): MCPCallbacks(...)})`.
+Server JSON may list `required_capabilities`, but cannot contain executable callbacks
+or grant itself capabilities. See [MCP interaction](MCP_INTERACTION.md#plugin-grants-and-readiness).
+
+`load_plugins(..., strict=True)` rejects any loading diagnostic, including skipped
+plugin resources, unsupported settings, and failed MCP connections. It raises
+`ConfigurationError` and closes started connections and plugin resources. The default
+remains permissive. Strict loading does not run self-checks or infer required capabilities.
+
+Use `readiness()` to run registered self-checks and check explicit requirements:
+
+```python
+async with load_plugins(["sandbox-plugin"], options=options, strict=True) as plugins:
+    status = await plugins.readiness(
+        required_tools=["mcp__sandbox__execute"],
+        required_skills=["sandbox-rules"],
+        required_mcp_servers=["sandbox"],
+        required_checks=[("sandbox-plugin", "health")],
+    )
+    status.require_ready()  # raises ConfigurationError with unmet requirements
+    agent = plugins.agent(provider=provider)
+```
+
+`ReadinessResult` separates `loaded`, missing tools/skills/MCP servers, missing checks,
+and executed check results. Checks are identified by `(plugin_name, check_name)`.
+Unlike `all(c.passed for c in await plugins.check())`, a required but unregistered
+check makes `ready` false. Without required checks, an empty check list is acceptable;
+every registered check is still run, and any failure makes `ready` false.
+
+Tool requirements cover plugin-contributed tools, including generated `read_skill`
+and `subagent`, not extra tools later passed to `Agent`. MCP names must identify
+responsive sessions; disabled or failed entries do not count. Each `readiness()` call
+pings MCP sessions concurrently, bounded by `mcp_timeout` seconds per server (default 5).
+Failed or timed-out sessions lose their available status and capability grants in the
+snapshot; a later successful ping restores them. This is not continuous monitoring,
+and a ping does not verify business functionality; register self-checks for that.
+Diagnostics are included but do not themselves fail readiness in
+permissive mode. Call `require_ready()` inside the context manager so failure also
+closes resources. Before opening or after closing, `loaded` and `ready` are false.
+
 ## Hooks from several plugins
 
 Several plugins can handle the same hook. Handlers run in this order: your own hook, then the plugins in load order, and within a plugin in the order it registered them. Their results combine as in Pi's extension runner:

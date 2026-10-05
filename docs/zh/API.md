@@ -159,6 +159,20 @@ async with connect_stdio("uvx", ["mcp-server-fetch"], prefix="web") as tools:
 
 需要 `pip install 'pi-python-core[mcp]'`，兼容官方 MCP SDK 1.10 及以上和 2.x。`connect_stdio` 启动一个 stdio MCP 服务器，退出 `async with` 时关闭它。`connect_http(url, headers=None, prefix=None, names=None)` 用同样的方式连接 streamable HTTP 服务器；和 Pi 一样，不支持旧的 SSE 传输方式。它只在服务器的同一源内跟随重定向，header 不会被发到其他源。它在 MCP SDK 1.10、1.30 和 2.3 上测过。已经自己建立了 `ClientSession` 时，用 `await mcp_tools(session, prefix=None, names=None)` 包装它的工具。转换方式与 Pi 的 MCP 适配相同：文本和图片直接转换；嵌入的文本或图片资源取出内容；音频、资源链接和二进制资源换成简短的文字说明；只有结构化结果时转成 JSON 文本，同时作为 `structured_content`；MCP 的 `isError` 成为工具错误；进度通知成为 `tool_execution_update` 事件。工具名加上前缀后只保留字母、数字、`_` 和 `-`，最长 64 个字符。schema 无法使用的工具会发出警告并跳过，不影响同一服务器的其他工具。用 Python MCP SDK 2.3 写的 stdio 服务器在 PyPy 上无法启动（缺少 `fcntl.F_DUPFD_CLOEXEC`），这是 SDK 本身的限制；客户端一侧不受影响。
 
+三个 MCP 入口均接受可选的 `call_metadata`，把 JSON 对象传给
+`ClientSession.call_tool(meta=...)`。注册时和每次调用时独立复制，不加入工具参数。
+SDK 不支持 `meta` 时，注册会抛出 `ConfigurationError`。
+插件配置和启动验收见[插件指南](PLUGINS.md#mcp-服务器)。
+
+在 POSIX 系统上，`connect_stdio(..., process_scope=True)` 还会在退出时清理残留进程组
+和嵌套的 pi-python stdio 连接。外层连接显式启用，内层连接自动继承。
+非 POSIX 系统不接受显式启用，具体范围见 [进程归属与限制](MCP_INTERACTION.md)。
+
+`connect_stdio` 和 `connect_http` 还接受 `callbacks=MCPCallbacks(...)`，按宿主授权启用
+模型请求和表单交互。`SamplingHandler` 接入宿主 Provider，`SamplingProvider` 让服务端 Agent
+通过当前 MCP 请求使用模型。新能力要求 SDK >=2.3,<3；公共接口、协议限制、取消及可运行示例见
+[MCP 交互](MCP_INTERACTION.md)。
+
 ## 插件
 
 `pi_python.plugins` 负责加载插件。插件是一组有名字的附加内容：工具、系统提示文字、钩子、技能、提示模板、子 agent 和 MCP 服务器，格式沿用 Pi 的 package。`async with load_plugins([...], services=..., options=...) as plugins:` 加载插件，`plugins.agent(...)` 构造一个带上全部插件内容的 Agent。怎样编写、发布插件，以及多个插件怎样合在一起，见 [插件指南](PLUGINS.md)。
@@ -217,3 +231,5 @@ OpenAI 可在最终响应中补回 encrypted_content。若可见推理和其余�
 `AssistantMessage.provider_thinking_level` 与上游相同：只在使用推理强度标记的 Claude 模型上记录本次强度，用于在后续请求中重建历史标记。需要请求等级时读取 `thinking_level`。
 
 Provider 重放历史时按上游规则跳过 `error` / `aborted` 回答；跨模型的推理转为普通文本，签名丢弃；一条系统消息位于工具调用和结果之间时移到结果之后。会话历史本身不变。
+
+MCP 的宿主配置、用量观察、重试策略和构建能力标识见 [MCP 交互文档](MCP_INTERACTION.md#真实-provider配置选择与计量)。

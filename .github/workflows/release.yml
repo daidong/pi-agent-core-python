@@ -1,21 +1,28 @@
 name: release
-# Pushing a tag such as v0.8.1 builds, tests and publishes that version to PyPI.
+# Pushing a tag such as v0.10.0 validates, builds and publishes that version to PyPI.
 # PyPI trusts this workflow file (trusted publishing), so no token is stored here.
 on:
   push:
     tags: ['v*']
 jobs:
+  validate:
+    uses: ./.github/workflows/ci.yml
   build:
+    needs: validate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
       - name: Tag matches the package version
         run: test "v$(grep -m1 '^version = ' pyproject.toml | cut -d'"' -f2)" = "$GITHUB_REF_NAME"
-      - run: uv sync --locked --extra providers --extra mcp
+      - run: uv sync --locked --extra providers --extra mcp-interactive
+      - name: Installed and runtime versions match the tag
+        run: |
+          uv run python -c 'import os; from importlib.metadata import version; from pi_python import __version__; assert version("pi-python-core") == __version__ == os.environ["GITHUB_REF_NAME"][1:]'
       - run: uv run pytest -q
       # Builds the sdist, then the wheel from the sdist, so both are exercised.
       - run: uv build
+      - run: uvx --from twine==6.2.0 twine check --strict dist/*
       - name: Installed wheel works without optional dependencies
         run: |
           uv venv -p 3.11 /tmp/installed

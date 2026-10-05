@@ -3,6 +3,8 @@
 import asyncio
 import importlib
 import importlib.util
+import inspect
+import json
 import socket
 import subprocess
 import sys
@@ -859,6 +861,8 @@ async def test_mcp_configuration_errors(tmp_path, monkeypatch):
         ("s", {"description": "nothing to run"}, "needs a command or a url"),
         ("s", {"url": "http://x", "headers": {"A": "${PI_PLUGIN_TEST_TOKEN}"}}, "is not set"),
         ("s", {"command": "x", "args": "--flag"}, "args must be a list"),
+        ("s", {"command": "x", "process_scope": "yes"}, "process_scope must be a boolean"),
+        ("s", {"url": "http://x", "process_scope": True}, "process_scope must be a boolean"),
         ("bad name", {"command": "x"}, "may only use letters"),
         ("s", {"command": "${PLUGIN_ROOT}/x"}, "needs a plugin directory"),
     ]:
@@ -891,6 +895,7 @@ async def test_mcp_variables_expand(tmp_path, monkeypatch):
             "remote": {
                 "url": "https://x.org/mcp",
                 "headers": {"Authorization": "Bearer ${PI_PLUGIN_TEST_TOKEN}"},
+                "call_metadata": {"context_id": "${LITERAL}", "nested": [None, True, 3]},
                 "enabled": False,
             },
         },
@@ -901,6 +906,10 @@ async def test_mcp_variables_expand(tmp_path, monkeypatch):
     assert servers["local"]["args"] == [f"{(tmp_path / 'p').resolve()}/server.py"]
     assert servers["local"]["env"] == {"TOKEN": "secret"}
     assert servers["remote"]["headers"] == {"Authorization": "Bearer secret"}
+    assert servers["remote"]["call_metadata"] == {
+        "context_id": "${LITERAL}",
+        "nested": [None, True, 3],
+    }
 
 
 def free_port():
@@ -941,6 +950,289 @@ async def test_connect_http():
     finally:
         process.terminate()
         process.wait(timeout=10)
+
+
+@pytest.fixture(params=["stdio", "http"])
+async def metadata_server(request):
+    if not HAS_MCP or (request.param == "stdio" and not STDIO_MCP):
+        pytest.skip("needs the [mcp] extra and a supported server runtime")
+    if request.param == "stdio":
+        yield {"command": sys.executable, "args": [str(SERVER)]}
+        return
+    port = free_port()
+    process = subprocess.Popen(
+        [sys.executable, str(SERVER), "--http", str(port)],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    try:
+        deadline = time.monotonic() + 30
+        while True:
+            try:
+                socket.create_connection(("127.0.0.1", port), timeout=0.2).close()
+                break
+            except OSError:
+                if time.monotonic() > deadline or process.poll() is not None:
+                    pytest.fail("the HTTP MCP server did not start")
+                await asyncio.sleep(0.1)
+        yield {"url": f"http://127.0.0.1:{port}/mcp"}
+    finally:
+        process.terminate()
+        process.wait(timeout=10)
+
+
+async def test_plugin_metadata_roundtrip_and_concurrent_contexts(metadata_server):
+    from mcp import ClientSession
+
+    if "meta" not in inspect.signature(ClientSession.call_tool).parameters:
+        pytest.skip("SDK does not support call metadata; tested separately")
+
+    def setup(api):
+        metadata = api.options["metadata"]
+        api.add_mcp_server(api.name, {**metadata_server, "call_metadata": metadata})
+        metadata["nested"]["ids"].append("changed after registration")
+
+    async def run_task(task):
+        options = {
+            name: {"metadata": {"context_id": f"{task}-{name}", "nested": {"ids": [task]}}}
+            for name in ("one", "two")
+        }
+        async with load_plugins(
+            [Plugin("one", setup), Plugin("two", setup)],
+            options=options,
+        ) as plugins:
+            status = await plugins.readiness(required_mcp_servers=["one", "two"])
+            assert status.ready
+            tools = [t for t in plugins.tools if t.name.endswith("__metadata")]
+            assert len(tools) == 2
+            for t in tools:
+                assert set(t.input_schema["properties"]) == {"value"}
+            provider = ScriptedProvider(
+                [
+                    calls(*[(t.name, {"value": "model argument"}) for t in tools]),
+                    AssistantMessage.text("done"),
+                ]
+            )
+            agent = plugins.agent(provider=provider)
+            updates = []
+            agent.subscribe(
+                lambda e: updates.append(e.data["update"])
+                if e.type == "tool_execution_update"
+                else None
+            )
+            result = await agent.prompt("go")
+            assert len(updates) == 2
+            for outcome, name in zip(result.tool_outcomes, ("one", "two"), strict=True):
+                assert not outcome.result.is_error
+                received = json.loads(outcome.result.content[0].text)
+                assert received["arguments"] == {"value": "model argument"}
+                meta = received["meta"]
+                assert meta["context_id"] == f"{task}-{name}"
+                assert meta["nested"] == {"ids": [task]}
+                assert "progressToken" in meta or "progress_token" in meta
+            for request in provider.requests:
+                assert "context_id" not in repr(request.tools)
+
+    await asyncio.gather(run_task("task-a"), run_task("task-b"))
+
+
+async def test_unsupported_sdk_metadata_fails_plugin_loading(metadata_server):
+    from mcp import ClientSession
+
+    if "meta" in inspect.signature(ClientSession.call_tool).parameters:
+        pytest.skip("requires an old SDK without meta")
+    closed = []
+
+    def setup(api):
+        api.on_close(lambda: closed.append(True))
+        api.add_mcp_server("sandbox", {**metadata_server, "call_metadata": {}})
+
+    with pytest.raises(ConfigurationError, match="call_metadata.*meta"):
+        async with load_plugins(Plugin("p", setup)):
+            pytest.fail("unsupported metadata must not silently load")
+    assert closed == [True]
+
+
+@pytest.mark.parametrize("strict", [False, True])
+async def test_strict_loading_rejects_diagnostics_and_closes_resources(strict, monkeypatch):
+    from contextlib import asynccontextmanager
+    import pi_python.mcp
+
+    events = []
+
+    @asynccontextmanager
+    async def connect(command, args, **kwargs):
+        if command == "broken":
+            raise ConnectionError("unavailable")
+        events.append("connected")
+        try:
+            yield []
+        finally:
+            events.append("disconnected")
+
+    monkeypatch.setattr(pi_python.mcp, "connect_stdio", connect)
+
+    def setup(api):
+        api.on_close(lambda: events.append("closed"))
+        api.add_mcp_server("good", {"command": "good"})
+        api.add_mcp_server("bad", {"command": "broken"})
+        api.add_mcp_server("disabled", {"command": "good", "enabled": False})
+
+    plugins = load_plugins(Plugin("p", setup), strict=strict)
+    if strict:
+        with pytest.raises(ConfigurationError, match="Strict plugin loading.*unavailable"):
+            await plugins.open()
+    else:
+        with pytest.warns(PluginWarning, match="unavailable"):
+            await plugins.open()
+        report = await plugins.readiness(required_mcp_servers=["good", "bad", "disabled"])
+        assert report.loaded and not report.ready
+        assert report.missing_mcp_servers == ("bad", "disabled")
+        with pytest.raises(ConfigurationError, match="missing MCP servers"):
+            report.require_ready()
+        await plugins.aclose()
+    assert events == ["connected", "disconnected", "closed"]
+    report = await plugins.readiness(required_mcp_servers=["good"])
+    assert not report.loaded and not report.ready and report.missing_mcp_servers == ("good",)
+    await plugins.aclose()
+    assert events.count("closed") == 1
+
+
+async def test_strict_loading_rejects_invalid_resources(tmp_path):
+    write(tmp_path / "skills" / "invalid" / "SKILL.md", "No description")
+    write(tmp_path / "mcp.json", '{"mcpServers": {"broken": {"type": "sse"}}}')
+    with pytest.raises(ConfigurationError, match="Strict plugin loading") as caught:
+        async with load_plugins(tmp_path, strict=True):
+            pass
+    assert "description is required" in str(caught.value)
+    assert "SSE transport" in str(caught.value)
+
+
+async def test_readiness_requires_named_checks_and_resources(tmp_path):
+    write(
+        tmp_path / "skills" / "rules" / "SKILL.md",
+        "---\nname: rules\ndescription: Rules\n---\nRules",
+    )
+    ran = []
+
+    @tool
+    def validate() -> str:
+        """Validate rules."""
+        return "ok"
+
+    def setup(api):
+        api.add_tool(validate)
+        api.add_check(lambda: ran.append("p"), "health")
+
+    async with load_plugins(Plugin("p", setup, root=tmp_path), strict=True) as plugins:
+        report = await plugins.readiness(
+            required_tools=["validate", "read_skill"],
+            required_skills=["rules"],
+            required_checks=[("p", "health")],
+        )
+        assert report.ready and report.plugins == ("p",) and ran == ["p"]
+        report.require_ready()
+        report = await plugins.readiness(
+            required_tools=["sandbox"],
+            required_skills=["absent"],
+            required_checks=[("other-plugin", "health")],
+        )
+        assert not report.ready
+        assert report.missing_tools == ("sandbox",) and report.missing_skills == ("absent",)
+        assert report.missing_checks == (("other-plugin", "health"),)
+
+
+async def test_readiness_empty_and_failed_checks_are_distinct():
+    plugins = load_plugins(Plugin("empty"), strict=True)
+    assert not (await plugins.readiness()).ready
+    async with plugins:
+        report = await plugins.readiness(required_checks=[("empty", "health")])
+        assert report.loaded and not report.ready and report.checks == ()
+        assert report.missing_checks == (("empty", "health"),)
+
+    def setup(api):
+        api.add_check(lambda: False, "false")
+        api.add_check(lambda: 1 / 0, "error")
+
+    async with load_plugins(Plugin("failed", setup), strict=True) as plugins:
+        report = await plugins.readiness(required_checks=[("failed", "false"), ("failed", "error")])
+        assert report.loaded and not report.ready and not report.missing_checks
+        assert len(report.checks) == 2 and not any(c.passed for c in report.checks)
+        with pytest.raises(ConfigurationError, match="failed/false.*failed/error"):
+            report.require_ready()
+
+
+@pytest.mark.parametrize("timeout", [0, -1, True, float("nan"), float("inf")])
+async def test_readiness_rejects_invalid_probe_timeout(timeout):
+    async with load_plugins(Plugin("empty")) as plugins:
+        with pytest.raises(ConfigurationError, match="mcp_timeout"):
+            await plugins.readiness(mcp_timeout=timeout)
+
+
+async def test_readiness_probes_are_bounded_cancelled_and_can_recover(monkeypatch):
+    from contextlib import asynccontextmanager
+    from types import SimpleNamespace
+    import pi_python.mcp
+
+    healthy = False
+    entered, stopped = set(), set()
+
+    @asynccontextmanager
+    async def connect(command, args, **kwargs):
+        async def ping():
+            if healthy:
+                return
+            entered.add(command)
+            try:
+                await asyncio.Event().wait()
+            finally:
+                stopped.add(command)
+
+        kwargs["_on_session"](SimpleNamespace(send_ping=ping))
+        yield []
+
+    monkeypatch.setattr(pi_python.mcp, "connect_stdio", connect)
+
+    def setup(api):
+        for name in ("one", "two"):
+            api.add_mcp_server(name, {"command": name})
+
+    async with load_plugins(Plugin("p", setup)) as plugins:
+        status = await asyncio.wait_for(
+            plugins.readiness(required_mcp_servers=["one", "two"], mcp_timeout=0.01), 1
+        )
+        assert status.missing_mcp_servers == ("one", "two")
+        assert entered == stopped == {"one", "two"}
+        healthy = True
+        assert (await plugins.readiness(required_mcp_servers=["one", "two"])).ready
+        healthy = False
+        entered.clear()
+        stopped.clear()
+        task = asyncio.create_task(plugins.readiness())
+        async with asyncio.timeout(1):
+            while len(entered) < 2:
+                await asyncio.sleep(0)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        assert stopped == {"one", "two"}
+
+
+async def test_tool_business_error_does_not_fail_readiness(metadata_server):
+    def setup(api):
+        api.add_mcp_server("business", metadata_server)
+
+    async def emit(value):
+        pass
+
+    async with load_plugins(Plugin("p", setup)) as plugins:
+        failing = next(t for t in plugins.tools if t.name.endswith("__fail"))
+        result = await failing.execute(
+            {"reason": "business validation failed"},
+            ToolContext("run", "call", CancelToken(), emit),
+        )
+        assert result.is_error
+        assert (await plugins.readiness(required_mcp_servers=["business"])).ready
 
 
 # --- unused imports guard ---------------------------------------------------------------

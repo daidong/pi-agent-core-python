@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pi-python-core"
-version = "0.9.0"
+version = "0.10.0"
 description = "An embeddable asyncio agent core with opt-in Claude and OpenAI providers"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -58,3 +58,5 @@ oauth = ["PyJWT[crypto]>=2.8,<3"]
 # Before 0.8.2 this extra also carried httpx and websockets; it remains so old commands work.
 providers = ["PyJWT[crypto]>=2.8,<3"]
 mcp = ["mcp>=1.10"]
+# Reverse-request dispatch and cancellation rely on the SDK 2.3 dispatcher.
+mcp-interactive = ["mcp>=2.3,<3", "jsonschema[format-nongpl]>=4.18,<5"]

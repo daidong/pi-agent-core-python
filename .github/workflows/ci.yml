@@ -1,5 +1,8 @@
 name: core
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  workflow_call:
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -27,7 +30,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
       # The MCP SDK's stdio server cannot start on PyPy (no fcntl.F_DUPFD_CLOEXEC); its test skips there.
-      - run: uv sync --locked --extra providers ${{ !startsWith(matrix.python, 'pypy') && '--extra mcp' || '' }} --python '${{ matrix.python }}'
+      - run: uv sync --locked --extra providers ${{ !startsWith(matrix.python, 'pypy') && '--extra mcp-interactive' || '' }} --python '${{ matrix.python }}'
       - run: uv run --python '${{ matrix.python }}' pytest -q
   installed-wheel:
     runs-on: ubuntu-latest
@@ -41,6 +44,20 @@ jobs:
           cd /tmp
           /tmp/installed/bin/python -c 'import importlib.util as u; assert u.find_spec("httpx") and u.find_spec("websockets"); assert u.find_spec("jwt") is None'
           /tmp/installed/bin/python "$GITHUB_WORKSPACE/examples/in_memory.py"
+          /tmp/installed/bin/python -c 'from pi_python.mcp import MCP_FEATURES; assert {"sampling-host-state-v1", "sampling-profiles-v1", "sampling-metering-v1", "sampling-retry-v1"} <= MCP_FEATURES'
+      # Exercise the deployed wheel outside the checkout, without an editable install.
+      - run: |
+          wheel=$(ls dist/pi_python_core-*-py3-none-any.whl)
+          uv pip install -p /tmp/installed/bin/python "${wheel}[mcp-interactive]" pytest==8.4.2 pytest-asyncio==1.2.0
+          cd /tmp
+          /tmp/installed/bin/python "$GITHUB_WORKSPACE/examples/mcp_interactive.py"
+          /tmp/installed/bin/python -m pytest -q -o pythonpath= \
+            "$GITHUB_WORKSPACE/tests/test_completions.py" \
+            "$GITHUB_WORKSPACE/tests/test_mcp_interaction.py::test_form_rejects_sensitive_and_unsupported_schema_before_ui" \
+            "$GITHUB_WORKSPACE/tests/test_mcp_interaction.py::test_plugin_readiness_revokes_capabilities_after_disconnect" \
+            "$GITHUB_WORKSPACE/tests/test_mcp_host.py::test_sampling_metering_distinguishes_unknown_and_zero_usage" \
+            "$GITHUB_WORKSPACE/tests/test_plugins.py::test_readiness_probes_are_bounded_cancelled_and_can_recover" \
+            "$GITHUB_WORKSPACE/tests/test_plugins.py::test_tool_business_error_does_not_fail_readiness"
   # The [mcp] extra allows SDK 1.10 and later; the lock file holds 2.x, so check the 1.x
   # code paths (HTTP client, redirect rule, stdio servers) on the oldest supported SDK.
   mcp-sdk-1:
@@ -48,7 +65,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-      - run: uv run --isolated --python 3.12 --extra providers --group dev --with 'mcp>=1.10,<1.11' pytest -q tests/test_mcp.py tests/test_plugins.py
+      - run: uv run --isolated --python 3.12 --extra providers --group dev --with 'mcp>=1.10,<1.11' pytest -q tests/test_mcp.py tests/test_mcp_process.py tests/test_plugins.py
+  # Pin the minimum interactive SDK independently of the moving lockfile.
+  mcp-interactive-minimum:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv run --isolated --python 3.11 --extra mcp-interactive --with 'mcp==2.3.0' pytest -q tests/test_mcp_interaction.py tests/test_mcp_host.py tests/test_mcp_process.py
+      - run: uv run --isolated --python 3.11 --extra mcp-interactive --with 'mcp==2.3.0' python examples/mcp_interactive.py
   # Install requirements are ranges; the lower bounds must keep working.
   lowest-dependencies:
     runs-on: ubuntu-latest

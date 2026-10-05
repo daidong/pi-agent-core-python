@@ -112,7 +112,10 @@ When Codex reuses a connection, it uses upstream's incremental requests: if this
 
 For known models, OpenAI sends the model's output limit by default (shortened by the context estimate, at least 16). When a ChatGPT sign-in token is used directly against `api.openai.com` (the token does not start with `sk-`), the library, like upstream, does not send `prompt_cache_retention`, `prompt_cache_options`, `max_output_tokens` or `temperature`, which the server rejects in that case.
 
-Usage is normalized to `input`, `output`, `cache_read`, `cache_write`, `reasoning` and `total_tokens`. A tool's own usage is stored separately in the tool result and is not mixed into the main model's token counts.
+Usage is normalized to `input`, `output`, `cache_read`, `cache_write`, `reasoning` and `total_tokens`. When the upstream omits usage, OpenAI Responses, Anthropic, and Chat Completions add
+`{"type": "usage_unavailable"}` to `AssistantMessage.diagnostics`. Their legacy normalized
+counters remain present for compatibility; those default zeros are not measured consumption.
+MCP sampling observations report `usage=None` for this case. A tool's own usage is stored separately in the tool result and is not mixed into the main model's token counts.
 
 ## Model table and DeepSeek
 

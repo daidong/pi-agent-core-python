@@ -22,11 +22,12 @@ import importlib
 import importlib.machinery
 import importlib.util
 import json
+import math
 import os
 import re
 import sys
 import warnings
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
 from copy import copy
 from dataclasses import dataclass, replace
 from importlib.metadata import EntryPoint, entry_points
@@ -43,6 +44,7 @@ from ..limits import RunLimits
 from ..models import ModelInfo
 from ..sync import run_sync
 from ..tools import Tool, ToolContext, ToolResult, invoke
+from .._mcp_interaction import MCPCallbacks
 from ._compose import (
     HOOK_NAMES,
     PluginFailure,
@@ -77,6 +79,7 @@ __all__ = [
     "PluginSet",
     "PluginWarning",
     "PromptTemplate",
+    "ReadinessResult",
     "Skill",
     "discover_plugins",
     "load_plugins",
@@ -85,7 +88,20 @@ __all__ = [
 ENTRY_POINT_GROUP = "pi_python.plugins"
 READ_SKILL_TOOL = "read_skill"
 MAX_SKILL_FILE_BYTES = 256 * 1024
-_MCP_KEYS = {"type", "command", "args", "env", "cwd", "url", "headers", "enabled", "description"}
+_MCP_KEYS = {
+    "process_scope",
+    "type",
+    "command",
+    "args",
+    "env",
+    "cwd",
+    "url",
+    "headers",
+    "enabled",
+    "description",
+    "call_metadata",
+    "required_capabilities",
+}
 _VARIABLE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
 _MISSING: Any = object()
 F = TypeVar("F", bound=Callable[..., Any])
@@ -130,6 +146,56 @@ class CheckResult:
     name: str
     passed: bool
     detail: str = ""
+
+
+@dataclass(frozen=True)
+class ReadinessResult:
+    """A snapshot after self-checks and MCP pings, not a continuous health guarantee."""
+
+    loaded: bool
+    plugins: tuple[str, ...]
+    diagnostics: tuple[str, ...]
+    missing_tools: tuple[str, ...]
+    missing_skills: tuple[str, ...]
+    missing_mcp_servers: tuple[str, ...]
+    missing_checks: tuple[tuple[str, str], ...]
+    checks: tuple[CheckResult, ...]
+    missing_mcp_capabilities: tuple[tuple[str, str], ...] = ()
+
+    @property
+    def ready(self) -> bool:
+        return (
+            self.loaded
+            and not (
+                self.missing_tools
+                or self.missing_skills
+                or self.missing_mcp_servers
+                or self.missing_checks
+                or self.missing_mcp_capabilities
+            )
+            and all(check.passed for check in self.checks)
+        )
+
+    def require_ready(self) -> None:
+        """Raise ConfigurationError with the unmet requirements, if any."""
+        if self.ready:
+            return
+        reasons = []
+        if not self.loaded:
+            reasons.append("plugins are not open")
+        for label, missing in (
+            ("tools", self.missing_tools),
+            ("skills", self.missing_skills),
+            ("MCP servers", self.missing_mcp_servers),
+            ("checks", self.missing_checks),
+            ("MCP capabilities", self.missing_mcp_capabilities),
+        ):
+            if missing:
+                reasons.append(f"missing {label}: {missing}")
+        for check in self.checks:
+            if not check.passed:
+                reasons.append(f"check {check.plugin}/{check.name} failed: {check.detail}")
+        raise ConfigurationError("Plugins are not ready: " + "; ".join(reasons))
 
 
 def discover_plugins() -> list[InstalledPlugin]:
@@ -250,7 +316,8 @@ class PluginAPI:
         """An MCP server in ``mcp.json`` form; it connects when the set opens.
 
         ``${PLUGIN_ROOT}``, ``${PYTHON}`` (this interpreter) and environment variables
-        are expanded in its strings.
+        are expanded in transport strings. `call_metadata` is a literal JSON object
+        snapshotted at registration and sent separately from tool arguments.
         """
         if not re.fullmatch(r"[A-Za-z0-9_-]+", name):
             raise ConfigurationError(
@@ -273,6 +340,8 @@ class PluginAPI:
         self._closers.append(callback)
 
     def _mcp_config(self, name: str, config: Mapping[str, Any]) -> dict[str, Any]:
+        from ..mcp import _copy_call_metadata
+
         if not isinstance(config, Mapping):
             raise ConfigurationError(f"MCP server {name!r}: the configuration must be an object")
         unknown = sorted(set(config) - _MCP_KEYS)
@@ -289,6 +358,29 @@ class PluginAPI:
         if kind not in {"stdio", "http", "streamable-http"}:
             raise ConfigurationError(f"MCP server {name!r} needs a command or a url")
         result: dict[str, Any] = {"type": "stdio" if kind == "stdio" else "http"}
+        if "process_scope" in config:
+            if kind != "stdio" or type(config["process_scope"]) is not bool:
+                raise ConfigurationError(
+                    f"MCP server {name!r}: process_scope must be a boolean for stdio"
+                )
+            result["process_scope"] = config["process_scope"]
+        if config.get("call_metadata") is not None:
+            result["call_metadata"] = _copy_call_metadata(config["call_metadata"])
+        required = config.get("required_capabilities", [])
+        if not isinstance(required, list) or any(
+            not isinstance(cap, str)
+            or cap
+            not in {
+                "sampling",
+                "sampling.tools",
+                "sampling.host_state",
+                "sampling.profiles",
+                "elicitation.form",
+            }
+            for cap in required
+        ):
+            raise ConfigurationError(f"MCP server {name!r}: invalid required_capabilities")
+        result["required_capabilities"] = list(required)
         result["enabled"] = config.get("enabled", True) is not False
         if kind == "stdio":
             command = config.get("command")
@@ -378,6 +470,8 @@ class PluginSet:
         services: Mapping[str, Any] | None = None,
         options: Mapping[str, Mapping[str, Any]] | None = None,
         on_error: Callable[[PluginFailure], Any] | None = None,
+        strict: bool = False,
+        mcp_callbacks: Mapping[tuple[str, str], MCPCallbacks] | None = None,
     ):
         if isinstance(sources, (str, os.PathLike, Plugin)):
             sources = [sources]
@@ -385,10 +479,14 @@ class PluginSet:
         self._services = dict(services or {})
         self._options = {name: dict(value) for name, value in (options or {}).items()}
         self._on_error = on_error or log_plugin_failure
+        self._strict = strict
+        self._mcp_callbacks = dict(mcp_callbacks or {})
         self._state = "new"
         self._apis: list[PluginAPI] = []
         self._closing: asyncio.Event | None = None
         self._servers: list[asyncio.Task[None]] = []
+        self._connected_servers: set[str] = set()
+        self._mcp_checks: dict[str, Callable[[], Awaitable[Any]]] = {}
         self.plugins: list[Plugin] = []
         self.tools: list[Tool] = []
         self.skills: list[Skill] = []
@@ -418,6 +516,10 @@ class PluginSet:
         self._state = "opening"
         try:
             await self._load()
+            if self._strict and self.diagnostics:
+                raise ConfigurationError(
+                    "Strict plugin loading failed: " + "; ".join(self.diagnostics)
+                )
         except BaseException:
             await self._shutdown()
             self._state = "closed"
@@ -461,6 +563,22 @@ class PluginSet:
                     raise
             self.plugins.append(replace(plugin, root=root))
         self._merge()
+        servers = {(api.name, name) for api in self._apis for name in api._mcp}
+        if set(self._mcp_callbacks) - servers:
+            raise ConfigurationError("MCP callbacks name an unknown (plugin, server) pair")
+        if any(not isinstance(value, MCPCallbacks) for value in self._mcp_callbacks.values()):
+            raise ConfigurationError("mcp_callbacks values must be MCPCallbacks runtime objects")
+        for api in self._apis:
+            for name, config in api._mcp.items():
+                if not config["enabled"]:
+                    continue
+                callbacks = self._mcp_callbacks.get((api.name, name))
+                available = set(callbacks.capabilities) if callbacks else set()
+                missing = set(config["required_capabilities"]) - available
+                if missing:
+                    raise ConfigurationError(
+                        f"MCP server {name!r} lacks host capabilities: {sorted(missing)}"
+                    )
         await self._connect_servers()
 
     def _merge(self) -> None:
@@ -531,6 +649,11 @@ class PluginSet:
         for api, name, ready in pending:
             try:
                 tools = await ready
+            except ConfigurationError:
+                # All connections were started together. Retrieve other failures too
+                # before aborting so no readiness future is left with an unhandled error.
+                await asyncio.gather(*(future for _, _, future in pending), return_exceptions=True)
+                raise
             except Exception as exc:
                 reason = _redact(f"{type(exc).__name__}: {exc}", api._secrets.get(name))
                 self.diagnostics.append(
@@ -559,20 +682,40 @@ class PluginSet:
 
         prefix = f"mcp__{name.replace('-', '_')}_"
         assert self._closing is not None
+
+        def on_session(session: Any) -> None:
+            self._mcp_checks[name] = session.send_ping
+
         try:
+            callbacks = self._mcp_callbacks.get((plugin, name))
+            callback_options: dict[str, Any] = (
+                {"callbacks": callbacks, "server_name": name, "plugin_name": plugin}
+                if callbacks
+                else {}
+            )
             if config["type"] == "stdio":
                 connection = connect_stdio(
                     config["command"],
                     config["args"],
                     env=config.get("env"),
                     cwd=config.get("cwd"),
+                    process_scope=config.get("process_scope", False),
                     prefix=prefix,
+                    call_metadata=config.get("call_metadata"),
+                    _on_session=on_session,
+                    **callback_options,
                 )
             else:
                 connection = connect_http(
-                    config["url"], headers=config.get("headers"), prefix=prefix
+                    config["url"],
+                    headers=config.get("headers"),
+                    prefix=prefix,
+                    call_metadata=config.get("call_metadata"),
+                    _on_session=on_session,
+                    **callback_options,
                 )
             async with connection as tools:
+                self._connected_servers.add(name)
                 ready.set_result(tools)
                 await self._closing.wait()
         except asyncio.CancelledError:
@@ -588,6 +731,9 @@ class PluginSet:
                 await self._report(
                     PluginFailure(plugin, f"MCP server {name}", ConnectionError(reason))
                 )
+        finally:
+            self._connected_servers.discard(name)
+            self._mcp_checks.pop(name, None)
 
     async def _shutdown(self) -> None:
         if self._closing is not None:
@@ -760,6 +906,87 @@ class PluginSet:
                     )
         return results
 
+    async def readiness(
+        self,
+        *,
+        required_tools: Iterable[str] = (),
+        required_skills: Iterable[str] = (),
+        required_mcp_servers: Iterable[str] = (),
+        required_checks: Iterable[tuple[str, str]] = (),
+        required_mcp_capabilities: Mapping[str, Iterable[str]] | None = None,
+        mcp_timeout: float = 5.0,
+    ) -> ReadinessResult:
+        """Run self-checks and compare available resources with explicit requirements.
+
+        Check identities are `(plugin_name, check_name)` pairs. An empty check list
+        is acceptable only when no checks are required. Diagnostics remain visible
+        but do not themselves fail readiness; use `strict=True` to reject them on load.
+        This checks the tools contributed by plugins, not tools later passed to Agent.
+        MCP sessions are pinged concurrently, with `mcp_timeout` seconds per server.
+        """
+        if (
+            isinstance(mcp_timeout, bool)
+            or not isinstance(mcp_timeout, (int, float))
+            or not math.isfinite(mcp_timeout)
+            or mcp_timeout <= 0
+        ):
+            raise ConfigurationError("mcp_timeout must be finite and positive")
+        checks = tuple(await self.check()) if self._state == "open" else ()
+
+        async def probe(name: str, ping: Callable[[], Awaitable[Any]]) -> None:
+            try:
+                async with asyncio.timeout(mcp_timeout):
+                    await ping()
+            except Exception:
+                healthy = False
+            else:
+                healthy = True
+            # Closing may have removed the session while the ping was pending.
+            if self._state == "open" and self._mcp_checks.get(name) is ping:
+                if healthy:
+                    self._connected_servers.add(name)
+                else:
+                    self._connected_servers.discard(name)
+
+        if self._state == "open":
+            await asyncio.gather(*(probe(name, ping) for name, ping in self._mcp_checks.items()))
+        loaded = self._state == "open"
+        tools = {tool.name for tool in self.tools} if loaded else set()
+        skills = {skill.name for skill in self.skills} if loaded else set()
+        if loaded and any(not skill.disable_model_invocation for skill in self.skills):
+            tools.add(READ_SKILL_TOOL)
+        if loaded and self.agents:
+            tools.add(SUBAGENT_TOOL)
+        servers = self._connected_servers if loaded else set()
+        executed = {(check.plugin, check.name) for check in checks}
+        return ReadinessResult(
+            loaded=loaded,
+            plugins=tuple(plugin.name for plugin in self.plugins) if loaded else (),
+            diagnostics=tuple(self.diagnostics),
+            missing_tools=tuple(sorted(set(required_tools) - tools)),
+            missing_skills=tuple(sorted(set(required_skills) - skills)),
+            missing_mcp_servers=tuple(sorted(set(required_mcp_servers) - servers)),
+            missing_checks=tuple(sorted(set(required_checks) - executed)),
+            checks=checks,
+            missing_mcp_capabilities=tuple(
+                sorted(
+                    (server, cap)
+                    for server, caps in (required_mcp_capabilities or {}).items()
+                    for cap in caps
+                    if cap not in self.mcp_capabilities.get(server, ())
+                )
+            ),
+        )
+
+    @property
+    def mcp_capabilities(self) -> dict[str, tuple[str, ...]]:
+        """Host grants for servers available at connection or the latest readiness check."""
+        return {
+            name: callbacks.capabilities
+            for (_, name), callbacks in self._mcp_callbacks.items()
+            if self._state == "open" and name in self._connected_servers
+        }
+
 
 def load_plugins(
     sources: Iterable[str | os.PathLike[str] | Plugin] | str | os.PathLike[str] | Plugin,
@@ -767,6 +994,8 @@ def load_plugins(
     services: Mapping[str, Any] | None = None,
     options: Mapping[str, Mapping[str, Any]] | None = None,
     on_error: Callable[[PluginFailure], Any] | None = None,
+    strict: bool = False,
+    mcp_callbacks: Mapping[tuple[str, str], MCPCallbacks] | None = None,
 ) -> PluginSet:
     """Plugins to load, in order; nothing runs until the set is opened.
 
@@ -775,8 +1004,17 @@ def load_plugins(
     ``api.service(name)``; `options` maps a plugin name to the options it reads from
     ``api.options``. `on_error` (sync or async) receives a :class:`PluginFailure` for each
     plugin handler that fails; by default failures are logged.
+    `strict=True` rejects any loading diagnostics and closes resources on failure.
+    Self-checks and required capabilities are evaluated separately by `readiness()`.
     """
-    return PluginSet(sources, services=services, options=options, on_error=on_error)
+    return PluginSet(
+        sources,
+        services=services,
+        options=options,
+        on_error=on_error,
+        strict=strict,
+        mcp_callbacks=mcp_callbacks,
+    )
 
 
 def _printable(server: str, what: str, value: str) -> str:

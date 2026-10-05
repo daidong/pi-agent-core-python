@@ -159,6 +159,23 @@ async with connect_stdio("uvx", ["mcp-server-fetch"], prefix="web") as tools:
 
 Requires `pip install 'pi-python-core[mcp]'` and works with the official MCP SDK 1.10 and later, including 2.x. `connect_stdio` starts a stdio MCP server and closes it when the `async with` block exits. `connect_http(url, headers=None, prefix=None, names=None)` connects to a streamable HTTP server in the same way; the legacy SSE transport is not supported, as in Pi. It follows redirects only within the server's origin, so headers are never sent to another one. It is tested with MCP SDK 1.10, 1.30 and 2.3. If you already have a `ClientSession`, wrap its tools with `await mcp_tools(session, prefix=None, names=None)`. Conversion follows Pi's MCP adapter: text and images convert directly; embedded text or image resources are unpacked; audio, resource links and binary resources become short text descriptions; a result with only structured content becomes JSON text and is also kept as `structured_content`; MCP's `isError` becomes a tool error; progress notifications become `tool_execution_update` events. After the prefix is added, tool names keep only letters, digits, `_` and `-`, up to 64 characters. A tool whose schema cannot be used is skipped with a warning, without affecting the server's other tools. A stdio server written with Python MCP SDK 2.3 cannot start on PyPy (`fcntl.F_DUPFD_CLOEXEC` is missing); this is a limitation of the SDK itself, and the client side is unaffected.
 
+On POSIX, `connect_stdio(..., process_scope=True)` also cleans surviving process
+groups and nested pi-python stdio connections on exit. It is opt-in at the outer
+connection and inherited by nested connections. Non-POSIX systems reject explicit
+enablement. See [process ownership](MCP_INTERACTION.md) for scope and limitations.
+
+All three MCP entry points accept optional `call_metadata`, a JSON object passed to
+`ClientSession.call_tool(meta=...)`. It is copied per registration and call, stays out
+of tool arguments, and requires an SDK with `meta` support; otherwise registration
+raises `ConfigurationError`. See [runtime metadata and readiness](PLUGINS.md#mcp-servers)
+for plugin configuration and startup checks.
+
+`connect_stdio` and `connect_http` also accept `callbacks=MCPCallbacks(...)` for
+host-authorized sampling and form elicitation. `SamplingHandler` adapts a host Provider;
+`SamplingProvider` runs a server Agent through the current MCP request. This opt-in
+feature requires SDK >=2.3,<3. See [MCP interaction](MCP_INTERACTION.md) for public APIs,
+protocol constraints, cancellation, and the runnable offline example.
+
 ## Plugins
 
 `pi_python.plugins` loads plugins: named bundles of tools, system prompt text, hooks, skills, prompt templates, subagents and MCP servers, in the format of Pi's packages. `async with load_plugins([...], services=..., options=...) as plugins:` loads them, and `plugins.agent(...)` builds an Agent with everything they contribute. The [plugin guide](PLUGINS.md) covers writing, distributing and combining plugins.
@@ -216,3 +233,5 @@ OpenAI may add encrypted_content back in the final response. If the visible reas
 `AssistantMessage.provider_thinking_level` matches upstream: it records this answer's effort only for Claude models that use effort markers, so later requests can rebuild the markers in history. Read `thinking_level` when you need the requested level.
 
 When replaying history, Providers skip `error` / `aborted` answers following upstream's rules; reasoning from a different model is converted to plain text and its signature is dropped; a system message that sits between a tool call and its result is moved after the result. The session history itself is unchanged.
+
+Host sampling profiles, usage observation, retry policy, and build feature markers are documented in [MCP interactions](MCP_INTERACTION.md#real-providers-profiles-accounting-and-retries).

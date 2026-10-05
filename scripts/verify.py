@@ -8,7 +8,7 @@ import sys
 import time
 
 COMMANDS = [
-    ["uv", "sync", "--locked", "--extra", "providers", "--extra", "mcp"],
+    ["uv", "sync", "--locked", "--extra", "providers", "--extra", "mcp-interactive"],
     ["uv", "run", "ruff", "check", "src", "tests", "examples", "compat", "scripts"],
     ["uv", "run", "ruff", "format", "--check", "src", "tests", "examples", "compat", "scripts"],
     ["uv", "run", "mypy", "src/pi_python"],
@@ -40,6 +40,7 @@ COMMANDS = [
     ["uv", "run", "python", "scripts/recovery_conformance.py"],
     ["uv", "run", "python", "scripts/plugin_conformance.py"],
     ["uv", "run", "python", "examples/plugin_demo.py"],
+    ["uv", "run", "python", "examples/mcp_interactive.py"],
     ["uv", "run", "python", "examples/provider_chat.py", "--help"],
     ["uv", "build"],
 ]
