@@ -10,7 +10,9 @@ from pi_python.plugins import Plugin, load_plugins
 
 def test_feature_inventory_and_unknown_requirement():
     assert MCP_FEATURES <= FEATURES
-    require_features(["task-scope-v1", "loop-portal-v1", "plugin-requires-v1"])
+    require_features(
+        ["task-scope-v1", "loop-portal-v1", "plugin-requires-v1", "nested-agent-ownership-v1"]
+    )
     with pytest.raises(ConfigurationError, match="missing-feature"):
         require_features(["missing-feature"], where="Example")
 

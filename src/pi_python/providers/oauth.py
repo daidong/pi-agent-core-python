@@ -19,7 +19,7 @@ from urllib.parse import parse_qs, urlencode, urlsplit
 from ..cancellation import CancelToken
 from ..errors import ConfigurationError, ProviderProtocolError
 from ..tools import invoke
-from .transport import HTTPTransport, ProviderHTTPError, cancellable
+from .transport import HTTPTransport, ProviderHTTPError, _acquire, cancellable
 from .openai import account_id
 
 
@@ -524,9 +524,8 @@ class RefreshingCredentials:
 
     async def get(self, cancel: CancelToken | None = None) -> OAuthCredential:
         cancel = cancel or CancelToken()
-        acquisition = asyncio.create_task(self._lock.acquire())
+        await _acquire(self._lock.acquire(), cancel, lambda acquired: self._lock.release())
         try:
-            await cancellable(acquisition, cancel)
             cancel.raise_if_cancelled()
             if self._dirty:
                 await invoke(self.persist, self.credential)
@@ -538,10 +537,4 @@ class RefreshingCredentials:
                 self._dirty = False
             return self.credential
         finally:
-            if (
-                acquisition.done()
-                and not acquisition.cancelled()
-                and acquisition.exception() is None
-                and acquisition.result()
-            ):
-                self._lock.release()
+            self._lock.release()

@@ -36,6 +36,7 @@ from ..transcript import (
 from ..tools import invoke
 from ..stream import event_contract
 from .common import RemoteProvider, normalize_usage, transform_messages
+from .transport import stream_error
 
 _CC_NAMES = "Read Write Edit Bash Grep Glob AskUserQuestion EnterPlanMode ExitPlanMode KillShell NotebookEdit Skill Task TaskOutput TodoWrite WebFetch WebSearch".split()
 _CC = {name.lower(): name for name in _CC_NAMES}
@@ -549,7 +550,7 @@ class AnthropicProvider(RemoteProvider):
                 if ended:
                     raise ProviderProtocolError("Anthropic event after message_stop")
                 if kind == "error":
-                    raise ProviderProtocolError("Anthropic stream reported an error")
+                    raise stream_error(event, headers)
                 if kind == "message_start":
                     usage.update(event["message"].get("usage", {}))
                     response_meta = event["message"]

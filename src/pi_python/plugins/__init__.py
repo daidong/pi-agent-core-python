@@ -43,7 +43,7 @@ from ..hooks import Hooks
 from ..limits import RunLimits
 from ..models import ModelInfo
 from ..sync import run_sync
-from ..tasks import TaskScope
+from ..tasks import TaskScope, _cancel, _join
 from ..features import _names, require_features
 from ..tools import Tool, ToolContext, ToolResult, invoke
 from .._mcp_interaction import MCPCallbacks
@@ -496,6 +496,8 @@ class PluginSet:
         self._strict = strict
         self._mcp_callbacks = dict(mcp_callbacks or {})
         self._state = "new"
+        self._open_task: asyncio.Task[None] | None = None
+        self._close_task: asyncio.Task[None] | None = None
         self._apis: list[PluginAPI] = []
         self._closing: asyncio.Event | None = None
         self._servers: list[asyncio.Task[None]] = []
@@ -528,28 +530,37 @@ class PluginSet:
         if self._state != "new":
             raise ConfigurationError("A PluginSet can be opened only once")
         self._state = "opening"
+        self._open_task = asyncio.create_task(self._start())
         try:
-            await self._load()
-            if self._strict and self.diagnostics:
-                raise ConfigurationError(
-                    "Strict plugin loading failed: " + "; ".join(self.diagnostics)
-                )
+            await asyncio.shield(self._open_task)
+            if self._state != "opening":
+                raise ConfigurationError("PluginSet closed while opening")
         except BaseException:
-            await self._shutdown()
-            self._state = "closed"
+            await self.aclose()
             raise
         self._state = "open"
-        for message in self.diagnostics:
-            warnings.warn(message, PluginWarning, stacklevel=2)
         return self
 
+    async def _start(self) -> None:
+        """Startup is one transaction, including diagnostics that may raise."""
+        await self._load()
+        if self._strict and self.diagnostics:
+            raise ConfigurationError("Strict plugin loading failed: " + "; ".join(self.diagnostics))
+        for message in self.diagnostics:
+            warnings.warn(message, PluginWarning, stacklevel=2)
+
     async def aclose(self) -> None:
-        """Disconnect MCP servers and run the plugins' close callbacks."""
+        """Finish cleanup once, then propagate cancellation of a waiting caller."""
         if self._state in {"new", "closed"}:
             self._state = "closed"
             return
-        await self._shutdown()
-        self._state = "closed"
+        if asyncio.current_task() in (self._open_task, self._close_task):
+            raise ConfigurationError("A setup or close callback cannot close its own PluginSet")
+        if self._close_task is None:
+            self._state = "closing"
+            self._close_task = asyncio.create_task(self._shutdown())
+        await _join([self._close_task])
+        self._close_task.result()
 
     async def _load(self) -> None:
         resolved = [_resolve(source) for source in self._sources]
@@ -757,17 +768,38 @@ class PluginSet:
             self._mcp_checks.pop(name, None)
 
     async def _shutdown(self) -> None:
-        if self._closing is not None:
-            self._closing.set()
-        if self._servers:
-            await asyncio.gather(*self._servers, return_exceptions=True)
-            self._servers.clear()
-        for api in reversed(self._apis):
-            for callback in reversed(api._closers):
-                try:
-                    await invoke(callback)
-                except Exception as exc:
-                    await self._report(PluginFailure(api.name, "on_close", exc))
+        cancelled = False
+        try:
+            # Stop resource registration before taking the cleanup inventory.
+            # Only this shutdown task cancels startup, so repeated caller
+            # cancellation cannot interrupt a setup function's finally block.
+            if self._open_task is not None:
+                _cancel(self._open_task)
+                await _join([self._open_task])
+            if self._closing is not None:
+                self._closing.set()
+            if self._servers:
+                if self._open_task is not None and self._open_task.cancelled():
+                    for server in self._servers:
+                        _cancel(server)
+                await asyncio.gather(*self._servers, return_exceptions=True)
+                self._servers.clear()
+            for api in reversed(self._apis):
+                while api._closers:
+                    callback = api._closers.pop()
+                    try:
+                        try:
+                            await invoke(callback)
+                        except Exception as exc:
+                            await self._report(PluginFailure(api.name, "on_close", exc))
+                    except asyncio.CancelledError:
+                        # A callback or its error reporter may cancel itself; release resources
+                        # registered before it, then deliver cancellation to callers.
+                        cancelled = True
+            if cancelled:
+                raise asyncio.CancelledError
+        finally:
+            self._state = "closed"
 
     async def _report(self, failure: PluginFailure) -> None:
         try:

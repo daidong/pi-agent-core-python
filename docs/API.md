@@ -48,6 +48,8 @@ Every event passes the same check: blocks must pair up, deltas must land in an o
 
 Message data also allows `pending` and `deferred`. `pending` is only for in-stream snapshots and cannot be committed to history; `deferred` can hold a background handle, but the library does not yet poll background tasks. For `length`, every tool call gets a not-executed result, and the model may then handle the error. `error` / `aborted` messages cannot declare tool calls: before the message is committed, its tool calls are removed, the rest of the partial content is kept, and a `removed_tool_calls` entry is added to `diagnostics`.
 
+The Agent closes each request's response iterator when the request ends, including error and cancellation paths. Custom iterators that own resources should implement `aclose()`. This does not close the shared Provider.
+
 ## Tool
 
 `Tool(name, description, input_schema, execute, output_schema=None, execution_mode="parallel", prepare_arguments=None)`.
@@ -81,7 +83,33 @@ def search_papers(query: str, year: int | None = None, limit: int = 10) -> list[
 
 Supported parameter types: `str`, `int`, `float`, `bool`, `None`, `list`, `set`, `tuple`, `dict[str, T]`, `Literal`, `Enum`, `Optional` and other unions, `Annotated[T, "description"]`, `TypedDict`, dataclasses, `datetime`, `date`, `UUID`, `Path`, and pydantic models. Before the call, the JSON arguments are converted to the types the function asks for, such as enum members, dates, dataclasses or pydantic models. A parameter annotated as `ToolContext` receives the call context and does not appear in the schema. `*args`, `**kwargs` and types that cannot be represented as JSON raise `ConfigurationError` at registration.
 
+For a union, conversion tries branches in annotation order, using only branches whose JSON Schema matches the input. For example, `list[int] | str` preserves `"abc"` as a string. When several branches match, the first successful conversion wins.
+
+Schema and conversion are compiled together at registration, including recursive types and union branches. Bare `set`, `frozenset` and `tuple` annotations also convert JSON arrays to the requested Python container. Nested pydantic definitions are isolated between parameters and union branches, even when their class names match.
+
+`TypedDict` requiredness follows resolved `Required` and `NotRequired` annotations,
+including inherited fields and `Annotated` wrappers when annotations are postponed.
+
 Concurrency is unlimited by default: a batch of tools all run at once, as in Pi; set `RunLimits(max_concurrency=...)` when you need a cap. If any tool requires `sequential`, the whole batch runs one at a time. When running concurrently, preparation completes in call order before execution starts; end events follow the order in which post-processing finishes, and results in history follow call order.
+
+Parallel tool and subagent batches own their child tasks: failure or cancellation cancels unfinished siblings and waits for their cleanup. Repeated caller cancellation does not interrupt that cleanup. The Run's existing cleanup deadline still applies; `cleanup_complete` reports whether cleanup actually finished.
+
+Inside a tool, use `await context.run_agent(child, message)` to run an exclusively
+owned, idle child Agent. It returns the child's `RunResult` and closes that Agent;
+the shared Provider stays open. See [the subagent example](../examples/subagent.py).
+An already running child is rejected without cancelling or closing it. Ordinary
+model/tool failures remain results that the calling tool can handle.
+
+Nested calls preserve two separate facts: whether an external operation's outcome
+is known, and whether its work has stopped. An unknown child outcome raises
+`ToolOutcomeUnknownError`, marks the enclosing Agent as requiring reconciliation,
+and stops further execution. This also applies across parallel siblings and multiple
+nesting levels. An unfinished child keeps its enclosing tool pending. The parent's
+cleanup deadline still bounds its run, which reports `cleanup_complete=False` until
+the descendant actually finishes. Repeated cancellation cannot abandon that cleanup.
+Standalone `ToolContext` callers must keep awaiting the call or manage its lifetime
+with `TaskScope`; without an enclosing Agent there is no Run cleanup deadline.
+Check `require_features(["nested-agent-ownership-v1"])` when depending on this API.
 
 A standalone program can call `await run_tool_call(tool, call, context, before_tool_call=..., after_tool_call=...)` to reuse the same validation and hook path. For standalone calls, the program manages lifetime, timeouts and cancellation itself; `Agent` adds batch management and `RunLimits`.
 

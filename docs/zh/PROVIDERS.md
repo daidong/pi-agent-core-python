@@ -100,7 +100,13 @@ Claude 的推理方式由模型记录决定：`compat["forceAdaptiveThinking"]` 
 
 OpenAI 将 `thinking_level` 映射到 reasoning effort。`options` 支持 `max_tokens`、`reasoning_summary`、`temperature`、`top_p`、`tool_choice`、`parallel_tool_calls`、`metadata`、`service_tier`、`text`、`headers`；Claude 另支持 `thinking_budgets`、`thinking_display`、`interleaved_thinking`、`top_k`、`stop_sequences`，以及直接覆盖的 `thinking` 和 `output_config`。与上游一致，Claude 只转发 `metadata.user_id`，字符串形式的 `tool_choice` 写成 `{"type": ...}`；推理开启、模型不支持或使用强度标记时不发送 `temperature`。具体模型允许哪些参数由服务端决定。
 
-Claude 使用 SSE。OpenAI/Codex 支持 `sse`、`websocket`、`websocket-cached` 和 `auto`。`websocket-cached` 要求 `session_id`；与上游一致，`auto` 在有 `session_id` 时也复用连接。`cache_retention="none"` 时每次请求使用一次性连接。连接按端点、会话和请求头隔离，同一连接串行使用；空闲 5 分钟或建立满 55 分钟后不再复用，已被服务端关闭的连接也会重建，而不是在旧连接上失败。时限可用 `HTTPTransport(websocket_idle_ttl=..., websocket_max_age=...)` 调整。结束后调用 `await provider.aclose()`；共享 transport 由应用管理生命周期。
+Claude 使用 SSE。OpenAI/Codex 支持 `sse`、`websocket`、`websocket-cached` 和 `auto`。`websocket-cached` 要求 `session_id`；与上游一致，`auto` 在有 `session_id` 时也复用连接。`cache_retention="none"` 时每次请求使用一次性连接。连接按端点、会话和请求头隔离，同一连接串行使用；空闲 5 分钟或建立满 55 分钟后不再复用，已被服务端关闭的连接也会重建，而不是在旧连接上失败。时限可用 `HTTPTransport(websocket_idle_ttl=..., websocket_max_age=...)` 调整。
+
+每次 WebSocket 请求及归还连接时清扫过期的空闲连接。默认最多保留 64 条空闲连接，超限时先关闭最早归还的连接；可用 `HTTPTransport(websocket_cache_size=...)` 调整，设为 `0` 则不保留连接。会话锁在最后一个运行或等待中的请求退出后移除。清扫由请求触发，没有后台定时器。结束后调用 `await provider.aclose()`；共享 transport 由应用管理生命周期。
+
+如果取消与取得 HTTP 响应、WebSocket 或请求锁同时发生，transport 会先释放已取得的资源，再传播取消异常。调用方重复取消不会打断这次释放。传入的 HTTP 客户端仍由应用管理。
+
+Responses、Messages 和 Chat Completions 的流内错误会在 `ProviderProtocolError` 中保留错误类型、代码和消息，让恢复逻辑识别上下文超限、暂时过载和额度耗尽。HTTP 和流内错误共用凭据脱敏规则，错误详情最多保留 4,000 个字符。
 
 Codex 复用连接时采用上游的增量请求：如果本次请求除输入外完全相同，且输入以上次输入加上次回答开头，只发送新增部分和 `previous_response_id`。任何其他情况都发送完整上下文。服务端回复找不到上一回答（`previous_response_not_found`）或连接数已满（`websocket_connection_limit_reached`）且尚未输出内容时，换新连接以完整上下文重试一次；此时服务端尚未生成内容，不会重复计费。`auto` 只在握手失败、请求尚未发出时回退 SSE；请求发出后的断线不重发，这比上游保守。Python 的 WebSocket 帧不带 `stream` 字段，上游会带；0.3 和 0.4 的实际 Codex 联调均不需要它。直接调用 OpenAI API 的 WebSocket 是本库扩展，上游没有对应路径，因此仍发送完整上下文。
 

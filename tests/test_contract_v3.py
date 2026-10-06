@@ -309,3 +309,53 @@ async def test_checked_provider_failure_commits_its_partial_message(abort):
     assert message.stop_reason == expected and message.content[0].text == "partial"
     assert (message.provider, message.model) == ("anthropic", "claude-x")
     assert ("overloaded" in message.error) != abort
+
+
+@pytest.mark.parametrize("ending", ["done", "error", "invalid", "cancel"])
+async def test_custom_provider_request_stream_is_closed(ending):
+    closed = []
+    started = asyncio.Event()
+
+    class Source:
+        sent = False
+
+        def __aiter__(self):
+            return self
+
+        async def __anext__(self):
+            if self.sent:
+                raise StopAsyncIteration
+            self.sent = True
+            if ending == "cancel":
+                started.set()
+                await asyncio.Event().wait()
+            if ending == "invalid":
+                return ModelEvent("invalid")
+            if ending == "error":
+                return ModelEvent("error", message=AssistantMessage.text("", stop_reason="error"))
+            return ModelEvent.done(AssistantMessage.text("done"))
+
+        async def aclose(self):
+            await asyncio.sleep(0)
+            closed.append("stream")
+
+    class Provider:
+        def stream(self, request, cancel):
+            return Source()
+
+        async def aclose(self):
+            closed.append("provider")
+
+    async with Agent(provider=Provider()) as agent:
+        task = asyncio.create_task(agent.prompt("go"))
+        if ending == "cancel":
+            await started.wait()
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+        else:
+            result = await task
+            assert result.status == ("completed" if ending == "done" else "failed")
+            assert result.cleanup_complete
+        assert closed == ["stream"]
+    assert closed == ["stream"]

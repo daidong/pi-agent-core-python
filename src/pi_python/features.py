@@ -18,6 +18,7 @@ FEATURES = MCP_FEATURES | frozenset(
         "structured-tool-results-v1",
         "task-scope-v1",
         "loop-portal-v1",
+        "nested-agent-ownership-v1",
         "plugin-requires-v1",
     }
 )

@@ -119,7 +119,7 @@ finally:
 | 可复用工具、说明和资源 | [插件开发流程](PLUGIN_DEVELOPMENT.md)，然后查[插件 API](PLUGINS.md)。 |
 | MCP 服务提供的工具 | [MCP 工具示例](../../examples/mcp_tools.py)；Agent 使用工具期间保持连接打开。 |
 | MCP 服务请求宿主模型或用户表单 | [MCP 交互](MCP_INTERACTION.md)和[离线示例](../../examples/mcp_interactive.py)，安装交互式 extra，由宿主显式配置回调。 |
-| 嵌套 Agent | [子 Agent 示例](../../examples/subagent.py)；插件也可以在 `agents/` 中声明。 |
+| 嵌套 Agent | 工具内用 `await context.run_agent(child, message)` 保留清理责任和结果未知状态，见[子 Agent 示例](../../examples/subagent.py)；插件也可以在 `agents/` 中声明。 |
 | 自定义模型适配 | 按 [Provider 协议](API.md) 实现；只发一个终结的 `ModelEvent.done`，并响应取消。 |
 
 MCP 增量采样是双方协商启用的扩展。宿主还原完整请求后才执行策略检查和模型调用。它减少 MCP 重复传输，不减少模型看到的历史或 token；业务代码无需管理内部缓存。

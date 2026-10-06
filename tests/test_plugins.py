@@ -1583,3 +1583,89 @@ async def test_subagents_follow_the_main_agents_run_limits():
     outcome = result.tool_outcomes[0].result
     assert outcome.is_error and "limit_reached" in outcome.content[0].text
     assert len(busy.requests) == 2
+
+
+async def test_cancelled_and_concurrent_plugin_close_finishes_once():
+    started, finish = asyncio.Event(), asyncio.Event()
+    events = []
+
+    async def slow_close():
+        events.append("start")
+        started.set()
+        await finish.wait()
+        events.append("finish")
+
+    def setup(api):
+        api.on_close(lambda: events.append("resource closed"))
+        api.on_close(slow_close)
+
+    plugins = await load_plugins([Plugin("close-test", setup)]).open()
+    first = asyncio.create_task(plugins.aclose())
+    await started.wait()
+    first.cancel()
+    await asyncio.sleep(0)
+    first.cancel()
+    second = asyncio.create_task(plugins.aclose())
+    await asyncio.sleep(0)
+    try:
+        assert not first.done()
+        with pytest.raises(ConfigurationError):
+            plugins.system_prompt()
+    finally:
+        finish.set()
+        results = await asyncio.gather(first, second, return_exceptions=True)
+    assert isinstance(results[0], asyncio.CancelledError)
+    assert results[1] is None
+    await plugins.aclose()
+    assert events == ["start", "finish", "resource closed"]
+
+
+async def test_self_cancelled_plugin_closer_does_not_skip_resources():
+    events = []
+
+    async def cancel_close():
+        raise asyncio.CancelledError
+
+    def setup(api):
+        api.on_close(lambda: events.append("closed"))
+        api.on_close(cancel_close)
+
+    plugins = await load_plugins([Plugin("close-test", setup)]).open()
+    with pytest.raises(asyncio.CancelledError):
+        await plugins.aclose()
+    assert events == ["closed"]
+    await plugins.aclose()
+    assert events == ["closed"]
+
+
+async def test_cancelled_plugin_close_joins_owned_tasks_before_resources():
+    cleaning, finish = asyncio.Event(), asyncio.Event()
+    events = []
+    scope = None
+
+    def setup(api):
+        nonlocal scope
+        api.on_close(lambda: events.append("resource"))
+        scope = api.task_scope()
+
+    async def work():
+        try:
+            await asyncio.Event().wait()
+        finally:
+            cleaning.set()
+            await finish.wait()
+            events.append("task")
+
+    plugins = await load_plugins([Plugin("scope-test", setup)]).open()
+    caller = asyncio.create_task(scope.run(work()))
+    for _ in range(3):
+        await asyncio.sleep(0)
+    closer = asyncio.create_task(plugins.aclose())
+    await cleaning.wait()
+    closer.cancel()
+    await asyncio.sleep(0)
+    assert events == []
+    finish.set()
+    results = await asyncio.gather(caller, closer, return_exceptions=True)
+    assert all(isinstance(result, asyncio.CancelledError) for result in results)
+    assert events == ["task", "resource"]

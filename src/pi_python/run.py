@@ -108,6 +108,13 @@ class Run:
     def fail(self, error: str) -> None:
         self.agent._last_error = error
 
+    def require_reconciliation(self) -> None:
+        """A descendant's unknown external outcome also makes this Agent unsafe to reuse."""
+        self.agent._unknown = True
+        # Wake the owner now: a parallel sibling may still be joining an
+        # uncooperative descendant. Its cleanup is bounded by this Run too.
+        self.token.cancel("outcome_unknown")
+
     def aborted(self) -> bool:
         """An explicit abort, seen from the driver or a tool worker.
 
@@ -128,6 +135,12 @@ class Run:
 
     def cancelled_outcome(self) -> tuple[str, str, AssistantMessage | None]:
         """Status, reason and, for an explicit abort, Pi's closing aborted message."""
+        if self.token.reason == "outcome_unknown":
+            return (
+                "failed",
+                "outcome_unknown",
+                failure_message(self, "error", "Child agent reported an unknown external outcome"),
+            )
         status = "limit_reached" if self.token.reason == "run_timeout" else "cancelled"
         failure = failure_message(self, "aborted", abort_error(self)) if self.aborted() else None
         return status, self.token.reason or "cancelled", failure
@@ -369,7 +382,14 @@ class Run:
                 status = "failed"
                 errors.append(f"{type(exc).__name__}: {exc}")
         if agent._unknown:
-            status, reason = ("cancelled" if status == "cancelled" else "failed"), "outcome_unknown"
+            status, reason = (
+                (
+                    "cancelled"
+                    if status == "cancelled" and self.token.reason != "outcome_unknown"
+                    else "failed"
+                ),
+                "outcome_unknown",
+            )
         if agent._last_error and agent._last_error not in errors:
             errors.append(agent._last_error)
         if not agent._cleanup_complete and agent._last_error not in errors:
@@ -385,7 +405,13 @@ class Run:
                     self.limits.cleanup_timeout,
                 )
         except asyncio.CancelledError:
-            status = "limit_reached" if self.token.reason == "run_timeout" else "cancelled"
+            status = (
+                "failed"
+                if self.token.reason == "outcome_unknown"
+                else "limit_reached"
+                if self.token.reason == "run_timeout"
+                else "cancelled"
+            )
             reason = self.token.reason or "cancelled"
             await self.cleanup()
         except Exception as exc:

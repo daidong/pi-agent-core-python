@@ -37,7 +37,7 @@ from ..transcript import (
 from ..tools import invoke
 from ..stream import event_contract
 from .common import RemoteProvider, normalize_usage, transform_messages
-from .transport import WebSocketLink
+from .transport import WebSocketLink, stream_error
 from .._version import __version__
 
 
@@ -496,7 +496,7 @@ class OpenAIProvider(RemoteProvider):
                 if final_response is not None:
                     raise ProviderProtocolError("OpenAI event after completion")
                 if kind in {"error", "response.failed"}:
-                    raise ProviderProtocolError("OpenAI stream reported an error")
+                    raise stream_error(event, headers)
                 raw_index = event.get("output_index")
                 index = raw_index if type(raw_index) is int else -1
                 if index < 0 and (

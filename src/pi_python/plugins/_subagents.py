@@ -15,12 +15,13 @@ from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 from ..agent import Agent, RunResult
-from ..errors import SubscriptionError
+from ..errors import SubscriptionError, ToolOutcomeUnknownError
 from ..hooks import Hooks
 from ..limits import RunLimits
 from ..messages import AssistantMessage, TextContent
 from ..models import ModelInfo
 from ..tools import Tool, ToolContext, ToolResult
+from ..tasks import _gather_owned
 from ._resources import AgentDefinition
 
 TOOL_NAME = "subagent"
@@ -120,18 +121,7 @@ def subagent_tool(
         # The main agent's model as of this call, including update_config and hook changes.
         inner = make_agent(by_name[name], getattr(context.agent_context, "model", None))
 
-        def forward(waiter: asyncio.Future[None]) -> None:
-            # Cancelling the outer call aborts the subagent's run.
-            if not waiter.cancelled():
-                inner.abort(context.cancel.reason or "parent cancelled")
-
-        watcher = asyncio.ensure_future(context.cancel.wait())
-        watcher.add_done_callback(forward)
-        try:
-            async with inner:
-                result = await inner.prompt(task)
-        finally:
-            watcher.cancel()
+        result = await context.run_agent(inner, task)
         text = _final_text(result)
         failed = result.status != "completed"
         if failed:
@@ -195,7 +185,7 @@ def subagent_tool(
                 async with gate:
                     try:
                         return await run_one(entry["agent"], entry["task"], context)
-                    except SubscriptionError:
+                    except (SubscriptionError, ToolOutcomeUnknownError):
                         raise
                     except Exception as exc:
                         # One task's fault is that task's failure; the others keep running.
@@ -209,7 +199,7 @@ def subagent_tool(
                             "usage": {},
                         }
 
-            records = list(await asyncio.gather(*(limited(t) for t in tasks)))
+            records = await _gather_owned(limited(t) for t in tasks)
             for record in records:
                 _add_usage(usage, record["usage"])
             succeeded = sum(not r["failed"] for r in records)

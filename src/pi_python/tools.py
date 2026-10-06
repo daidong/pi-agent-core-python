@@ -13,7 +13,7 @@ from urllib.parse import unquote
 from pathlib import PurePath
 from uuid import UUID
 from dataclasses import asdict, dataclass, field
-from typing import Any, Callable, Protocol
+from typing import TYPE_CHECKING, Any, Callable, Protocol
 from jsonschema import (
     Draft4Validator,
     Draft6Validator,
@@ -23,9 +23,11 @@ from jsonschema import (
     SchemaError,
 )
 from .cancellation import CancelToken
-from .errors import ConfigurationError, SubscriptionError, ToolOutcomeUnknownError
+from .errors import AgentBusyError, ConfigurationError, SubscriptionError, ToolOutcomeUnknownError
+from .tasks import _finish, _join
 from .messages import (
     ImageContent,
+    Message,
     TextContent,
     ToolCall,
     ToolDeclaration,
@@ -34,6 +36,9 @@ from .messages import (
     message_to_dict,
     validate_json,
 )
+
+if TYPE_CHECKING:
+    from .agent import Agent, RunResult
 
 # JSON Schema drafts accepted in tool schemas, keyed by $schema without scheme or "#".
 # Pydantic emits 2020-12; MCP servers commonly declare draft-07. No $schema means 2020-12.
@@ -355,10 +360,54 @@ class ToolContext:
     args: dict[str, Any] | None = None
     result: ToolResult | None = None
     is_error: bool = False
+    _on_reconciliation_required: Callable[[], None] | None = field(
+        default=None, repr=False, compare=False, kw_only=True
+    )
+    _reconciliation_required: bool = field(default=False, init=False, repr=False, compare=False)
 
     async def emit_update(self, value: Any) -> None:
         validate_json(value)
         await self._emit(value)
+
+    async def run_agent(self, agent: Agent, message: str | Message | list[Message]) -> RunResult:
+        """Run and close an exclusively owned, idle child Agent.
+
+        Forward cancellation and join all descendant work, even if the child
+        exceeds its cleanup deadline. The enclosing Run still has its own
+        deadline and reports incomplete cleanup while this call is pending.
+        An unknown child outcome requires reconciliation of the parent too,
+        and raises ToolOutcomeUnknownError instead of becoming an ordinary
+        tool failure. Shared providers remain application-owned.
+        """
+        agent._usable()
+        if agent._running:
+            raise AgentBusyError("Cannot adopt a running child Agent")
+
+        async def watch() -> None:
+            await self.cancel.wait()
+            agent.abort(self.cancel.reason or "parent cancelled")
+
+        watcher = asyncio.create_task(watch())
+        try:
+            self.cancel.raise_if_cancelled()
+            result = await agent.prompt(message)
+            if result.reconciliation_required:
+                raise ToolOutcomeUnknownError("Child agent reported an unknown external outcome")
+            return result
+        finally:
+            # Record this before joining other work: cancellation or a sibling's
+            # slow cleanup must not downgrade a known reconciliation requirement.
+            if agent._unknown:
+                self._reconciliation_required = True
+                if self._on_reconciliation_required is not None:
+                    self._on_reconciliation_required()
+
+            async def close() -> None:
+                watcher.cancel()
+                await _join([watcher])
+                await agent._aclose_owned()
+
+            await _finish(close())
 
 
 class ToolExecutor(Protocol):
@@ -499,6 +548,13 @@ async def run_tool_call(
             return outcome
     except asyncio.CancelledError:
         if outcome._settled:
+            raise
+        if context._reconciliation_required:
+            # Cancellation while joining another descendant cannot erase a
+            # child outcome that was already known to require reconciliation.
+            outcome.execution_status = "unknown"
+            outcome.error = "Child agent reported an unknown external outcome"
+            outcome.result = error_result("outcome_unknown", outcome.error)
             raise
         # Pi's abort: the tool saw the signal and stopped; record an ordinary error result.
         outcome.execution_status = "cancelled"

@@ -118,3 +118,41 @@ async def test_owned_task_cannot_close_its_scope():
     async with TaskScope() as scope:
         with pytest.raises(RuntimeError, match="own TaskScope"):
             await scope.run(scope.aclose())
+
+
+@pytest.mark.parametrize("trigger", ["failure", "cancellation"])
+async def test_owned_batch_joins_children_despite_repeated_cancellation(trigger):
+    from pi_python.tasks import _gather_owned
+
+    started, cleaning, finish = asyncio.Event(), asyncio.Event(), asyncio.Event()
+    closed = []
+
+    async def child():
+        started.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            cleaning.set()
+            await finish.wait()
+            closed.append(True)
+
+    async def sibling():
+        await started.wait()
+        if trigger == "failure":
+            raise ValueError("sibling failed")
+        await asyncio.Event().wait()
+
+    batch = asyncio.create_task(_gather_owned([child(), sibling()]))
+    try:
+        await started.wait()
+        if trigger == "cancellation":
+            batch.cancel()
+        await asyncio.wait_for(cleaning.wait(), 2)
+        for _ in range(2):
+            batch.cancel()
+            await asyncio.sleep(0)
+        assert not batch.done() and not closed
+    finally:
+        finish.set()
+        await asyncio.gather(batch, return_exceptions=True)
+    assert batch.cancelled() and closed == [True]

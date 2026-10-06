@@ -48,6 +48,8 @@ class MyProvider:
 
 消息数据还允许 `pending` 和 `deferred`。`pending` 只用于流中快照，不能提交历史；`deferred` 可保存后台句柄，但本库尚无后台任务轮询。`length` 中的工具全部产生未执行结果，然后允许模型处理错误。`error` / `aborted` 消息不能声明工具调用：提交前去掉其中的工具调用，保留其余部分内容，并在 `diagnostics` 记一条 `removed_tool_calls`。
 
+Agent 在每次请求结束时关闭该请求的响应迭代器，包括出错和取消路径。持有资源的自定义迭代器应实现 `aclose()`；共享 Provider 仍由应用关闭。
+
 ## Tool
 
 `Tool(name, description, input_schema, execute, output_schema=None, execution_mode="parallel", prepare_arguments=None)`。
@@ -81,7 +83,21 @@ def search_papers(query: str, year: int | None = None, limit: int = 10) -> list[
 
 支持的参数类型：`str`、`int`、`float`、`bool`、`None`、`list`、`set`、`tuple`、`dict[str, T]`、`Literal`、`Enum`、`Optional` 和其他联合类型、`Annotated[T, "说明"]`、`TypedDict`、dataclass、`datetime`、`date`、`UUID`、`Path` 以及 pydantic 模型。调用前，JSON 参数会转换成函数要求的类型，例如枚举成员、日期、dataclass 或 pydantic 模型。标注为 `ToolContext` 的参数会收到调用上下文，不出现在 schema 里。`*args`、`**kwargs` 和无法表示成 JSON 的类型在注册时报 `ConfigurationError`。
 
+联合类型按注解中的顺序尝试转换，但只尝试 JSON Schema 与输入匹配的分支。例如，`list[int] | str` 会把 `"abc"` 保留为字符串。多个分支匹配时，采用第一个转换成功的分支。
+
+注册时同时生成 schema 和转换规则，包括递归类型和联合类型分支。未指定元素类型的 `set`、`frozenset`、`tuple` 也会把 JSON 数组转换为对应的 Python 容器。不同参数及联合类型分支中的 pydantic 嵌套定义互相隔离，同名类不会覆盖彼此。
+
+`TypedDict` 的必填与可选字段按解析后的 `Required`、`NotRequired` 判断；延迟类型注解、继承字段和 `Annotated` 包装也遵守同一规则。
+
 并发数默认不设上限，同一批工具全部同时执行，与 Pi 相同；需要时设置 `RunLimits(max_concurrency=...)`。任一工具要求 `sequential`，整个批次串行。并发时按调用顺序完成准备，再启动执行；结束事件按后置整理完成顺序，历史结果按调用顺序。
+
+并行工具和子代理批次负责其子任务的生命周期：发生失败或取消时，取消尚未完成的其他任务，并等待它们清理。调用方重复取消不会中断清理。Run 原有的清理期限仍然有效，`cleanup_complete` 表示清理是否实际完成。
+
+工具内用 `await context.run_agent(child, message)` 调用自己独占、当前空闲的子 Agent。它返回子 Agent 的 `RunResult`，并关闭该 Agent，共享 Provider 仍由应用管理。见[子 Agent 示例](../../examples/subagent.py)。正在运行的子 Agent 会被拒绝，不会被取消或关闭。普通模型或工具失败仍作为结果返回，由调用工具处理。
+
+嵌套调用分别保留两个事实：外部操作结果是否确定，以及工作是否已经停止。子 Agent 的结果未知时，抛出 `ToolOutcomeUnknownError`，同时标记父 Agent 需要人工核对并停止后续执行；并行任务和多层嵌套也遵守这项规则。子任务尚未结束时，外层工具继续持有它。父运行仍按自己的清理期限返回，但会报告 `cleanup_complete=False`，直到后代任务真正结束。重复取消不会丢弃这项清理工作。
+
+独立使用 `ToolContext` 时，应持续等待该调用，或用 `TaskScope` 管理它的生命周期；没有外层 Agent 时，就没有 Run 的清理期限。依赖此 API 时可检查 `require_features(["nested-agent-ownership-v1"])`。
 
 独立程序可调用 `await run_tool_call(tool, call, context, before_tool_call=..., after_tool_call=...)`，复用同一验证与钩子路径。独立调用的生命周期、超时和取消任务由程序自己管理；`Agent` 提供批次管理和 `RunLimits`。
 

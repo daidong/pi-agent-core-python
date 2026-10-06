@@ -46,13 +46,8 @@ async def ask_researcher(question: str, context: ToolContext) -> ToolResult:
         question: The question, with the text to analyze.
     """
     inner = researcher()
-    # Forward the outer cancellation to the inner run.
-    watcher = asyncio.create_task(context.cancel.wait())
-    watcher.add_done_callback(lambda _: inner.abort("parent cancelled"))
-    try:
-        result = await inner.prompt(question)
-    finally:
-        watcher.cancel()
+    # Own the child's lifetime and propagate unknown external outcomes to the parent.
+    result = await context.run_agent(inner, question)
     answer = result.messages[-1]
     text = "".join(getattr(block, "text", "") for block in answer.content)
     return ToolResult.text(

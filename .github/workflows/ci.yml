@@ -53,6 +53,8 @@ jobs:
           /tmp/installed/bin/python "$GITHUB_WORKSPACE/examples/mcp_interactive.py"
           /tmp/installed/bin/python -m pytest -q -o pythonpath= \
             "$GITHUB_WORKSPACE/tests/test_tasks.py" \
+            "$GITHUB_WORKSPACE/tests/test_nested_agents.py" \
+            "$GITHUB_WORKSPACE/tests/test_typeddict_annotations.py" \
             "$GITHUB_WORKSPACE/tests/test_sync.py" \
             "$GITHUB_WORKSPACE/tests/test_features.py" \
             "$GITHUB_WORKSPACE/tests/test_mcp_delta.py" \

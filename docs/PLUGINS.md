@@ -41,6 +41,10 @@ Each source is one of these:
 
 A string counts as a path when it starts with `.` or `~`, contains a slash, or ends in `.py`. Plugins load in the order given. Opening the set runs each plugin's setup and connects its MCP servers. Closing it disconnects the servers and runs the plugins' cleanup.
 
+Concurrent close calls share one cleanup task. Cancellation of a waiting caller is propagated only after cleanup finishes; callbacks run once in reverse registration order. A closing set rejects new agent/configuration assembly. Cleanup callbacks must cooperate and finish; no implicit shutdown deadline is imposed.
+
+Startup is transactional: setup failure, cancellation, or a warning promoted to an error releases registered resources. Closing during startup first cancels and joins setup, including its `finally` blocks, before releasing resources. The set cannot reopen after closing. A setup or cleanup callback cannot close its own set. Cancellation from a cleanup callback or its error reporter is propagated after the remaining cleanup callbacks run.
+
 `plugins.agent(...)` takes the same arguments as `Agent` and returns an Agent that combines yours with the plugins':
 
 - **System prompt:** your text, then each plugin's instructions, then the list of available skills.
@@ -195,6 +199,13 @@ The main agent sees a single `subagent` tool. Its description lists the availabl
 | Chain | `chain: [{agent, task}, ...]` | The last step's answer. `{previous}` in a task becomes the previous step's answer; the chain stops at the first failure |
 
 Each task runs a fresh Agent with its own history, so the main conversation sees only the answers. Each subagent run has the main agent's `RunLimits`, such as `max_model_requests`; a chain has no step limit, as in Pi, so set limits when untrusted text can reach the model. Their token usage is added to the tool result's `usage`, and each task's details go in `details`. Cancelling the main agent aborts its subagents. Pi runs each subagent as a separate process; here a subagent is an Agent in the same event loop.
+
+The built-in subagent tool uses `ToolContext.run_agent` in all three modes. An
+unknown external outcome stops the parent and requires reconciliation; it is not
+converted to an ordinary task failure. Unfinished descendant work remains owned
+after cancellation or a cleanup timeout. The parent cannot report cleanup complete
+or become reusable until that work actually finishes. Normal subagent failures
+still follow the single, parallel, and chain behavior described above.
 
 ## MCP servers
 

@@ -45,6 +45,7 @@ from ..transcript import (
     with_request_tools,
 )
 from .common import RemoteProvider, transform_messages
+from .transport import stream_error
 
 API = "openai-completions"
 
@@ -908,10 +909,11 @@ class OpenAICompletionsProvider(RemoteProvider):
         model = self.model_info(request)
         compat = resolve_compat(model, self.base_url)
         body = await self.payload(request, self._build(request, model, compat))
+        headers = self._headers(request, key, compat)
         events = self.transport.stream(
             self.base_url + "/chat/completions",
             body,
-            self._headers(request, key, compat),
+            headers,
             cancel,
             on_response=request.on_response,
         )
@@ -946,9 +948,7 @@ class OpenAICompletionsProvider(RemoteProvider):
                     ended = True
                     continue
                 if _truthy(chunk.get("error")):
-                    raise ProviderProtocolError(
-                        "Provider stream error: " + json.dumps(chunk["error"], ensure_ascii=False)
-                    )
+                    raise stream_error(chunk, headers)
                 await invoke(request.on_provider_stream_event, deepcopy(chunk))
                 if not response_id and isinstance(chunk.get("id"), str):
                     response_id = chunk["id"] or None

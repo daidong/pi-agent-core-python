@@ -147,7 +147,7 @@ These APIs and feature declarations are part of the 0.10.0 source line; check
 | Reusable tools, instructions and resources | [Plugin development workflow](PLUGIN_DEVELOPMENT.md), then [plugin API](PLUGINS.md). |
 | Tools from an MCP server | [MCP tools example](../examples/mcp_tools.py); keep the connection open for the agent's lifetime. |
 | MCP server requests a host model or form | [MCP interactions](MCP_INTERACTION.md) and [offline example](../examples/mcp_interactive.py). Use the interactive extra and explicit host callbacks. |
-| A nested agent | [Subagent example](../examples/subagent.py); plugins can supply definitions in `agents/`. |
+| A nested agent | Use `await context.run_agent(child, message)` inside a tool to preserve cleanup ownership and unknown outcomes; see the [subagent example](../examples/subagent.py). Plugins can supply definitions in `agents/`. |
 | Your own model adapter | The [Provider contract](API.md#provider); emit exactly one terminal `ModelEvent.done` and honor cancellation. |
 
 MCP incremental sampling is a negotiated extension. It reconstructs the full request

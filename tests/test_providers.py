@@ -499,3 +499,51 @@ async def test_proxy_invalid_terminal_protocol(fault):
         agent = Agent(provider=provider, tools=[Tool("echo", "", {"type": "object"}, execute)])
         result = await agent.prompt("go")
     assert result.status == "failed" and effects == []
+
+
+@pytest.mark.parametrize("kind", ["anthropic", "openai"])
+@pytest.mark.parametrize(
+    "code,message,overflow,retryable",
+    [
+        (
+            "context_length_exceeded",
+            "Your input exceeds the context window of this model",
+            True,
+            False,
+        ),
+        ("overloaded_error", "Overloaded", False, True),
+        ("insufficient_quota", "Billing limit reached", False, False),
+    ],
+)
+async def test_stream_error_preserves_recovery_information(
+    kind, code, message, overflow, retryable
+):
+    error = {"type": code, "code": code, "message": message}
+    event = (
+        {"type": "error", "error": error}
+        if kind == "anthropic"
+        else {"type": "response.failed", "response": {"error": error}}
+    )
+    provider, _, streams, client = remote(kind, [[event]])
+    async with client:
+        result = await Agent(provider=provider, model="test-model").prompt("go")
+    response = result.messages[-1]
+    assert result.status == "failed"
+    assert code in response.error
+    assert is_context_overflow(response) is overflow
+    assert is_retryable_error(response) is retryable
+    assert all(s.closed for s in streams)
+
+
+@pytest.mark.parametrize("kind", ["anthropic", "openai"])
+async def test_stream_error_redacts_credentials_and_caps_server_text(kind):
+    event = {"type": "error", "code": "overloaded_error", "message": "test-key " + "x" * 9000}
+    if kind == "anthropic":
+        event = {"type": "error", "error": event}
+    provider, _, _, client = remote(kind, [[event]])
+    async with client:
+        result = await Agent(provider=provider, model="test-model").prompt("go")
+    message = result.messages[-1]
+    assert "test-key" not in message.error
+    assert "[redacted]" in message.error and "overloaded_error" in message.error
+    assert len(message.error) < 4200

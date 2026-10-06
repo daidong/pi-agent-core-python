@@ -29,6 +29,26 @@ async def _join(tasks: Iterable[asyncio.Future[Any]]) -> None:
         raise asyncio.CancelledError
 
 
+async def _gather_owned(awaitables: Iterable[Awaitable[T]]) -> list[T]:
+    """A batch owns every child until it exits, including after the first failure."""
+    tasks = [asyncio.ensure_future(value) for value in awaitables]
+    group = asyncio.gather(*tasks)
+    try:
+        return await asyncio.shield(group)
+    finally:
+        for task in tasks:
+            _cancel(task)
+        # Retrieve the group exception too if caller cancellation won the race.
+        await _join([group, *tasks])
+
+
+async def _finish(awaitable: Awaitable[T]) -> T:
+    """Give cleanup one owner; caller cancellation is delivered after it finishes."""
+    task = asyncio.ensure_future(awaitable)
+    await _join([task])
+    return task.result()
+
+
 class TaskScope:
     """Own calls made with ``run`` and cancel/join them on ``aclose``.
 

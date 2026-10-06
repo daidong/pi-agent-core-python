@@ -369,3 +369,17 @@ def test_model_helper_validates_like_the_catalog():
         provider.model("m", max_tokens=0)
     with pytest.raises(ConfigurationError, match="thinking level"):
         provider.model("m", thinking_level_map={"turbo": "x"})
+
+
+async def test_chat_stream_error_uses_shared_redaction_and_recovery_rules():
+    from pi_python import is_retryable_error
+
+    client, _ = server((200, [{"error": {"code": "overloaded_error", "message": "token-secret"}}]))
+    async with client:
+        provider = OpenAICompletionsProvider(
+            base_url=LOCAL, name="local", api_key="token-secret", transport=HTTPTransport(client)
+        )
+        _, message = await run(provider, provider.model("test"))
+    assert "token-secret" not in message.error
+    assert "[redacted]" in message.error
+    assert is_retryable_error(message)

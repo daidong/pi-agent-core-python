@@ -18,7 +18,7 @@ from uuid import UUID
 
 from .errors import ConfigurationError
 from .messages import validate_json
-from .tools import Tool, ToolContext
+from .tools import Tool, ToolContext, schema_validator
 
 _PRIMITIVES: dict[Any, dict[str, Any]] = {
     str: {"type": "string"},
@@ -124,7 +124,7 @@ def _build(
     schemas = _Schemas()
     properties: dict[str, Any] = {}
     required: list[str] = []
-    converters: dict[str, Any] = {}
+    converters: dict[str, _Argument] = {}
     context_name = None
     parameters = list(inspect.signature(function).parameters.values())
     if parameters and parameters[0].name in {"self", "cls"}:
@@ -140,7 +140,8 @@ def _build(
         if _is_context(annotation):
             context_name = parameter.name
             continue
-        schema = schemas.schema(annotation, parameter.name)
+        plan = schemas.compile(annotation, parameter.name)
+        schema = plan.schema
         if parameter.name in documented and "description" not in schema:
             schema["description"] = documented[parameter.name]
         if parameter.default is parameter.empty:
@@ -150,7 +151,7 @@ def _build(
             if default is not _MISSING:
                 schema["default"] = default
         properties[parameter.name] = schema
-        converters[parameter.name] = annotation
+        converters[parameter.name] = plan
     input_schema: dict[str, Any] = {
         "type": "object",
         "properties": properties,
@@ -160,8 +161,10 @@ def _build(
     if schemas.definitions:
         input_schema["$defs"] = schemas.definitions
 
+    schemas.finish()
+
     def arguments(args: dict[str, Any], context: ToolContext) -> dict[str, Any]:
-        values = {key: _convert(converters[key], value) for key, value in args.items()}
+        values = {key: converters[key](value) for key, value in args.items()}
         if context_name is not None:
             values[context_name] = context
         return values
@@ -229,7 +232,19 @@ def _fields(annotation: Any) -> list[tuple[str, Any, bool]]:
     hints = typing.get_type_hints(annotation, include_extras=True)
     if _is_typeddict(annotation):
         keys = annotation.__required_keys__
-        return [(key, hint, key in keys) for key, hint in hints.items()]
+        fields = []
+        for key, hint in hints.items():
+            required = key in keys  # Preserve inherited total=True/False defaults.
+            wrapped = hint
+            while typing.get_origin(wrapped) in _WRAPPERS:
+                origin = typing.get_origin(wrapped)
+                if origin in (typing.Required, typing.NotRequired):
+                    required = origin is typing.Required
+                wrapped = typing.get_args(wrapped)[0]
+            # __required_keys__ cannot see Required/NotRequired inside strings
+            # when annotations are postponed; resolved qualifiers take precedence.
+            fields.append((key, hint, required))
+        return fields
     return [
         (
             field.name,
@@ -241,14 +256,31 @@ def _fields(annotation: Any) -> list[tuple[str, Any, bool]]:
     ]
 
 
+def _identity(value: Any) -> Any:
+    return value
+
+
+@dataclasses.dataclass
+class _Argument:
+    """The model's declaration and its Python decoder, compiled together."""
+
+    schema: dict[str, Any]
+    decode: Callable[[Any], Any] = _identity
+
+    def __call__(self, value: Any) -> Any:
+        return self.decode(value)
+
+
 class _Schemas:
-    """JSON Schema for parameter types; recursive types go to $defs."""
+    """Compile annotations once; bind union validators after recursive definitions exist."""
 
     def __init__(self) -> None:
         self.definitions: dict[str, Any] = {}
         self.names: dict[Any, str] = {}
-        self.building: list[Any] = []
+        self.building: dict[Any, _Argument] = {}
         self.recursive: set[Any] = set()
+        self.scopes: set[str] = set()
+        self.unions: list[tuple[list[_Argument], list[Any]]] = []
 
     def _name(self, annotation: Any) -> str:
         if annotation not in self.names:
@@ -259,137 +291,140 @@ class _Schemas:
             self.names[annotation] = name
         return self.names[annotation]
 
-    def schema(self, annotation: Any, where: str) -> dict[str, Any]:
+    def finish(self) -> None:
+        for options, validators in self.unions:
+            validators.extend(
+                schema_validator({**option.schema, "$defs": self.definitions}) for option in options
+            )
+
+    def compile(self, annotation: Any, where: str) -> _Argument:
         origin = typing.get_origin(annotation)
         args = typing.get_args(annotation)
-        schema: dict[str, Any]
         if origin is typing.Annotated:
-            schema = self.schema(args[0], where)
+            plan = self.compile(args[0], where)
+            schema = dict(plan.schema)
             text = next((a for a in args[1:] if isinstance(a, str)), None)
             if text:
                 schema["description"] = text
-            return schema
+            return _Argument(schema, plan)
         if origin in _WRAPPERS:
-            return self.schema(args[0], where)
+            return self.compile(args[0], where)
         if annotation is Any or annotation is inspect.Parameter.empty:
-            return {}
+            return _Argument({})
         if annotation in _PRIMITIVES:
-            return dict(_PRIMITIVES[annotation])
+            decoder = (
+                annotation.fromisoformat
+                if annotation in (date, datetime)
+                else annotation
+                if annotation in (UUID, Path, int, float)
+                else _identity
+            )
+            return _Argument(dict(_PRIMITIVES[annotation]), decoder)
         if origin is Literal:
-            return {"enum": list(args)}
+            return _Argument({"enum": list(args)})
         if origin in (Union, types.UnionType):
-            options = [self.schema(a, where) for a in args]
-            return options[0] if len(options) == 1 else {"anyOf": options}
+            options = [self.compile(a, where) for a in args]
+            validators: list[Any] = []
+            self.unions.append((options, validators))
+
+            def union(value: Any) -> Any:
+                for plan, validator in zip(options, validators):
+                    if validator.is_valid(value):
+                        try:
+                            return plan(value)
+                        except (TypeError, ValueError):
+                            continue
+                raise ValueError("No union branch can convert the supplied value")
+
+            return _Argument({"anyOf": [p.schema for p in options]}, union)
         if isinstance(annotation, type) and issubclass(annotation, enum.Enum):
-            return {"enum": [member.value for member in annotation]}
-        if origin in (list, set, frozenset, Sequence) or annotation in (list, set, frozenset):
+            return _Argument({"enum": [member.value for member in annotation]}, annotation)
+        # Canonicalize bare and parameterized containers in one place.
+        kind = origin or annotation
+        if kind in (list, set, frozenset, Sequence):
+            item = self.compile(args[0], where) if args else _Argument({})
             schema = {"type": "array"}
             if args:
-                schema["items"] = self.schema(args[0], where)
-            if origin in (set, frozenset):
+                schema["items"] = item.schema
+            if kind in (set, frozenset):
                 schema["uniqueItems"] = True
-            return schema
-        if origin is tuple or annotation is tuple:
-            if len(args) == 2 and args[1] is Ellipsis:
-                return {"type": "array", "items": self.schema(args[0], where)}
+            container = list if kind is Sequence else kind
+            return _Argument(schema, lambda value: container(item(v) for v in value))
+        if kind is tuple:
             if not args:
-                return {"type": "array"}
-            return {
-                "type": "array",
-                "prefixItems": [self.schema(a, where) for a in args],
-                "minItems": len(args),
-                "maxItems": len(args),
-            }
-        if origin in (dict, Mapping) or annotation is dict:
+                return _Argument({"type": "array"}, tuple)
+            if len(args) == 2 and args[1] is Ellipsis:
+                item = self.compile(args[0], where)
+                return _Argument(
+                    {"type": "array", "items": item.schema},
+                    lambda value: tuple(item(v) for v in value),
+                )
+            items = [self.compile(a, where) for a in args]
+            return _Argument(
+                {
+                    "type": "array",
+                    "prefixItems": [p.schema for p in items],
+                    "minItems": len(args),
+                    "maxItems": len(args),
+                },
+                lambda value: tuple(plan(v) for plan, v in zip(items, value)),
+            )
+        if kind in (dict, Mapping):
             schema = {"type": "object"}
+            item = _Argument({})
             if len(args) == 2:
                 if args[0] is not str:
                     raise ConfigurationError(f"{where}: dictionary keys must be str")
-                schema["additionalProperties"] = self.schema(args[1], where)
-            return schema
+                item = self.compile(args[1], where)
+                schema["additionalProperties"] = item.schema
+            return _Argument(schema, lambda value: {k: item(v) for k, v in value.items()})
         if _is_pydantic(annotation):
-            # Namespace this parameter's definitions so two models named alike cannot collide.
-            scope = re.sub(r"[^A-Za-z0-9_-]", "_", where)
+            # Allocate a scope per occurrence, including same-named union branches
+            # and paths whose punctuation normalizes to the same string.
+            base = re.sub(r"[^A-Za-z0-9_-]", "_", where)
+            scope, n = base, 2
+            while scope in self.scopes:
+                scope, n = f"{base}_{n}", n + 1
+            self.scopes.add(scope)
             model = annotation.model_json_schema(ref_template=f"#/$defs/{scope}.{{model}}")
             for key, value in model.pop("$defs", {}).items():
                 self.definitions[f"{scope}.{key}"] = value
-            return model
+            return _Argument(model, annotation.model_validate)
         if _is_typeddict(annotation) or dataclasses.is_dataclass(annotation):
             return self._object(annotation, where)
         raise ConfigurationError(f"{where}: unsupported parameter type {annotation!r}")
 
-    def _object(self, annotation: Any, where: str) -> dict[str, Any]:
+    def _object(self, annotation: Any, where: str) -> _Argument:
         ref = {"$ref": f"#/$defs/{self._name(annotation)}"}
-        if annotation in self.building:  # a type that contains itself
+        if annotation in self.building:
             self.recursive.add(annotation)
-            return ref
-        self.building.append(annotation)
+            return _Argument(ref, self.building[annotation])
+        plan = _Argument({})
+        self.building[annotation] = plan
         try:
             fields = _fields(annotation)
+            children = {key: self.compile(hint, f"{where}.{key}") for key, hint, _ in fields}
             schema = {
                 "type": "object",
-                "properties": {key: self.schema(hint, f"{where}.{key}") for key, hint, _ in fields},
+                "properties": {key: child.schema for key, child in children.items()},
                 "required": [key for key, _, required in fields if required],
                 "additionalProperties": False,
             }
         finally:
-            self.building.pop()
+            del self.building[annotation]
+        typed_dict = _is_typeddict(annotation)
+
+        def decode(value: Any) -> Any:
+            values = {key: children[key](v) for key, v in value.items()}
+            return values if typed_dict else annotation(**values)
+
+        plan.decode = decode
         if annotation in self.recursive:
             self.definitions[self._name(annotation)] = schema
-            return ref
-        return schema
-
-
-def _convert(annotation: Any, value: Any) -> Any:
-    """Turn validated JSON into the Python value the annotation asks for."""
-    annotation = _strip(annotation)
-    origin = typing.get_origin(annotation)
-    args = typing.get_args(annotation)
-    if value is None:
-        return None
-    if origin in (Union, types.UnionType):
-        for option in args:
-            if option is type(None):
-                continue
-            try:
-                return _convert(option, value)
-            except Exception:
-                continue
-        return value
-    if isinstance(annotation, type):
-        if issubclass(annotation, enum.Enum):
-            return annotation(value)
-        if annotation is datetime:
-            return datetime.fromisoformat(value)
-        if annotation is date:
-            return date.fromisoformat(value)
-        if annotation is UUID:
-            return UUID(value)
-        if annotation is Path:
-            return Path(value)
-        if annotation is float and isinstance(value, int):
-            return float(value)
-        if annotation is int and isinstance(value, float) and value.is_integer():
-            return int(value)  # JSON Schema counts 3.0 as an integer
-        if _is_pydantic(annotation):
-            return annotation.model_validate(value)  # type: ignore[attr-defined]
-        if _is_typeddict(annotation):
-            hints = {key: hint for key, hint, _ in _fields(annotation)}
-            return {key: _convert(hints.get(key, Any), item) for key, item in value.items()}
-        if dataclasses.is_dataclass(annotation):
-            hints = {key: hint for key, hint, _ in _fields(annotation)}
-            return annotation(**{k: _convert(hints.get(k, Any), v) for k, v in value.items()})
-    if origin in (list, Sequence) and args:
-        return [_convert(args[0], item) for item in value]
-    if origin in (set, frozenset):
-        return origin(_convert(args[0], item) if args else item for item in value)
-    if origin is tuple and args:
-        if len(args) == 2 and args[1] is Ellipsis:
-            return tuple(_convert(args[0], item) for item in value)
-        return tuple(_convert(a, item) for a, item in zip(args, value))
-    if origin in (dict, Mapping) and len(args) == 2:
-        return {key: _convert(args[1], item) for key, item in value.items()}
-    return value
+            plan.schema = ref
+        else:
+            plan.schema = schema
+        return plan
 
 
 def _parse_docstring(doc: str) -> tuple[str, dict[str, str]]:
