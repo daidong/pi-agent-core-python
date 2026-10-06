@@ -48,6 +48,8 @@ class MyProvider:
 
 消息数据还允许 `pending` 和 `deferred`。`pending` 只用于流中快照，不能提交历史；`deferred` 可保存后台句柄，但本库尚无后台任务轮询。`length` 中的工具全部产生未执行结果，然后允许模型处理错误。`error` / `aborted` 消息不能声明工具调用：提交前去掉其中的工具调用，保留其余部分内容，并在 `diagnostics` 记一条 `removed_tool_calls`。
 
+Agent 在每次请求结束时关闭该请求的响应迭代器，包括出错和取消路径。持有资源的自定义迭代器应实现 `aclose()`；共享 Provider 仍由应用关闭。
+
 ## Tool
 
 `Tool(name, description, input_schema, execute, output_schema=None, execution_mode="parallel", prepare_arguments=None)`。
@@ -81,7 +83,21 @@ def search_papers(query: str, year: int | None = None, limit: int = 10) -> list[
 
 支持的参数类型：`str`、`int`、`float`、`bool`、`None`、`list`、`set`、`tuple`、`dict[str, T]`、`Literal`、`Enum`、`Optional` 和其他联合类型、`Annotated[T, "说明"]`、`TypedDict`、dataclass、`datetime`、`date`、`UUID`、`Path` 以及 pydantic 模型。调用前，JSON 参数会转换成函数要求的类型，例如枚举成员、日期、dataclass 或 pydantic 模型。标注为 `ToolContext` 的参数会收到调用上下文，不出现在 schema 里。`*args`、`**kwargs` 和无法表示成 JSON 的类型在注册时报 `ConfigurationError`。
 
+联合类型按注解中的顺序尝试转换，但只尝试 JSON Schema 与输入匹配的分支。例如，`list[int] | str` 会把 `"abc"` 保留为字符串。多个分支匹配时，采用第一个转换成功的分支。
+
+注册时同时生成 schema 和转换规则，包括递归类型和联合类型分支。未指定元素类型的 `set`、`frozenset`、`tuple` 也会把 JSON 数组转换为对应的 Python 容器。不同参数及联合类型分支中的 pydantic 嵌套定义互相隔离，同名类不会覆盖彼此。
+
+`TypedDict` 的必填与可选字段按解析后的 `Required`、`NotRequired` 判断；延迟类型注解、继承字段和 `Annotated` 包装也遵守同一规则。
+
 并发数默认不设上限，同一批工具全部同时执行，与 Pi 相同；需要时设置 `RunLimits(max_concurrency=...)`。任一工具要求 `sequential`，整个批次串行。并发时按调用顺序完成准备，再启动执行；结束事件按后置整理完成顺序，历史结果按调用顺序。
+
+并行工具和子代理批次负责其子任务的生命周期：发生失败或取消时，取消尚未完成的其他任务，并等待它们清理。调用方重复取消不会中断清理。Run 原有的清理期限仍然有效，`cleanup_complete` 表示清理是否实际完成。
+
+工具内用 `await context.run_agent(child, message)` 调用自己独占、当前空闲的子 Agent。它返回子 Agent 的 `RunResult`，并关闭该 Agent，共享 Provider 仍由应用管理。见[子 Agent 示例](../../examples/subagent.py)。正在运行的子 Agent 会被拒绝，不会被取消或关闭。普通模型或工具失败仍作为结果返回，由调用工具处理。
+
+嵌套调用分别保留两个事实：外部操作结果是否确定，以及工作是否已经停止。子 Agent 的结果未知时，抛出 `ToolOutcomeUnknownError`，同时标记父 Agent 需要人工核对并停止后续执行；并行任务和多层嵌套也遵守这项规则。子任务尚未结束时，外层工具继续持有它。父运行仍按自己的清理期限返回，但会报告 `cleanup_complete=False`，直到后代任务真正结束。重复取消不会丢弃这项清理工作。
+
+独立使用 `ToolContext` 时，应持续等待该调用，或用 `TaskScope` 管理它的生命周期；没有外层 Agent 时，就没有 Run 的清理期限。依赖此 API 时可检查 `require_features(["nested-agent-ownership-v1"])`。
 
 独立程序可调用 `await run_tool_call(tool, call, context, before_tool_call=..., after_tool_call=...)`，复用同一验证与钩子路径。独立调用的生命周期、超时和取消任务由程序自己管理；`Agent` 提供批次管理和 `RunLimits`。
 
@@ -159,6 +175,20 @@ async with connect_stdio("uvx", ["mcp-server-fetch"], prefix="web") as tools:
 
 需要 `pip install 'pi-python-core[mcp]'`，兼容官方 MCP SDK 1.10 及以上和 2.x。`connect_stdio` 启动一个 stdio MCP 服务器，退出 `async with` 时关闭它。`connect_http(url, headers=None, prefix=None, names=None)` 用同样的方式连接 streamable HTTP 服务器；和 Pi 一样，不支持旧的 SSE 传输方式。它只在服务器的同一源内跟随重定向，header 不会被发到其他源。它在 MCP SDK 1.10、1.30 和 2.3 上测过。已经自己建立了 `ClientSession` 时，用 `await mcp_tools(session, prefix=None, names=None)` 包装它的工具。转换方式与 Pi 的 MCP 适配相同：文本和图片直接转换；嵌入的文本或图片资源取出内容；音频、资源链接和二进制资源换成简短的文字说明；只有结构化结果时转成 JSON 文本，同时作为 `structured_content`；MCP 的 `isError` 成为工具错误；进度通知成为 `tool_execution_update` 事件。工具名加上前缀后只保留字母、数字、`_` 和 `-`，最长 64 个字符。schema 无法使用的工具会发出警告并跳过，不影响同一服务器的其他工具。用 Python MCP SDK 2.3 写的 stdio 服务器在 PyPy 上无法启动（缺少 `fcntl.F_DUPFD_CLOEXEC`），这是 SDK 本身的限制；客户端一侧不受影响。
 
+三个 MCP 入口均接受可选的 `call_metadata`，把 JSON 对象传给
+`ClientSession.call_tool(meta=...)`。注册时和每次调用时独立复制，不加入工具参数。
+SDK 不支持 `meta` 时，注册会抛出 `ConfigurationError`。
+插件配置和启动验收见[插件指南](PLUGINS.md#mcp-服务器)。
+
+在 POSIX 系统上，`connect_stdio(..., process_scope=True)` 还会在退出时清理残留进程组
+和嵌套的 pi-python stdio 连接。外层连接显式启用，内层连接自动继承。
+非 POSIX 系统不接受显式启用，具体范围见 [进程归属与限制](MCP_INTERACTION.md)。
+
+`connect_stdio` 和 `connect_http` 还接受 `callbacks=MCPCallbacks(...)`，按宿主授权启用
+模型请求和表单交互。`SamplingHandler` 接入宿主 Provider，`SamplingProvider` 让服务端 Agent
+通过当前 MCP 请求使用模型。新能力要求 SDK >=2.3,<3；公共接口、协议限制、取消及可运行示例见
+[MCP 交互](MCP_INTERACTION.md)。
+
 ## 插件
 
 `pi_python.plugins` 负责加载插件。插件是一组有名字的附加内容：工具、系统提示文字、钩子、技能、提示模板、子 agent 和 MCP 服务器，格式沿用 Pi 的 package。`async with load_plugins([...], services=..., options=...) as plugins:` 加载插件，`plugins.agent(...)` 构造一个带上全部插件内容的 Agent。怎样编写、发布插件，以及多个插件怎样合在一起，见 [插件指南](PLUGINS.md)。
@@ -217,3 +247,39 @@ OpenAI 可在最终响应中补回 encrypted_content。若可见推理和其余�
 `AssistantMessage.provider_thinking_level` 与上游相同：只在使用推理强度标记的 Claude 模型上记录本次强度，用于在后续请求中重建历史标记。需要请求等级时读取 `thinking_level`。
 
 Provider 重放历史时按上游规则跳过 `error` / `aborted` 回答；跨模型的推理转为普通文本，签名丢弃；一条系统消息位于工具调用和结果之间时移到结果之后。会话历史本身不变。
+
+MCP 的宿主配置、用量观察、重试策略和构建能力标识见 [MCP 交互文档](MCP_INTERACTION.md#真实-provider配置选择与计量)。
+
+
+## 任务生命周期与同步线程桥接
+
+`TaskScope` 管理传给 `await scope.run(awaitable, cancel=token)` 的异步任务。
+每次调用在独立子任务中运行。调用方或取消令牌中止时，框架取消子任务并等待清理。
+`await scope.aclose()` 拒绝新调用，取消并等待现有任务，包括等待应用锁的任务。
+使用 `async with TaskScope() as scope`，或通过插件的 `api.task_scope()` 注册自动关闭。
+执行异常只交给对应调用方，不影响其他调用，也不会在关闭时再次抛出。
+任务必须配合取消；框架不会强制终止线程或隐式设置期限。任务不能关闭包含自己的作用域。
+一个作用域只能用于首次使用它的事件循环。
+
+`LoopPortal` 让同步工作线程把异步调用交给已有事件循环。它与自行创建后台循环的
+`run_sync` 不同。必须在连接所属循环创建并关闭桥接对象：
+
+```python
+import asyncio
+from pi_python import LoopPortal
+
+async def request(connection):
+    async with LoopPortal() as portal:
+        return await asyncio.to_thread(portal.call, connection.fetch, "item")
+```
+
+`portal.call(async_function, *args, timeout=None, **kwargs)` 接收异步函数而非已创建的协程，
+将结果或异常返回工作线程，并保留该线程的上下文变量。任何事件循环线程内的阻塞调用都会被拒绝。
+关闭会取消并等待已提交的异步工作，但不关闭借用的循环。
+超时限制阻塞等待时间，并请求取消异步工作；清理完成由 `aclose()` 保证。
+关闭完成前应保持所属循环运行，工作线程本身仍由应用管理。
+
+`FEATURES` 声明当前构建提供的版本化 API，`require_features(names, where="Application")`
+在能力缺失或名称未知时抛出 `ConfigurationError`。这些标记不表示可选依赖已经安装，
+也不代表 MCP 对端能力、凭据或宿主授权。原有 `MCP_FEATURES` 保持兼容，是其子集。
+插件可声明所需能力，由加载器统一校验，见 [插件文档](PLUGINS.md)。

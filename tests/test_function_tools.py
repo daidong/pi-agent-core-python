@@ -294,3 +294,164 @@ def test_pydantic_models_with_the_same_name_do_not_collide():
         )
     )
     assert out.result.content[0].text == "xy"
+
+
+@pytest.mark.parametrize(
+    "annotation,value,expected",
+    [
+        (list[int] | str, "abc", "abc"),
+        (int | date, "2026-10-05", date(2026, 10, 5)),
+        (int | bool, True, True),
+        (list[date] | list[int], [3], [3]),
+        (list[int] | list[date], ["2026-10-05"], [date(2026, 10, 5)]),
+        (
+            Point | Window,
+            {"start": "2026-10-05", "days": 2},
+            {"start": date(2026, 10, 5), "days": 2},
+        ),
+        (int | Node, {"label": "a", "children": []}, Node("a", [])),
+    ],
+)
+async def test_union_conversion_uses_a_matching_schema(annotation, value, expected):
+    seen = []
+
+    def capture(value):
+        seen.append(value)
+
+    capture.__annotations__ = {"value": annotation}
+    target = tool(capture)
+    outcome = await run_tool_call(
+        target,
+        ToolCall("c", target.name, {"value": value}),
+        ToolContext("r", "c", CancelToken(), None),
+    )
+    assert not outcome.result.is_error
+    assert seen == [expected]
+    assert type(seen[0]) is type(expected)
+
+
+async def test_union_conversion_resolves_pydantic_definitions():
+    pydantic = pytest.importorskip("pydantic")
+
+    class Address(pydantic.BaseModel):
+        street: str
+
+    class Person(pydantic.BaseModel):
+        home: Address
+
+    seen = []
+
+    @tool
+    def capture(value: int | Person) -> None:
+        seen.append(value)
+
+    outcome = await run_tool_call(
+        capture,
+        ToolCall("c", "capture", {"value": {"home": {"street": "Main"}}}),
+        ToolContext("r", "c", CancelToken(), None),
+    )
+    assert not outcome.result.is_error
+    assert isinstance(seen[0], Person)
+    assert seen[0].home.street == "Main"
+
+
+@pytest.mark.parametrize(
+    "annotation,expected", [(set, set), (frozenset, frozenset), (tuple, tuple)]
+)
+async def test_bare_container_annotation_is_converted(annotation, expected):
+    seen = []
+
+    def capture(value):
+        seen.append(value)
+
+    capture.__annotations__ = {"value": annotation}
+    target = tool(capture)
+    outcome = await run_tool_call(
+        target,
+        ToolCall("c", target.name, {"value": [1, 2]}),
+        ToolContext("r", "c", CancelToken(), None),
+    )
+    assert not outcome.result.is_error
+    assert type(seen[0]) is expected
+
+
+async def test_union_pydantic_nested_names_are_isolated():
+    pydantic = pytest.importorskip("pydantic")
+    A = pydantic.create_model("Wrapper", item=(pydantic.create_model("Item", a=(str, ...)), ...))
+    B = pydantic.create_model("Wrapper", item=(pydantic.create_model("Item", b=(int, ...)), ...))
+    seen = []
+
+    def capture(value):
+        seen.append(value)
+
+    capture.__annotations__ = {"value": A | B}
+    target = tool(capture)
+    for value in ({"item": {"a": "yes"}}, {"item": {"b": 3}}):
+        outcome = await run_tool_call(
+            target,
+            ToolCall("c", target.name, {"value": value}),
+            ToolContext("r", "c", CancelToken(), None),
+        )
+        assert not outcome.result.is_error, outcome.result
+    assert type(seen[0]) is A and type(seen[1]) is B
+
+
+@dataclass
+class RecursiveOption:
+    value: int
+    children: list["RecursiveOption | str"]
+
+
+async def test_compiled_recursive_union_converts_nested_values():
+    @tool
+    def capture(value: RecursiveOption | str) -> dict:
+        if isinstance(value, str):
+            return {"text": value}
+        return {
+            "number": value.value,
+            "child_number": value.children[0].value,
+            "leaf": value.children[0].children[0],
+        }
+
+    outcome = await run_tool_call(
+        capture,
+        ToolCall(
+            "c",
+            "capture",
+            {
+                "value": {
+                    "value": 1,
+                    "children": [{"value": 2, "children": ["leaf"]}],
+                }
+            },
+        ),
+        ToolContext("r", "c", CancelToken(), None),
+    )
+    assert not outcome.result.is_error
+    assert outcome.result.structured_content == {"number": 1, "child_number": 2, "leaf": "leaf"}
+
+
+async def test_union_conversion_can_fall_back_after_custom_validation():
+    pydantic = pytest.importorskip("pydantic")
+
+    class Positive(pydantic.BaseModel):
+        value: int
+
+        @pydantic.field_validator("value")
+        @classmethod
+        def positive(cls, value):
+            if value <= 0:
+                raise ValueError("positive required")
+            return value
+
+    @tool
+    def capture(value: Positive | dict[str, int]) -> str:
+        return type(value).__name__
+
+    for number, expected in ((1, "Positive"), (-1, "dict")):
+        result = await run_tool_call(
+            capture,
+            ToolCall("c", "capture", {"value": {"value": number}}),
+            ToolContext("r", "c", CancelToken(), None),
+        )
+        assert result.result.content[0].text == expected

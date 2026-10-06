@@ -16,13 +16,34 @@ import inspect
 import json
 import re
 import warnings
-from collections.abc import AsyncIterator, Iterable, Mapping, Sequence
+from collections.abc import AsyncIterator, Callable, Iterable, Mapping, Sequence
 from contextlib import AsyncExitStack, asynccontextmanager
+from copy import deepcopy
 from typing import Any
 
 from .errors import ConfigurationError
 from .messages import ImageContent, TextContent
 from .tools import Tool, ToolContext, ToolResult
+from ._mcp_host import (
+    MCP_FEATURES as MCP_FEATURES,
+    SAMPLING_EXTENSION as SAMPLING_EXTENSION,
+    SamplingProfile as SamplingProfile,
+    SamplingRetryPolicy as SamplingRetryPolicy,
+    SamplingObservation as SamplingObservation,
+    SamplingFailure as SamplingFailure,
+)
+from ._mcp_interaction import (
+    ElicitationHandler as ElicitationHandler,
+    ElicitationRequest as ElicitationRequest,
+    ElicitationResponse as ElicitationResponse,
+    MCPCallbackEvent as MCPCallbackEvent,
+    MCPCallbacks as MCPCallbacks,
+    MCPRequestContext as MCPRequestContext,
+    SamplingHandler as SamplingHandler,
+    SamplingProvider as SamplingProvider,
+    _Interaction,
+    _await_cancel,
+)
 
 
 def _get(value: Any, snake: str, camel: str | None = None) -> Any:
@@ -70,7 +91,27 @@ def _tool_name(prefix: str | None, name: str, taken: set[str]) -> str:
     return result
 
 
-def _wrap(session: Any, spec: Any, prefix: str | None, taken: set[str]) -> Tool:
+def _copy_call_metadata(value: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    """Validate and snapshot application metadata without interpreting its contents."""
+    if value is None:
+        return None
+    if not isinstance(value, Mapping):
+        raise ConfigurationError("call_metadata must be a JSON object")
+    try:
+        result: dict[str, Any] = json.loads(json.dumps(dict(value), allow_nan=False))
+        return result
+    except (TypeError, ValueError, RecursionError) as exc:
+        raise ConfigurationError("call_metadata must be a JSON object") from exc
+
+
+def _wrap(
+    session: Any,
+    spec: Any,
+    prefix: str | None,
+    taken: set[str],
+    call_metadata: dict[str, Any] | None,
+    interaction: _Interaction | None = None,
+) -> Tool:
     name = _get(spec, "name")
     schema = dict(_get(spec, "input_schema", "inputSchema") or {})
     # Model APIs require an object schema, and some reject one without `properties`.
@@ -82,7 +123,18 @@ def _wrap(session: Any, spec: Any, prefix: str | None, taken: set[str]) -> Tool:
         ) -> None:
             await context.emit_update({"progress": done, "total": total, "message": message})
 
-        result = await session.call_tool(name, args, progress_callback=progress)
+        # The SDK still owns progress tokens and request serialization. A fresh copy
+        # prevents its mutations from affecting another invocation of these tools.
+        kwargs = {"meta": deepcopy(call_metadata)} if call_metadata is not None else {}
+        if interaction is None:
+            result = await session.call_tool(name, args, progress_callback=progress, **kwargs)
+        else:
+
+            async def call() -> Any:
+                async with interaction.call(context):
+                    return await session.call_tool(name, args, progress_callback=progress, **kwargs)
+
+            result = await _await_cancel(call(), context.cancel)
         blocks = _get(result, "content")
         if blocks is None:
             # MCP 2.x can ask the client for input mid-call; this adapter cannot answer.
@@ -105,14 +157,35 @@ def _wrap(session: Any, spec: Any, prefix: str | None, taken: set[str]) -> Tool:
 
 
 async def mcp_tools(
-    session: Any, *, prefix: str | None = None, names: Iterable[str] | None = None
+    session: Any,
+    *,
+    prefix: str | None = None,
+    names: Iterable[str] | None = None,
+    call_metadata: Mapping[str, Any] | None = None,
+    _interaction: _Interaction | None = None,
 ) -> list[Tool]:
     """Wrap the tools of an initialized MCP client session.
 
     `prefix` namespaces the tool names (``prefix_tool``); `names` keeps only those MCP
     tools. A tool whose input schema cannot be used is skipped with a warning, so one
     unusual tool does not make the whole server unusable.
+    `call_metadata` is a snapshot of JSON metadata sent as MCP request `_meta`,
+    separate from model-visible arguments. It requires SDK `call_tool(meta=...)` support.
     """
+    metadata = _copy_call_metadata(call_metadata)
+    if metadata is not None:
+        try:
+            parameter = inspect.signature(session.call_tool).parameters.get("meta")
+        except (TypeError, ValueError):
+            parameter = None
+        if parameter is None or parameter.kind not in (
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            inspect.Parameter.KEYWORD_ONLY,
+        ):
+            raise ConfigurationError(
+                "call_metadata requires an MCP SDK with ClientSession.call_tool(meta=...); "
+                "upgrade the MCP SDK"
+            )
     wanted = set(names) if names is not None else None
     specs: list[Any] = []
     cursor = None
@@ -128,7 +201,7 @@ async def mcp_tools(
         if wanted is not None and _get(spec, "name") not in wanted:
             continue
         try:
-            tools.append(_wrap(session, spec, prefix, taken))
+            tools.append(_wrap(session, spec, prefix, taken, metadata, _interaction))
         except (ConfigurationError, RecursionError) as exc:
             warnings.warn(f"Skipping MCP tool {_get(spec, 'name')}: {exc}", stacklevel=2)
     return tools
@@ -153,7 +226,13 @@ async def connect_stdio(
     cwd: str | None = None,
     prefix: str | None = None,
     names: Iterable[str] | None = None,
+    call_metadata: Mapping[str, Any] | None = None,
+    callbacks: MCPCallbacks | None = None,
+    server_name: str = "mcp",
+    plugin_name: str | None = None,
     init_timeout: float = 30.0,
+    process_scope: bool = False,
+    _on_session: Callable[[Any], None] | None = None,
 ) -> AsyncIterator[list[Tool]]:
     """Start a stdio MCP server, yield its tools, and stop it when the block ends.
 
@@ -161,6 +240,10 @@ async def connect_stdio(
 
     A server that does not complete the MCP handshake within `init_timeout` seconds
     raises TimeoutError instead of hanging.
+    `call_metadata` is passed to `mcp_tools` as per-call MCP request metadata.
+    On POSIX, `process_scope=True` also owns surviving process groups, including
+    nested pi-python stdio connections. Nested connections inherit that ownership.
+    This does not track arbitrary detached children launched outside this adapter.
     """
     try:
         from mcp import ClientSession, StdioServerParameters  # type: ignore[import-not-found,unused-ignore]
@@ -169,14 +252,32 @@ async def connect_stdio(
         raise ImportError(
             "connect_stdio needs the MCP SDK: pip install 'pi-python-core[mcp]'"
         ) from exc
-    params = StdioServerParameters(command=command, args=list(args), env=env, cwd=cwd)
+    interaction = _Interaction(callbacks, server_name, plugin_name) if callbacks else None
+    from ._mcp_process import process_scope as owned_processes
+
     try:
-        async with stdio_client(params) as (read, write):
-            async with ClientSession(read, write) as session:
-                async with asyncio.timeout(init_timeout):
-                    await session.initialize()
-                    tools = await mcp_tools(session, prefix=prefix, names=names)
-                yield tools
+        async with owned_processes(command, args, env, process_scope) as (cmd, argv, child_env):
+            params = StdioServerParameters(command=cmd, args=argv, env=child_env, cwd=cwd)
+            async with stdio_client(params) as (read, write):
+                async with (
+                    interaction.session(read, write) if interaction else ClientSession(read, write)
+                ) as session:
+                    try:
+                        async with asyncio.timeout(init_timeout):
+                            await session.initialize()
+                            tools = await mcp_tools(
+                                session,
+                                prefix=prefix,
+                                names=names,
+                                call_metadata=call_metadata,
+                                _interaction=interaction,
+                            )
+                        if _on_session is not None:
+                            _on_session(session)
+                        yield tools
+                    finally:
+                        if interaction:
+                            await interaction.aclose()
     except BaseExceptionGroup as group:
         _raise_single(group)
 
@@ -188,13 +289,19 @@ async def connect_http(
     headers: Mapping[str, str] | None = None,
     prefix: str | None = None,
     names: Iterable[str] | None = None,
+    call_metadata: Mapping[str, Any] | None = None,
+    callbacks: MCPCallbacks | None = None,
+    server_name: str = "mcp",
+    plugin_name: str | None = None,
     init_timeout: float = 30.0,
+    _on_session: Callable[[Any], None] | None = None,
 ) -> AsyncIterator[list[Tool]]:
     """Connect to a streamable HTTP MCP server, yield its tools, and disconnect afterwards.
 
     ``async with connect_http("https://example.org/mcp", headers={...}) as tools: ...``
 
     The legacy SSE transport is not supported, as in Pi.
+    `call_metadata` is passed to `mcp_tools` as per-call MCP request metadata.
     """
     try:
         from mcp import ClientSession  # type: ignore[import-not-found,unused-ignore]
@@ -205,6 +312,7 @@ async def connect_http(
         ) from exc
     from mcp.shared._httpx_utils import create_mcp_http_client  # type: ignore[import-not-found,unused-ignore]
 
+    interaction = _Interaction(callbacks, server_name, plugin_name) if callbacks else None
     origin = _origin(url)
 
     async def same_origin(request: Any) -> None:
@@ -242,10 +350,24 @@ async def connect_http(
                         httpx_client_factory=client_without_redirects,
                     )
                 )
-            session = await stack.enter_async_context(ClientSession(streams[0], streams[1]))
+            session = await stack.enter_async_context(
+                interaction.session(streams[0], streams[1])
+                if interaction
+                else ClientSession(streams[0], streams[1])
+            )
+            if interaction:
+                stack.push_async_callback(interaction.aclose)
             async with asyncio.timeout(init_timeout):
                 await session.initialize()
-                tools = await mcp_tools(session, prefix=prefix, names=names)
+                tools = await mcp_tools(
+                    session,
+                    prefix=prefix,
+                    names=names,
+                    call_metadata=call_metadata,
+                    _interaction=interaction,
+                )
+            if _on_session is not None:
+                _on_session(session)
             yield tools
     except BaseExceptionGroup as group:
         _raise_single(group)

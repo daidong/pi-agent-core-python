@@ -9,3 +9,7 @@ Help the user complete their current task. Preserve their scope, hard constraint
 Skills are available in `.agents/skills` (Codex) and `.claude/skills` (Claude). Use the host's advertised skill list and read the selected SKILL.md; use its Skill tool when available. For scholarly writing, the full Plain-Language Contract lives at `paper-writing/references/plain-language-contract.md` relative to the skills directory. Edit the bundled source when maintaining PiPilot; workspace copies are synchronized outputs.
 
 <!-- pipilot:end -->
+
+## Library and plugin integration
+
+When using this library in an application, start with [the coding-agent guide](docs/CODING_AGENTS.md) ([中文](docs/zh/CODING_AGENTS.md)). To build a pi-python plugin, follow [the development workflow and complete example](docs/PLUGIN_DEVELOPMENT.md) ([中文](docs/zh/PLUGIN_DEVELOPMENT.md)). These guides cover public APIs, resource ownership, offline verification, and installed-plugin packaging.

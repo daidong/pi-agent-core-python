@@ -48,6 +48,8 @@ Every event passes the same check: blocks must pair up, deltas must land in an o
 
 Message data also allows `pending` and `deferred`. `pending` is only for in-stream snapshots and cannot be committed to history; `deferred` can hold a background handle, but the library does not yet poll background tasks. For `length`, every tool call gets a not-executed result, and the model may then handle the error. `error` / `aborted` messages cannot declare tool calls: before the message is committed, its tool calls are removed, the rest of the partial content is kept, and a `removed_tool_calls` entry is added to `diagnostics`.
 
+The Agent closes each request's response iterator when the request ends, including error and cancellation paths. Custom iterators that own resources should implement `aclose()`. This does not close the shared Provider.
+
 ## Tool
 
 `Tool(name, description, input_schema, execute, output_schema=None, execution_mode="parallel", prepare_arguments=None)`.
@@ -81,7 +83,33 @@ def search_papers(query: str, year: int | None = None, limit: int = 10) -> list[
 
 Supported parameter types: `str`, `int`, `float`, `bool`, `None`, `list`, `set`, `tuple`, `dict[str, T]`, `Literal`, `Enum`, `Optional` and other unions, `Annotated[T, "description"]`, `TypedDict`, dataclasses, `datetime`, `date`, `UUID`, `Path`, and pydantic models. Before the call, the JSON arguments are converted to the types the function asks for, such as enum members, dates, dataclasses or pydantic models. A parameter annotated as `ToolContext` receives the call context and does not appear in the schema. `*args`, `**kwargs` and types that cannot be represented as JSON raise `ConfigurationError` at registration.
 
+For a union, conversion tries branches in annotation order, using only branches whose JSON Schema matches the input. For example, `list[int] | str` preserves `"abc"` as a string. When several branches match, the first successful conversion wins.
+
+Schema and conversion are compiled together at registration, including recursive types and union branches. Bare `set`, `frozenset` and `tuple` annotations also convert JSON arrays to the requested Python container. Nested pydantic definitions are isolated between parameters and union branches, even when their class names match.
+
+`TypedDict` requiredness follows resolved `Required` and `NotRequired` annotations,
+including inherited fields and `Annotated` wrappers when annotations are postponed.
+
 Concurrency is unlimited by default: a batch of tools all run at once, as in Pi; set `RunLimits(max_concurrency=...)` when you need a cap. If any tool requires `sequential`, the whole batch runs one at a time. When running concurrently, preparation completes in call order before execution starts; end events follow the order in which post-processing finishes, and results in history follow call order.
+
+Parallel tool and subagent batches own their child tasks: failure or cancellation cancels unfinished siblings and waits for their cleanup. Repeated caller cancellation does not interrupt that cleanup. The Run's existing cleanup deadline still applies; `cleanup_complete` reports whether cleanup actually finished.
+
+Inside a tool, use `await context.run_agent(child, message)` to run an exclusively
+owned, idle child Agent. It returns the child's `RunResult` and closes that Agent;
+the shared Provider stays open. See [the subagent example](../examples/subagent.py).
+An already running child is rejected without cancelling or closing it. Ordinary
+model/tool failures remain results that the calling tool can handle.
+
+Nested calls preserve two separate facts: whether an external operation's outcome
+is known, and whether its work has stopped. An unknown child outcome raises
+`ToolOutcomeUnknownError`, marks the enclosing Agent as requiring reconciliation,
+and stops further execution. This also applies across parallel siblings and multiple
+nesting levels. An unfinished child keeps its enclosing tool pending. The parent's
+cleanup deadline still bounds its run, which reports `cleanup_complete=False` until
+the descendant actually finishes. Repeated cancellation cannot abandon that cleanup.
+Standalone `ToolContext` callers must keep awaiting the call or manage its lifetime
+with `TaskScope`; without an enclosing Agent there is no Run cleanup deadline.
+Check `require_features(["nested-agent-ownership-v1"])` when depending on this API.
 
 A standalone program can call `await run_tool_call(tool, call, context, before_tool_call=..., after_tool_call=...)` to reuse the same validation and hook path. For standalone calls, the program manages lifetime, timeouts and cancellation itself; `Agent` adds batch management and `RunLimits`.
 
@@ -159,6 +187,23 @@ async with connect_stdio("uvx", ["mcp-server-fetch"], prefix="web") as tools:
 
 Requires `pip install 'pi-python-core[mcp]'` and works with the official MCP SDK 1.10 and later, including 2.x. `connect_stdio` starts a stdio MCP server and closes it when the `async with` block exits. `connect_http(url, headers=None, prefix=None, names=None)` connects to a streamable HTTP server in the same way; the legacy SSE transport is not supported, as in Pi. It follows redirects only within the server's origin, so headers are never sent to another one. It is tested with MCP SDK 1.10, 1.30 and 2.3. If you already have a `ClientSession`, wrap its tools with `await mcp_tools(session, prefix=None, names=None)`. Conversion follows Pi's MCP adapter: text and images convert directly; embedded text or image resources are unpacked; audio, resource links and binary resources become short text descriptions; a result with only structured content becomes JSON text and is also kept as `structured_content`; MCP's `isError` becomes a tool error; progress notifications become `tool_execution_update` events. After the prefix is added, tool names keep only letters, digits, `_` and `-`, up to 64 characters. A tool whose schema cannot be used is skipped with a warning, without affecting the server's other tools. A stdio server written with Python MCP SDK 2.3 cannot start on PyPy (`fcntl.F_DUPFD_CLOEXEC` is missing); this is a limitation of the SDK itself, and the client side is unaffected.
 
+On POSIX, `connect_stdio(..., process_scope=True)` also cleans surviving process
+groups and nested pi-python stdio connections on exit. It is opt-in at the outer
+connection and inherited by nested connections. Non-POSIX systems reject explicit
+enablement. See [process ownership](MCP_INTERACTION.md) for scope and limitations.
+
+All three MCP entry points accept optional `call_metadata`, a JSON object passed to
+`ClientSession.call_tool(meta=...)`. It is copied per registration and call, stays out
+of tool arguments, and requires an SDK with `meta` support; otherwise registration
+raises `ConfigurationError`. See [runtime metadata and readiness](PLUGINS.md#mcp-servers)
+for plugin configuration and startup checks.
+
+`connect_stdio` and `connect_http` also accept `callbacks=MCPCallbacks(...)` for
+host-authorized sampling and form elicitation. `SamplingHandler` adapts a host Provider;
+`SamplingProvider` runs a server Agent through the current MCP request. This opt-in
+feature requires SDK >=2.3,<3. See [MCP interaction](MCP_INTERACTION.md) for public APIs,
+protocol constraints, cancellation, and the runnable offline example.
+
 ## Plugins
 
 `pi_python.plugins` loads plugins: named bundles of tools, system prompt text, hooks, skills, prompt templates, subagents and MCP servers, in the format of Pi's packages. `async with load_plugins([...], services=..., options=...) as plugins:` loads them, and `plugins.agent(...)` builds an Agent with everything they contribute. The [plugin guide](PLUGINS.md) covers writing, distributing and combining plugins.
@@ -216,3 +261,45 @@ OpenAI may add encrypted_content back in the final response. If the visible reas
 `AssistantMessage.provider_thinking_level` matches upstream: it records this answer's effort only for Claude models that use effort markers, so later requests can rebuild the markers in history. Read `thinking_level` when you need the requested level.
 
 When replaying history, Providers skip `error` / `aborted` answers following upstream's rules; reasoning from a different model is converted to plain text and its signature is dropped; a system message that sits between a tool call and its result is moved after the result. The session history itself is unchanged.
+
+Host sampling profiles, usage observation, retry policy, and build feature markers are documented in [MCP interactions](MCP_INTERACTION.md#real-providers-profiles-accounting-and-retries).
+
+
+## Owned tasks and calls from worker threads
+
+`TaskScope` owns the asynchronous calls passed to `await scope.run(awaitable,
+cancel=token)`. Each call runs in a child task. Cancelling the caller or token
+cancels that task and waits for its cleanup. `await scope.aclose()` rejects new
+calls, cancels active calls, and joins them, including calls waiting on an
+application lock. Use `async with TaskScope() as scope`, or a plugin's
+`api.task_scope()` to register automatic cleanup. Exceptions go to the individual
+caller. Closing does not re-raise a completed call's error. Work must cooperate
+with cancellation; this API does not terminate threads or impose a deadline.
+An owned task cannot close its own scope. A scope is bound to its first event loop.
+
+`LoopPortal` submits async work from a synchronous worker thread onto an **existing**
+event loop. This differs from `run_sync`, which owns a separate background loop.
+Create and close the portal on the loop that owns the connection:
+
+```python
+import asyncio
+from pi_python import LoopPortal
+
+async def request(connection):
+    async with LoopPortal() as portal:
+        # A callable is passed, not a coroutine created in the worker thread.
+        return await asyncio.to_thread(portal.call, connection.fetch, "item")
+```
+
+`portal.call(async_function, *args, timeout=None, **kwargs)` returns the result or
+raises the error in the worker thread, preserving its context variables. Blocking
+an event-loop thread is rejected. Closing cancels and joins submitted work without
+closing the borrowed loop. A timeout bounds the blocking wait and requests async
+cancellation; `aclose()` waits for that cleanup. Keep the owning loop running until
+the portal has closed. Application threads themselves remain application-owned.
+
+`FEATURES` is the immutable set of versioned APIs provided by the current build.
+`require_features(names, where="Application")` raises `ConfigurationError` for
+unknown or unavailable features. It does not validate installed optional packages,
+MCP peer capabilities, credentials, or host authorization. `MCP_FEATURES` remains
+available and is a subset. Plugin declarations are described in [Plugins](PLUGINS.md#declaring-required-framework-features).

@@ -31,6 +31,7 @@ from .tools import (
     run_tool_call,
 )
 from .transcript import current_tools
+from .tasks import _gather_owned
 
 if TYPE_CHECKING:
     from .run import Run
@@ -160,9 +161,17 @@ async def stream_response(run: Run) -> tuple[AssistantMessage, bool]:
                     partial=run.partial,
                 )
     finally:
-        close = getattr(iterator, "aclose", None)
-        if close is not None:
-            await close()
+        try:
+            close = getattr(iterator, "aclose", None)
+            if close is not None:
+                await close()
+        finally:
+            # Closing the validator does not close the iterator it wraps. Own the
+            # per-request stream here, without closing the shared Provider.
+            if source is not iterator:
+                close = getattr(source, "aclose", None)
+                if close is not None:
+                    await close()
     if final is None:
         raise ProviderProtocolError("Stream ended without final message")
     run.partial = None
@@ -201,6 +210,7 @@ async def execute_batch(run: Run, outcomes: list[ToolOutcome]) -> None:
             emit,
             assistant_message=snapshot["message"],
             agent_context=snapshot["context"],
+            _on_reconciliation_required=lambda: run.require_reconciliation(),
         )
         return contexts[id(outcome)]
 
@@ -285,14 +295,7 @@ async def execute_batch(run: Run, outcomes: list[ToolOutcome]) -> None:
                 await run.end_tool(outcome)
         # Every await inside a worker is owned and bounded, so an abort reaches each tool
         # directly and the batch settles; caller cancellation cancels the workers below.
-        workers = [asyncio.create_task(execute(o)) for o in outcomes]
-        try:
-            await asyncio.gather(*workers)
-        finally:
-            for worker in workers:
-                if not worker.done():
-                    worker.cancel()
-            await asyncio.gather(*workers, return_exceptions=True)
+        await _gather_owned(execute(o) for o in outcomes)
         for outcome in outcomes:
             await run.commit_outcome(outcome)
 

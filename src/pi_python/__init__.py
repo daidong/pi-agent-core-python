@@ -53,7 +53,9 @@ from .lowlevel import (
 from .proxy import ProxyProvider, stream_proxy
 from .testing import ScriptedProvider
 from .function_tools import tool
-from .sync import run_sync
+from .sync import LoopPortal, run_sync
+from .tasks import TaskScope
+from .features import FEATURES, require_features
 from .recovery import (
     is_context_overflow,
     is_recoverable_length,
@@ -141,6 +143,10 @@ __all__ = [
     "Tool",
     "tool",
     "run_sync",
+    "LoopPortal",
+    "TaskScope",
+    "FEATURES",
+    "require_features",
     "is_context_overflow",
     "is_recoverable_length",
     "is_retryable_error",

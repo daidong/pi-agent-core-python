@@ -137,6 +137,10 @@ class Agent:
         self._last_error: str | None = None
         self._idle = asyncio.Event()
         self._idle.set()
+        # Unlike _idle (which also wakes callers on a cleanup timeout), this
+        # marks actual completion of the run and all operations it owns.
+        self._settled = asyncio.Event()
+        self._settled.set()
 
     @property
     def steering_mode(self) -> str:
@@ -284,6 +288,18 @@ class Agent:
         if run is None or run.driver is None or run.driver.done():
             self._running = False
             self._idle.set()
+            self._settled.set()
+
+    async def _aclose_owned(self) -> None:
+        """Join an exclusively owned child, even beyond its cleanup deadline.
+
+        The enclosing tool remains pending, so its parent Run can enforce its
+        own deadline without losing ownership of unfinished descendant work.
+        """
+        try:
+            await self.aclose()
+        except CleanupTimeoutError:
+            await self._settled.wait()
 
     async def wait_for_idle(self) -> None:
         if not self._cleanup_complete:
@@ -361,6 +377,7 @@ class Agent:
             )
         self._running = True
         self._idle.clear()
+        self._settled.clear()
         self._last_error = None
         self._events.failed = False
         run = self._run = Run(self, skip_initial_steering)
@@ -393,4 +410,6 @@ class Agent:
         result = await run.drive(pending)
         self._running = not self._cleanup_complete
         self._idle.set()  # Wakes waiters; they check cleanup_complete before returning.
+        if self._cleanup_complete:
+            self._settled.set()
         return result

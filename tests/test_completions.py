@@ -90,6 +90,66 @@ async def test_keyless_local_server_needs_no_credentials():
     assert body["max_completion_tokens"] == 16384  # the declared default output limit
 
 
+@pytest.mark.parametrize(
+    "usage,known",
+    [
+        ({}, False),
+        (None, False),
+        ({"unrelated": 1}, False),
+        ({"prompt_tokens": 12}, False),
+        ({"completion_tokens": 8}, False),
+        ({"prompt_tokens": True, "completion_tokens": 8}, False),
+        ({"prompt_tokens": -1, "completion_tokens": 8}, False),
+        ({"prompt_tokens": 12, "completion_tokens": "8"}, False),
+        ({"prompt_tokens": 0, "completion_tokens": 0}, True),
+        ({"prompt_tokens": 12, "completion_tokens": 8}, True),
+    ],
+)
+@pytest.mark.parametrize("on_choice", [False, True])
+async def test_usage_requires_complete_counts_and_preserves_real_zero(usage, known, on_choice):
+    chunks = reply()
+    target = chunks[-1]["choices"][0] if on_choice else chunks[-1]
+    target["usage"] = usage
+    client, _ = server((200, chunks))
+    async with client:
+        provider = OpenAICompletionsProvider(base_url=LOCAL, transport=HTTPTransport(client))
+        _, message = await run(provider, provider.model("qwen3:8b"))
+    assert message.stop_reason == "stop"
+    assert (message.diagnostics is None) is known
+    if not known:
+        assert {"type": "usage_unavailable"} in message.diagnostics
+    else:
+        assert message.usage["total_tokens"] == usage["prompt_tokens"] + usage["completion_tokens"]
+
+
+@pytest.mark.parametrize("empty_last", [False, True])
+async def test_empty_usage_does_not_hide_valid_choice_or_earlier_usage(empty_last):
+    chunks = reply()
+    chunks[-1]["usage"] = {}
+    usage = {"prompt_tokens": 12, "completion_tokens": 8}
+    if empty_last:
+        chunks[0]["usage"] = usage
+    else:
+        chunks[-1]["choices"][0]["usage"] = usage
+    client, _ = server((200, chunks))
+    async with client:
+        provider = OpenAICompletionsProvider(base_url=LOCAL, transport=HTTPTransport(client))
+        _, message = await run(provider, provider.model("qwen3:8b"))
+    assert message.diagnostics is None
+    assert message.usage["total_tokens"] == 20
+
+
+async def test_partial_usage_stays_available_to_direct_callers_but_is_not_measured():
+    chunks = reply()
+    chunks[0]["usage"] = {"prompt_tokens": 12}
+    client, _ = server((200, chunks))
+    async with client:
+        provider = OpenAICompletionsProvider(base_url=LOCAL, transport=HTTPTransport(client))
+        _, message = await run(provider, provider.model("qwen3:8b"))
+    assert message.usage["input"] == 12
+    assert {"type": "usage_unavailable"} in message.diagnostics
+
+
 def test_model_helper_mirrors_upstream_custom_model_defaults():
     provider = OpenAICompletionsProvider(base_url=LOCAL, name="ollama")
     model = provider.model("qwen3:8b")
@@ -309,3 +369,17 @@ def test_model_helper_validates_like_the_catalog():
         provider.model("m", max_tokens=0)
     with pytest.raises(ConfigurationError, match="thinking level"):
         provider.model("m", thinking_level_map={"turbo": "x"})
+
+
+async def test_chat_stream_error_uses_shared_redaction_and_recovery_rules():
+    from pi_python import is_retryable_error
+
+    client, _ = server((200, [{"error": {"code": "overloaded_error", "message": "token-secret"}}]))
+    async with client:
+        provider = OpenAICompletionsProvider(
+            base_url=LOCAL, name="local", api_key="token-secret", transport=HTTPTransport(client)
+        )
+        _, message = await run(provider, provider.model("test"))
+    assert "token-secret" not in message.error
+    assert "[redacted]" in message.error
+    assert is_retryable_error(message)

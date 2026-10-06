@@ -22,11 +22,12 @@ import importlib
 import importlib.machinery
 import importlib.util
 import json
+import math
 import os
 import re
 import sys
 import warnings
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
 from copy import copy
 from dataclasses import dataclass, replace
 from importlib.metadata import EntryPoint, entry_points
@@ -42,7 +43,10 @@ from ..hooks import Hooks
 from ..limits import RunLimits
 from ..models import ModelInfo
 from ..sync import run_sync
+from ..tasks import TaskScope, _cancel, _join
+from ..features import _names, require_features
 from ..tools import Tool, ToolContext, ToolResult, invoke
+from .._mcp_interaction import MCPCallbacks
 from ._compose import (
     HOOK_NAMES,
     PluginFailure,
@@ -77,6 +81,7 @@ __all__ = [
     "PluginSet",
     "PluginWarning",
     "PromptTemplate",
+    "ReadinessResult",
     "Skill",
     "discover_plugins",
     "load_plugins",
@@ -85,7 +90,20 @@ __all__ = [
 ENTRY_POINT_GROUP = "pi_python.plugins"
 READ_SKILL_TOOL = "read_skill"
 MAX_SKILL_FILE_BYTES = 256 * 1024
-_MCP_KEYS = {"type", "command", "args", "env", "cwd", "url", "headers", "enabled", "description"}
+_MCP_KEYS = {
+    "process_scope",
+    "type",
+    "command",
+    "args",
+    "env",
+    "cwd",
+    "url",
+    "headers",
+    "enabled",
+    "description",
+    "call_metadata",
+    "required_capabilities",
+}
 _VARIABLE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
 _MISSING: Any = object()
 F = TypeVar("F", bound=Callable[..., Any])
@@ -110,6 +128,7 @@ class Plugin:
     root: str | os.PathLike[str] | None = None
     version: str | None = None
     source: str = "code"
+    requires: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -130,6 +149,56 @@ class CheckResult:
     name: str
     passed: bool
     detail: str = ""
+
+
+@dataclass(frozen=True)
+class ReadinessResult:
+    """A snapshot after self-checks and MCP pings, not a continuous health guarantee."""
+
+    loaded: bool
+    plugins: tuple[str, ...]
+    diagnostics: tuple[str, ...]
+    missing_tools: tuple[str, ...]
+    missing_skills: tuple[str, ...]
+    missing_mcp_servers: tuple[str, ...]
+    missing_checks: tuple[tuple[str, str], ...]
+    checks: tuple[CheckResult, ...]
+    missing_mcp_capabilities: tuple[tuple[str, str], ...] = ()
+
+    @property
+    def ready(self) -> bool:
+        return (
+            self.loaded
+            and not (
+                self.missing_tools
+                or self.missing_skills
+                or self.missing_mcp_servers
+                or self.missing_checks
+                or self.missing_mcp_capabilities
+            )
+            and all(check.passed for check in self.checks)
+        )
+
+    def require_ready(self) -> None:
+        """Raise ConfigurationError with the unmet requirements, if any."""
+        if self.ready:
+            return
+        reasons = []
+        if not self.loaded:
+            reasons.append("plugins are not open")
+        for label, missing in (
+            ("tools", self.missing_tools),
+            ("skills", self.missing_skills),
+            ("MCP servers", self.missing_mcp_servers),
+            ("checks", self.missing_checks),
+            ("MCP capabilities", self.missing_mcp_capabilities),
+        ):
+            if missing:
+                reasons.append(f"missing {label}: {missing}")
+        for check in self.checks:
+            if not check.passed:
+                reasons.append(f"check {check.plugin}/{check.name} failed: {check.detail}")
+        raise ConfigurationError("Plugins are not ready: " + "; ".join(reasons))
 
 
 def discover_plugins() -> list[InstalledPlugin]:
@@ -196,6 +265,16 @@ class PluginAPI:
         self._tools.append(made)
         return made
 
+    def task_scope(self) -> TaskScope:
+        """Create owned asynchronous work, automatically closed with this plugin.
+
+        Register resources needed by that work before creating the scope: close
+        callbacks run in reverse registration order.
+        """
+        scope = TaskScope()
+        self.on_close(scope.aclose)
+        return scope
+
     def add_system_prompt(self, text: str) -> None:
         """Append instructions to the system prompt of agents built from this set."""
         if text.strip():
@@ -250,7 +329,8 @@ class PluginAPI:
         """An MCP server in ``mcp.json`` form; it connects when the set opens.
 
         ``${PLUGIN_ROOT}``, ``${PYTHON}`` (this interpreter) and environment variables
-        are expanded in its strings.
+        are expanded in transport strings. `call_metadata` is a literal JSON object
+        snapshotted at registration and sent separately from tool arguments.
         """
         if not re.fullmatch(r"[A-Za-z0-9_-]+", name):
             raise ConfigurationError(
@@ -273,6 +353,8 @@ class PluginAPI:
         self._closers.append(callback)
 
     def _mcp_config(self, name: str, config: Mapping[str, Any]) -> dict[str, Any]:
+        from ..mcp import _copy_call_metadata
+
         if not isinstance(config, Mapping):
             raise ConfigurationError(f"MCP server {name!r}: the configuration must be an object")
         unknown = sorted(set(config) - _MCP_KEYS)
@@ -289,6 +371,30 @@ class PluginAPI:
         if kind not in {"stdio", "http", "streamable-http"}:
             raise ConfigurationError(f"MCP server {name!r} needs a command or a url")
         result: dict[str, Any] = {"type": "stdio" if kind == "stdio" else "http"}
+        if "process_scope" in config:
+            if kind != "stdio" or type(config["process_scope"]) is not bool:
+                raise ConfigurationError(
+                    f"MCP server {name!r}: process_scope must be a boolean for stdio"
+                )
+            result["process_scope"] = config["process_scope"]
+        if config.get("call_metadata") is not None:
+            result["call_metadata"] = _copy_call_metadata(config["call_metadata"])
+        required = config.get("required_capabilities", [])
+        if not isinstance(required, list) or any(
+            not isinstance(cap, str)
+            or cap
+            not in {
+                "sampling",
+                "sampling.tools",
+                "sampling.host_state",
+                "sampling.profiles",
+                "sampling.delta",
+                "elicitation.form",
+            }
+            for cap in required
+        ):
+            raise ConfigurationError(f"MCP server {name!r}: invalid required_capabilities")
+        result["required_capabilities"] = list(required)
         result["enabled"] = config.get("enabled", True) is not False
         if kind == "stdio":
             command = config.get("command")
@@ -378,6 +484,8 @@ class PluginSet:
         services: Mapping[str, Any] | None = None,
         options: Mapping[str, Mapping[str, Any]] | None = None,
         on_error: Callable[[PluginFailure], Any] | None = None,
+        strict: bool = False,
+        mcp_callbacks: Mapping[tuple[str, str], MCPCallbacks] | None = None,
     ):
         if isinstance(sources, (str, os.PathLike, Plugin)):
             sources = [sources]
@@ -385,10 +493,16 @@ class PluginSet:
         self._services = dict(services or {})
         self._options = {name: dict(value) for name, value in (options or {}).items()}
         self._on_error = on_error or log_plugin_failure
+        self._strict = strict
+        self._mcp_callbacks = dict(mcp_callbacks or {})
         self._state = "new"
+        self._open_task: asyncio.Task[None] | None = None
+        self._close_task: asyncio.Task[None] | None = None
         self._apis: list[PluginAPI] = []
         self._closing: asyncio.Event | None = None
         self._servers: list[asyncio.Task[None]] = []
+        self._connected_servers: set[str] = set()
+        self._mcp_checks: dict[str, Callable[[], Awaitable[Any]]] = {}
         self.plugins: list[Plugin] = []
         self.tools: list[Tool] = []
         self.skills: list[Skill] = []
@@ -416,29 +530,49 @@ class PluginSet:
         if self._state != "new":
             raise ConfigurationError("A PluginSet can be opened only once")
         self._state = "opening"
+        self._open_task = asyncio.create_task(self._start())
         try:
-            await self._load()
+            await asyncio.shield(self._open_task)
+            if self._state != "opening":
+                raise ConfigurationError("PluginSet closed while opening")
         except BaseException:
-            await self._shutdown()
-            self._state = "closed"
+            await self.aclose()
             raise
         self._state = "open"
-        for message in self.diagnostics:
-            warnings.warn(message, PluginWarning, stacklevel=2)
         return self
 
+    async def _start(self) -> None:
+        """Startup is one transaction, including diagnostics that may raise."""
+        await self._load()
+        if self._strict and self.diagnostics:
+            raise ConfigurationError("Strict plugin loading failed: " + "; ".join(self.diagnostics))
+        for message in self.diagnostics:
+            warnings.warn(message, PluginWarning, stacklevel=2)
+
     async def aclose(self) -> None:
-        """Disconnect MCP servers and run the plugins' close callbacks."""
+        """Finish cleanup once, then propagate cancellation of a waiting caller."""
         if self._state in {"new", "closed"}:
             self._state = "closed"
             return
-        await self._shutdown()
-        self._state = "closed"
+        if asyncio.current_task() in (self._open_task, self._close_task):
+            raise ConfigurationError("A setup or close callback cannot close its own PluginSet")
+        if self._close_task is None:
+            self._state = "closing"
+            self._close_task = asyncio.create_task(self._shutdown())
+        await _join([self._close_task])
+        self._close_task.result()
 
     async def _load(self) -> None:
         resolved = [_resolve(source) for source in self._sources]
         seen: set[str] = set()
         for plugin in resolved:
+            plugin.requires = _names(plugin.requires)
+            if plugin.root is not None:
+                requirement_root = Path(plugin.root).expanduser().resolve()
+                plugin.requires = _names(
+                    (*plugin.requires, *_directory_requirements(requirement_root))
+                )
+            require_features(plugin.requires, where=f"Plugin {plugin.name!r}")
             if plugin.name in seen:
                 raise ConfigurationError(f"Two plugins are named {plugin.name!r}")
             seen.add(plugin.name)
@@ -461,6 +595,22 @@ class PluginSet:
                     raise
             self.plugins.append(replace(plugin, root=root))
         self._merge()
+        servers = {(api.name, name) for api in self._apis for name in api._mcp}
+        if set(self._mcp_callbacks) - servers:
+            raise ConfigurationError("MCP callbacks name an unknown (plugin, server) pair")
+        if any(not isinstance(value, MCPCallbacks) for value in self._mcp_callbacks.values()):
+            raise ConfigurationError("mcp_callbacks values must be MCPCallbacks runtime objects")
+        for api in self._apis:
+            for name, config in api._mcp.items():
+                if not config["enabled"]:
+                    continue
+                callbacks = self._mcp_callbacks.get((api.name, name))
+                available = set(callbacks.capabilities) if callbacks else set()
+                missing = set(config["required_capabilities"]) - available
+                if missing:
+                    raise ConfigurationError(
+                        f"MCP server {name!r} lacks host capabilities: {sorted(missing)}"
+                    )
         await self._connect_servers()
 
     def _merge(self) -> None:
@@ -531,6 +681,11 @@ class PluginSet:
         for api, name, ready in pending:
             try:
                 tools = await ready
+            except ConfigurationError:
+                # All connections were started together. Retrieve other failures too
+                # before aborting so no readiness future is left with an unhandled error.
+                await asyncio.gather(*(future for _, _, future in pending), return_exceptions=True)
+                raise
             except Exception as exc:
                 reason = _redact(f"{type(exc).__name__}: {exc}", api._secrets.get(name))
                 self.diagnostics.append(
@@ -559,20 +714,40 @@ class PluginSet:
 
         prefix = f"mcp__{name.replace('-', '_')}_"
         assert self._closing is not None
+
+        def on_session(session: Any) -> None:
+            self._mcp_checks[name] = session.send_ping
+
         try:
+            callbacks = self._mcp_callbacks.get((plugin, name))
+            callback_options: dict[str, Any] = (
+                {"callbacks": callbacks, "server_name": name, "plugin_name": plugin}
+                if callbacks
+                else {}
+            )
             if config["type"] == "stdio":
                 connection = connect_stdio(
                     config["command"],
                     config["args"],
                     env=config.get("env"),
                     cwd=config.get("cwd"),
+                    process_scope=config.get("process_scope", False),
                     prefix=prefix,
+                    call_metadata=config.get("call_metadata"),
+                    _on_session=on_session,
+                    **callback_options,
                 )
             else:
                 connection = connect_http(
-                    config["url"], headers=config.get("headers"), prefix=prefix
+                    config["url"],
+                    headers=config.get("headers"),
+                    prefix=prefix,
+                    call_metadata=config.get("call_metadata"),
+                    _on_session=on_session,
+                    **callback_options,
                 )
             async with connection as tools:
+                self._connected_servers.add(name)
                 ready.set_result(tools)
                 await self._closing.wait()
         except asyncio.CancelledError:
@@ -588,19 +763,43 @@ class PluginSet:
                 await self._report(
                     PluginFailure(plugin, f"MCP server {name}", ConnectionError(reason))
                 )
+        finally:
+            self._connected_servers.discard(name)
+            self._mcp_checks.pop(name, None)
 
     async def _shutdown(self) -> None:
-        if self._closing is not None:
-            self._closing.set()
-        if self._servers:
-            await asyncio.gather(*self._servers, return_exceptions=True)
-            self._servers.clear()
-        for api in reversed(self._apis):
-            for callback in reversed(api._closers):
-                try:
-                    await invoke(callback)
-                except Exception as exc:
-                    await self._report(PluginFailure(api.name, "on_close", exc))
+        cancelled = False
+        try:
+            # Stop resource registration before taking the cleanup inventory.
+            # Only this shutdown task cancels startup, so repeated caller
+            # cancellation cannot interrupt a setup function's finally block.
+            if self._open_task is not None:
+                _cancel(self._open_task)
+                await _join([self._open_task])
+            if self._closing is not None:
+                self._closing.set()
+            if self._servers:
+                if self._open_task is not None and self._open_task.cancelled():
+                    for server in self._servers:
+                        _cancel(server)
+                await asyncio.gather(*self._servers, return_exceptions=True)
+                self._servers.clear()
+            for api in reversed(self._apis):
+                while api._closers:
+                    callback = api._closers.pop()
+                    try:
+                        try:
+                            await invoke(callback)
+                        except Exception as exc:
+                            await self._report(PluginFailure(api.name, "on_close", exc))
+                    except asyncio.CancelledError:
+                        # A callback or its error reporter may cancel itself; release resources
+                        # registered before it, then deliver cancellation to callers.
+                        cancelled = True
+            if cancelled:
+                raise asyncio.CancelledError
+        finally:
+            self._state = "closed"
 
     async def _report(self, failure: PluginFailure) -> None:
         try:
@@ -760,6 +959,87 @@ class PluginSet:
                     )
         return results
 
+    async def readiness(
+        self,
+        *,
+        required_tools: Iterable[str] = (),
+        required_skills: Iterable[str] = (),
+        required_mcp_servers: Iterable[str] = (),
+        required_checks: Iterable[tuple[str, str]] = (),
+        required_mcp_capabilities: Mapping[str, Iterable[str]] | None = None,
+        mcp_timeout: float = 5.0,
+    ) -> ReadinessResult:
+        """Run self-checks and compare available resources with explicit requirements.
+
+        Check identities are `(plugin_name, check_name)` pairs. An empty check list
+        is acceptable only when no checks are required. Diagnostics remain visible
+        but do not themselves fail readiness; use `strict=True` to reject them on load.
+        This checks the tools contributed by plugins, not tools later passed to Agent.
+        MCP sessions are pinged concurrently, with `mcp_timeout` seconds per server.
+        """
+        if (
+            isinstance(mcp_timeout, bool)
+            or not isinstance(mcp_timeout, (int, float))
+            or not math.isfinite(mcp_timeout)
+            or mcp_timeout <= 0
+        ):
+            raise ConfigurationError("mcp_timeout must be finite and positive")
+        checks = tuple(await self.check()) if self._state == "open" else ()
+
+        async def probe(name: str, ping: Callable[[], Awaitable[Any]]) -> None:
+            try:
+                async with asyncio.timeout(mcp_timeout):
+                    await ping()
+            except Exception:
+                healthy = False
+            else:
+                healthy = True
+            # Closing may have removed the session while the ping was pending.
+            if self._state == "open" and self._mcp_checks.get(name) is ping:
+                if healthy:
+                    self._connected_servers.add(name)
+                else:
+                    self._connected_servers.discard(name)
+
+        if self._state == "open":
+            await asyncio.gather(*(probe(name, ping) for name, ping in self._mcp_checks.items()))
+        loaded = self._state == "open"
+        tools = {tool.name for tool in self.tools} if loaded else set()
+        skills = {skill.name for skill in self.skills} if loaded else set()
+        if loaded and any(not skill.disable_model_invocation for skill in self.skills):
+            tools.add(READ_SKILL_TOOL)
+        if loaded and self.agents:
+            tools.add(SUBAGENT_TOOL)
+        servers = self._connected_servers if loaded else set()
+        executed = {(check.plugin, check.name) for check in checks}
+        return ReadinessResult(
+            loaded=loaded,
+            plugins=tuple(plugin.name for plugin in self.plugins) if loaded else (),
+            diagnostics=tuple(self.diagnostics),
+            missing_tools=tuple(sorted(set(required_tools) - tools)),
+            missing_skills=tuple(sorted(set(required_skills) - skills)),
+            missing_mcp_servers=tuple(sorted(set(required_mcp_servers) - servers)),
+            missing_checks=tuple(sorted(set(required_checks) - executed)),
+            checks=checks,
+            missing_mcp_capabilities=tuple(
+                sorted(
+                    (server, cap)
+                    for server, caps in (required_mcp_capabilities or {}).items()
+                    for cap in caps
+                    if cap not in self.mcp_capabilities.get(server, ())
+                )
+            ),
+        )
+
+    @property
+    def mcp_capabilities(self) -> dict[str, tuple[str, ...]]:
+        """Host grants for servers available at connection or the latest readiness check."""
+        return {
+            name: callbacks.capabilities
+            for (_, name), callbacks in self._mcp_callbacks.items()
+            if self._state == "open" and name in self._connected_servers
+        }
+
 
 def load_plugins(
     sources: Iterable[str | os.PathLike[str] | Plugin] | str | os.PathLike[str] | Plugin,
@@ -767,6 +1047,8 @@ def load_plugins(
     services: Mapping[str, Any] | None = None,
     options: Mapping[str, Mapping[str, Any]] | None = None,
     on_error: Callable[[PluginFailure], Any] | None = None,
+    strict: bool = False,
+    mcp_callbacks: Mapping[tuple[str, str], MCPCallbacks] | None = None,
 ) -> PluginSet:
     """Plugins to load, in order; nothing runs until the set is opened.
 
@@ -775,8 +1057,17 @@ def load_plugins(
     ``api.service(name)``; `options` maps a plugin name to the options it reads from
     ``api.options``. `on_error` (sync or async) receives a :class:`PluginFailure` for each
     plugin handler that fails; by default failures are logged.
+    `strict=True` rejects any loading diagnostics and closes resources on failure.
+    Self-checks and required capabilities are evaluated separately by `readiness()`.
     """
-    return PluginSet(sources, services=services, options=options, on_error=on_error)
+    return PluginSet(
+        sources,
+        services=services,
+        options=options,
+        on_error=on_error,
+        strict=strict,
+        mcp_callbacks=mcp_callbacks,
+    )
 
 
 def _printable(server: str, what: str, value: str) -> str:
@@ -832,9 +1123,11 @@ def _module_name(path: Path) -> str:
 def _from_path(path: Path) -> Plugin:
     path = path.expanduser().resolve()
     if path.is_dir():
+        requirements = _directory_requirements(path)
+        require_features(requirements, where=f"Plugin {path.name!r}")
         code = path / "plugin.py"
         if not code.is_file():
-            return Plugin(path.name, None, path, source=str(path))
+            return Plugin(path.name, None, path, source=str(path), requires=requirements)
         # The directory becomes a package, so plugin.py can import its neighbours
         # with relative imports (``from .ops import dedup``).
         package = _module_name(path)
@@ -847,7 +1140,14 @@ def _from_path(path: Path) -> Plugin:
         except Exception as exc:
             exc.add_note(f"while importing plugin {path.name!r} from {code}")
             raise
-        return Plugin(path.name, _setup_of(module, code), path, _version_of(module), str(path))
+        return Plugin(
+            path.name,
+            _setup_of(module, code),
+            path,
+            _version_of(module),
+            str(path),
+            _names((*requirements, *_requirements_of(module))),
+        )
     if path.is_file() and path.suffix == ".py":
         name = _module_name(path)
         loaded = sys.modules.get(name)
@@ -862,7 +1162,14 @@ def _from_path(path: Path) -> Plugin:
                 sys.modules.pop(name, None)
                 exc.add_note(f"while importing plugin {path.stem!r} from {path}")
                 raise
-        return Plugin(path.stem, _setup_of(loaded, path), None, _version_of(loaded), str(path))
+        return Plugin(
+            path.stem,
+            _setup_of(loaded, path),
+            None,
+            _version_of(loaded),
+            str(path),
+            _requirements_of(loaded),
+        )
     if not path.exists():
         raise ConfigurationError(f"Plugin path {path} does not exist")
     raise ConfigurationError(f"A plugin path must be a directory or a .py file: {path}")
@@ -878,6 +1185,25 @@ def _setup_of(module: ModuleType, where: Path | str) -> Callable[[PluginAPI], An
 def _version_of(module: ModuleType) -> str | None:
     version = getattr(module, "__version__", None)
     return version if isinstance(version, str) else None
+
+
+def _requirements_of(target: Any) -> tuple[str, ...]:
+    return _names(getattr(target, "__requires__", ()))
+
+
+def _directory_requirements(path: Path) -> tuple[str, ...]:
+    manifest = path / "pi-plugin.json"
+    if not manifest.exists():
+        return ()
+    try:
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+    except (ValueError, OSError) as exc:
+        raise ConfigurationError(f"Invalid plugin manifest: {manifest}") from exc
+    if not isinstance(data, dict) or set(data) - {"requires"}:
+        raise ConfigurationError(
+            f"Plugin manifest must be an object with only 'requires': {manifest}"
+        )
+    return _names(data.get("requires", ()))
 
 
 def _from_entry_point(name: str) -> Plugin:
@@ -911,9 +1237,9 @@ def _from_entry_point(name: str) -> Plugin:
         setup = getattr(target, "setup", None)
         if setup is None and package_dir is None:
             raise ConfigurationError(f"{source} has no setup(api) function and no directory")
-        return Plugin(name, setup, package_dir, version, source)
+        return Plugin(name, setup, package_dir, version, source, _requirements_of(target))
     if callable(target):
-        return Plugin(name, target, package_dir, version, source)
+        return Plugin(name, target, package_dir, version, source, _requirements_of(target))
     raise ConfigurationError(f"{source} is not a module, a setup function or a Plugin")
 
 

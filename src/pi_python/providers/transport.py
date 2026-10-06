@@ -19,6 +19,7 @@ import math
 import re
 from urllib.parse import quote
 from ..tools import invoke
+from ..tasks import _cancel, _finish, _join
 
 
 T = TypeVar("T")
@@ -71,7 +72,11 @@ async def error_body(response: Any, headers: Mapping[str, str]) -> str | None:
                 break
     except Exception:
         return None
-    text = data.decode("utf-8", "replace").strip()
+    return _safe_error_text(data.decode("utf-8", "replace").strip(), headers) or None
+
+
+def _safe_error_text(text: str, headers: Mapping[str, str]) -> str:
+    """One redaction and size policy for HTTP and in-stream provider failures."""
     for name, value in headers.items():
         if _CREDENTIAL_HEADER.search(name):
             for part in str(value).split():
@@ -83,7 +88,23 @@ async def error_body(response: Any, headers: Mapping[str, str]) -> str | None:
         text = (
             f"{text[:MAX_ERROR_BODY_CHARS]}... [truncated {len(text) - MAX_ERROR_BODY_CHARS} chars]"
         )
-    return text or None
+    return text
+
+
+def stream_error(event: Mapping[str, Any], headers: Mapping[str, str]) -> ProviderProtocolError:
+    """Keep recovery-relevant fields from each provider's error envelope."""
+    envelope = event.get("response") if event.get("type") == "response.failed" else event
+    error = envelope.get("error", envelope) if isinstance(envelope, Mapping) else None
+    if isinstance(error, Mapping):
+        fields = {
+            key: error[key]
+            for key in ("type", "code", "message")
+            if isinstance(error.get(key), str)
+        }
+        detail = json.dumps(fields, ensure_ascii=False) if fields else "Unknown provider error"
+    else:
+        detail = error if isinstance(error, str) else "Unknown provider error"
+    return ProviderProtocolError("Provider stream error: " + _safe_error_text(detail, headers))
 
 
 def retry_delay(headers: Mapping[str, str]) -> float | None:
@@ -110,10 +131,30 @@ async def cancellable(awaitable: Awaitable[T], cancel: CancelToken) -> T:
             raise asyncio.CancelledError(cancel.reason)
         return task.result()
     finally:
-        signal.cancel()
-        if not task.done():
-            task.cancel()
-        await asyncio.gather(task, signal, return_exceptions=True)
+        _cancel(signal)
+        _cancel(task)
+        await _join([task, signal])
+
+
+async def _acquire(awaitable: Awaitable[T], cancel: CancelToken, release: Callable[[T], Any]) -> T:
+    """Deliver an acquired resource, or release it before propagating cancellation.
+
+    Completing the acquisition is not ownership transfer: cancellation can win
+    while its result is already available. Cleanup owns that otherwise lost result.
+    """
+    task = asyncio.ensure_future(awaitable)
+    try:
+        return await cancellable(task, cancel)
+    except BaseException:
+
+        async def dispose() -> None:
+            _cancel(task)
+            await _join([task])
+            if not task.cancelled() and task.exception() is None:
+                await invoke(release, task.result())
+
+        await _finish(dispose())
+        raise
 
 
 async def sse_events(chunks: AsyncIterator[bytes]) -> AsyncGenerator[dict[str, Any], None]:
@@ -191,11 +232,14 @@ class HTTPTransport:
         max_retry_delay: float = 30,
         websocket_idle_ttl: float = 5 * 60,
         websocket_max_age: float = 55 * 60,
+        websocket_cache_size: int = 64,
     ) -> None:
         if type(max_retries) is not int or not 0 <= max_retries <= 10:
             raise ValueError("max_retries must be between 0 and 10")
         if retry_base < 0 or max_retry_delay < 0:
             raise ValueError("Retry delays must be nonnegative")
+        if type(websocket_cache_size) is not int or websocket_cache_size < 0:
+            raise ValueError("websocket_cache_size must be a nonnegative integer")
         self.client = client
         self.timeout = timeout
         self.max_retries = max_retries
@@ -203,9 +247,12 @@ class HTTPTransport:
         self.max_retry_delay = max_retry_delay
         self.websocket_idle_ttl = websocket_idle_ttl
         self.websocket_max_age = websocket_max_age
+        self.websocket_cache_size = websocket_cache_size
         self._clock = time.monotonic
         self._sockets: dict[tuple, CachedSocket] = {}
         self._socket_locks: dict[tuple, asyncio.Lock] = {}
+        self._socket_users: dict[tuple, int] = {}
+        self._socket_generation = 0
         self._stats = dict(
             http_attempts=0,
             http_retries=0,
@@ -222,9 +269,49 @@ class HTTPTransport:
         return dict(self._stats)
 
     async def aclose(self) -> None:
+        self._socket_generation += 1
         sockets, self._sockets = self._sockets, {}
-        await asyncio.gather(*(entry.socket.close() for entry in sockets.values()))
-        self._socket_locks.clear()
+        await self._close_sockets(list(sockets.values()))
+
+    async def _close_sockets(self, entries: list[CachedSocket]) -> None:
+        for entry in entries:
+            entry.continuation = None
+        tasks = [asyncio.ensure_future(entry.socket.close()) for entry in entries]
+        await _join(tasks)
+        for task in tasks:
+            task.result()
+
+    async def _prune_sockets(self) -> None:
+        # Only idle sockets live in this map. Remove before awaiting closes, so
+        # concurrent requests cannot acquire a socket being retired.
+        retired = []
+        for key, entry in list(self._sockets.items()):
+            if not self._reusable(entry):
+                retired.append(self._sockets.pop(key))
+                self._stats["websocket_expired"] += 1
+        while len(self._sockets) > self.websocket_cache_size:
+            retired.append(self._sockets.pop(next(iter(self._sockets))))
+        if retired:
+            await self._close_sockets(retired)
+
+    @asynccontextmanager
+    async def _socket_lock(self, key: tuple | None, cancel: CancelToken) -> AsyncIterator[None]:
+        lock = self._socket_locks.setdefault(key, asyncio.Lock()) if key else asyncio.Lock()
+        if key is not None:
+            self._socket_users[key] = self._socket_users.get(key, 0) + 1
+        try:
+            await _acquire(lock.acquire(), cancel, lambda acquired: lock.release())
+            try:
+                cancel.raise_if_cancelled()
+                yield
+            finally:
+                lock.release()
+        finally:
+            if key is not None:
+                self._socket_users[key] -= 1
+                if not self._socket_users[key]:
+                    del self._socket_users[key]
+                    del self._socket_locks[key]
 
     async def __aenter__(self) -> HTTPTransport:
         return self
@@ -288,7 +375,9 @@ class HTTPTransport:
                 request = client.build_request("POST", url, headers=headers, json=body)
                 # A network exception may follow server acceptance. Never replay it.
                 self._stats["http_attempts"] += 1
-                response = await cancellable(client.send(request, stream=True), cancel)
+                response = await _acquire(
+                    client.send(request, stream=True), cancel, lambda response: response.aclose()
+                )
                 try:
                     await invoke(
                         on_response,
@@ -303,9 +392,9 @@ class HTTPTransport:
                         body=await cancellable(error_body(response, headers), cancel),
                     )
                 except BaseException:
-                    await response.aclose()
+                    await _finish(response.aclose())
                     raise
-                await response.aclose()
+                await _finish(response.aclose())
                 if not error.retryable or attempt == self.max_retries:
                     raise error
                 delay = (
@@ -327,7 +416,7 @@ class HTTPTransport:
                         break
                     yield event
             finally:
-                await response.aclose()
+                await _finish(response.aclose())
 
     async def responses(
         self,
@@ -400,124 +489,137 @@ class HTTPTransport:
             session_id,
             hashlib.sha256(json.dumps(headers, sort_keys=True).encode()).hexdigest(),
         )
-        lock = self._socket_locks.setdefault(key, asyncio.Lock()) if session_id else asyncio.Lock()
-        await cancellable(lock.acquire(), cancel)
-        entry: CachedSocket | None = None
-        complete = False
-        retried: set[str] = set()
-        try:
-            while True:
-                entry = self._sockets.pop(key, None) if session_id else None
-                if entry is not None and not self._reusable(entry):
-                    self._stats["websocket_expired"] += 1
-                    await entry.socket.close()
-                    entry = None
-                if entry is not None:
-                    self._stats["websocket_reuses"] += 1
-                else:
-                    try:
-                        socket = await cancellable(
-                            connect(
-                                endpoint,
-                                additional_headers={
-                                    **headers,
-                                    "OpenAI-Beta": "responses_websockets=2026-02-06",
-                                },
-                                open_timeout=30,
-                                max_size=16 * 1024 * 1024,
-                                **no_proxy,
-                            ),
-                            cancel,
-                        )
-                        self._stats["websocket_connects"] += 1
-                    except (
-                        OSError,
-                        TimeoutError,
-                        InvalidHandshake,
-                    ):
-                        if not fallback:
-                            raise
-                        self._stats["websocket_fallbacks"] += 1
-                        # No response.create has been sent, so SSE fallback is safe.
-                        events = self.stream(url, body, headers, cancel, on_response=on_response)
-                        try:
-                            async for event in events:
-                                yield event
-                        finally:
-                            await events.aclose()
-                        return
-                    entry = CachedSocket(socket, self._clock(), self._clock())
-                await invoke(
-                    on_response,
-                    {"status": 101, "headers": dict(entry.socket.response.headers.raw_items())},
-                )
-                # A continuation is consumed here; the provider restores one only after a
-                # complete response, so any failure falls back to the full context.
-                state, entry.continuation = entry.continuation, None
-                sent = continued_body(body, state) if link is not None else None
-                if sent is not None:
-                    self._stats["websocket_delta_requests"] += 1
-                if link is not None:
-                    link.entry = entry
-                await cancellable(
-                    entry.socket.send(
-                        json.dumps(
-                            {
-                                "type": "response.create",
-                                **{k: v for k, v in (sent or body).items() if k != "stream"},
-                            }
-                        )
-                    ),
-                    cancel,
-                )
-                output = False
-                retry = None
+        await self._prune_sockets()
+        async with self._socket_lock(key if session_id else None, cancel):
+            entry: CachedSocket | None = None
+            complete = False
+            retried: set[str] = set()
+            generation = self._socket_generation
+            try:
                 while True:
-                    raw = await cancellable(entry.socket.recv(), cancel)
-                    event = json.loads(raw)
-                    if not isinstance(event, dict):
-                        raise ProviderProtocolError("WebSocket event must be an object")
-                    code = error_code(event)
-                    # Rejected before any model output: Pi retries once with the full
-                    # context on a fresh connection. Nothing was generated, so this
-                    # cannot duplicate a response.
-                    if not output and code in _RETRYABLE_WEBSOCKET_CODES and code not in retried:
-                        if code != "previous_response_not_found" or sent is not None:
-                            retry = code
-                            break
-                    output = output or str(event.get("type", "")).startswith(
-                        ("response.output", "response.content_part", "response.reasoning")
+                    entry = self._sockets.pop(key, None) if session_id else None
+                    if entry is not None and not self._reusable(entry):
+                        self._stats["websocket_expired"] += 1
+                        await _finish(entry.socket.close())
+                        entry = None
+                    if entry is not None:
+                        self._stats["websocket_reuses"] += 1
+                    else:
+                        try:
+                            socket = await _acquire(
+                                connect(
+                                    endpoint,
+                                    additional_headers={
+                                        **headers,
+                                        "OpenAI-Beta": "responses_websockets=2026-02-06",
+                                    },
+                                    open_timeout=30,
+                                    max_size=16 * 1024 * 1024,
+                                    **no_proxy,
+                                ),
+                                cancel,
+                                lambda socket: socket.close(),
+                            )
+                            self._stats["websocket_connects"] += 1
+                        except (
+                            OSError,
+                            TimeoutError,
+                            InvalidHandshake,
+                        ):
+                            if not fallback:
+                                raise
+                            self._stats["websocket_fallbacks"] += 1
+                            # No response.create has been sent, so SSE fallback is safe.
+                            events = self.stream(
+                                url, body, headers, cancel, on_response=on_response
+                            )
+                            try:
+                                async for event in events:
+                                    yield event
+                            finally:
+                                await events.aclose()
+                            return
+                        entry = CachedSocket(socket, self._clock(), self._clock())
+                    await invoke(
+                        on_response,
+                        {"status": 101, "headers": dict(entry.socket.response.headers.raw_items())},
                     )
-                    terminal = event.get("type") in {
-                        "response.completed",
-                        "response.done",
-                        "response.failed",
-                        "response.incomplete",
-                        "error",
-                    }
-                    # A response cut at the output limit still ends cleanly (Pi keeps it).
-                    complete = event.get("type") in {
-                        "response.completed",
-                        "response.done",
-                        "response.incomplete",
-                    }
-                    yield event
-                    if terminal:
+                    # A continuation is consumed here; the provider restores one only after a
+                    # complete response, so any failure falls back to the full context.
+                    state, entry.continuation = entry.continuation, None
+                    sent = continued_body(body, state) if link is not None else None
+                    if sent is not None:
+                        self._stats["websocket_delta_requests"] += 1
+                    if link is not None:
+                        link.entry = entry
+                    await cancellable(
+                        entry.socket.send(
+                            json.dumps(
+                                {
+                                    "type": "response.create",
+                                    **{k: v for k, v in (sent or body).items() if k != "stream"},
+                                }
+                            )
+                        ),
+                        cancel,
+                    )
+                    output = False
+                    retry = None
+                    while True:
+                        raw = await cancellable(entry.socket.recv(), cancel)
+                        event = json.loads(raw)
+                        if not isinstance(event, dict):
+                            raise ProviderProtocolError("WebSocket event must be an object")
+                        code = error_code(event)
+                        # Rejected before any model output: Pi retries once with the full
+                        # context on a fresh connection. Nothing was generated, so this
+                        # cannot duplicate a response.
+                        if (
+                            not output
+                            and code in _RETRYABLE_WEBSOCKET_CODES
+                            and code not in retried
+                        ):
+                            if code != "previous_response_not_found" or sent is not None:
+                                retry = code
+                                break
+                        output = output or str(event.get("type", "")).startswith(
+                            ("response.output", "response.content_part", "response.reasoning")
+                        )
+                        terminal = event.get("type") in {
+                            "response.completed",
+                            "response.done",
+                            "response.failed",
+                            "response.incomplete",
+                            "error",
+                        }
+                        # A response cut at the output limit still ends cleanly (Pi keeps it).
+                        complete = event.get("type") in {
+                            "response.completed",
+                            "response.done",
+                            "response.incomplete",
+                        }
+                        yield event
+                        if terminal:
+                            break
+                    if retry is None:
                         break
-                if retry is None:
-                    break
-                retried.add(retry)
-                self._stats["websocket_retries"] += 1
-                await entry.socket.close()
-                entry = None
-        finally:
-            if entry is not None:
-                if session_id and complete and not cancel.cancelled:
-                    entry.released = self._clock()
-                    self._sockets[key] = entry
-                else:
-                    await entry.socket.close()
-            lock.release()
+                    retried.add(retry)
+                    self._stats["websocket_retries"] += 1
+                    await _finish(entry.socket.close())
+                    entry = None
+            finally:
+                if entry is not None:
+                    if (
+                        session_id
+                        and complete
+                        and not cancel.cancelled
+                        and generation == self._socket_generation
+                    ):
+                        entry.released = self._clock()
+                        self._sockets[key] = entry
+                        await self._prune_sockets()
+                    else:
+                        await _finish(entry.socket.close())
 
 
 _RETRYABLE_WEBSOCKET_CODES = {"previous_response_not_found", "websocket_connection_limit_reached"}

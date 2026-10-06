@@ -1,6 +1,7 @@
 """A small stdio MCP server for tests; works with the MCP SDK 1.x (FastMCP) and 2.x (MCPServer)."""
 
 import base64
+import json
 
 try:
     from mcp.server.mcpserver import Context, Image, MCPServer as Server
@@ -30,6 +31,21 @@ async def count(steps: int, ctx: Context) -> str:
     for step in range(1, steps + 1):
         await ctx.report_progress(step, steps, f"step {step}")
     return f"counted {steps}"
+
+
+@server.tool()
+async def metadata(value: str, ctx: Context) -> str:
+    """Echo the request metadata separately from the tool arguments."""
+    await ctx.report_progress(1, 1, "metadata received")
+    meta = ctx.request_context.meta
+    if hasattr(meta, "model_dump"):  # SDK 1.x uses a model; SDK 2.x uses a dict.
+        meta = meta.model_dump(by_alias=True, exclude_none=True)
+    return json.dumps(
+        {
+            "arguments": {"value": value},
+            "meta": meta or {},
+        }
+    )
 
 
 @server.tool(name="pixel.png")

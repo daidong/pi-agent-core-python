@@ -2,6 +2,8 @@
 
 [English](../PLUGINS.md) | **中文**
 
+需要完整的起步包、离线验证和 wheel 安装步骤时，先读[插件开发流程](PLUGIN_DEVELOPMENT.md)。
+
 插件是给 agent 的一组附加内容，打包成一个有名字的单元：工具、写进系统提示的说明、钩子、技能、提示模板、子 agent 和 MCP 服务器。打包成插件后，可以用 pip 安装，可以在几个项目之间共用，也可以整组打开或关掉。插件不会让 agent 获得原本没有的能力。它只是把你本来要手工写进 `Agent(...)` 的工具、系统提示和钩子组装好，agent 的执行循环本身不变。
 
 格式沿用 Pi 的 package。Pi 的一个 package 对应这里的一个插件，package 里的 TypeScript 扩展代码对应插件的 Python `setup` 函数。技能、提示模板和子 agent 定义用的是和 Pi 相同的 Markdown 文件，大多可以直接拷过来用。
@@ -37,6 +39,10 @@ async with load_plugins(
 | `Plugin` 对象 | `Plugin("audit", setup)` | 你在自己代码里定义的插件 |
 
 字符串以 `.` 或 `~` 开头、含有斜杠或以 `.py` 结尾时，按路径处理。插件按给出的顺序加载。打开插件集时，依次运行每个插件的 setup，并连接它们的 MCP 服务器；关闭时断开服务器，并运行插件登记的清理。
+
+并发关闭会等待同一个清理任务；调用方被取消时，先完成清理，再抛出取消异常。回调按注册的逆序执行一次；关闭开始后不再允许组装新的 Agent 或配置。清理回调需要自行结束，框架不隐式设置关闭期限。
+
+启动是一个完整事务：setup 失败、被取消，或警告被提升为异常时，都会释放已注册的资源。启动期间关闭时，先取消并等待 setup（包括其 `finally` 块）退出，再释放资源；关闭后不能重新打开。setup 和清理回调不能关闭其所属插件集。清理回调或其错误报告回调抛出的取消异常，会在剩余清理回调执行后再传播。
 
 `plugins.agent(...)` 接受和 `Agent` 相同的参数，返回的 Agent 把你的配置和插件的贡献合在一起：
 
@@ -193,6 +199,8 @@ You check deduplication results. Report the number only.
 
 每个任务都新建一个 Agent，有自己的历史，主对话只看到回答。每次子 agent 运行都带着主 agent 的 `RunLimits`，例如 `max_model_requests`；和 Pi 一样，接力的步数不设上限，所以不可信的文字可能进入模型时，请设好上限。它们的 token 用量加到工具结果的 `usage` 里，每个任务的明细放在 `details` 里。取消主 agent 会中止它的子 agent。Pi 为每个子 agent 启动一个单独的进程；这里子 agent 是同一事件循环里的一个 Agent。
 
+内置子 Agent 工具的三种方式都使用 `ToolContext.run_agent`。外部操作结果未知时，父 Agent 停止并要求人工核对，不会把它降级成普通任务失败。取消或清理超时后，尚未结束的后代任务仍被追踪；这些工作真正结束前，父 Agent 不会报告清理完成，也不能复用。普通子 Agent 失败仍按上述单个、并行和接力规则处理。
+
 ## MCP 服务器
 
 `mcp.json` 的格式和 Pi 以及其他 MCP 客户端相同：
@@ -209,6 +217,72 @@ You check deduplication results. Report the number only.
 写了 `command` 的服务器通过 stdio 启动，可以带 `args`、`env`、`cwd`。写了 `url` 的服务器通过 streamable HTTP 连接，可以带 `headers`。这些字符串里，`${PLUGIN_ROOT}` 是插件目录，`${PYTHON}` 是当前运行的 Python 解释器，其他 `${名字}` 是环境变量。`enabled: false` 保留这一项但不连接。工具名是 `mcp__<服务器>__<工具>`。取自环境变量的值在警告里显示为 `***`；header 或 URL 里含有控制字符时（例如粘贴的 token 末尾多了换行）会被拒绝。HTTP 服务器可以在同一源（协议、主机、端口相同）内重定向；重定向到其他源时不跟随，所以 header 不会被发到那里。
 
 `mcp.json` 里写错的一项，例如用了没有设置的环境变量，会被跳过并给出警告；同样的错误出现在 `add_mcp_server` 里时，会报 `ConfigurationError`。启动或连接失败的服务器也会被跳过并给出警告，其他内容照常加载。本库不支持的设置，如 `timeout`、`exposure`、`oauth`，会被忽略并给出警告；超时请用 `RunLimits(tool_timeout=...)`。和 Pi 一样，不接受 SSE 传输方式。使用 MCP 需要 `pip install 'pi-python-core[mcp]'`。不用插件时，`pi_python.mcp.connect_http(url, headers=...)` 连接 HTTP 服务器，用法和启动本地服务器的 `connect_stdio` 一样。
+
+在 POSIX 系统上，stdio 配置还接受 `"process_scope": true`，适用于 `mcp.json`
+和 `api.add_mcp_server`。连接关闭时会清理残留进程组及继承归属的嵌套 pi-python
+stdio 连接。该字段必须是布尔值，HTTP 配置不接受它。
+取消行为和平台限制见 [进程归属](MCP_INTERACTION.md)。
+
+两种传输方式都支持 `call_metadata`。它是一个 JSON 对象，作为 MCP 工具请求的
+`_meta` 发送，不会进入工具 schema 或模型填写的参数。运行上下文通过插件 options 传入：
+
+```python
+def setup(api):
+    api.add_mcp_server("sandbox", {
+        "url": api.options["url"],
+        "call_metadata": {"context_id": api.options["context_id"]},
+    })
+```
+
+应用向 `load_plugins` 传入 `options={"sandbox-plugin": {"url": sandbox_url, "context_id": task_id}}`。
+注册服务器时保存元数据副本，每次调用再独立复制。字符串原样保留，不展开环境变量。
+框架不解释 `context_id`。不同任务上下文应分别加载插件集；注册后修改 options
+不会改变已有连接的上下文。`mcp.json` 也接受同名字段。不使用插件时，向
+`connect_stdio`、`connect_http` 或 `mcp_tools` 传入 `call_metadata` 即可。
+进度标识和通知仍由 SDK 管理。如果 SDK 的 `ClientSession.call_tool` 不支持 `meta`，
+配置元数据（包括空字典 `{}`）会抛出 `ConfigurationError` 并终止加载。
+未配置元数据时仍兼容旧 SDK。
+
+## 严格加载与就绪检查
+
+MCP 服务还可以请求宿主模型和用户表单。宿主通过
+`load_plugins(..., mcp_callbacks={(插件名, 服务名): MCPCallbacks(...)})` 授权。
+服务 JSON 可以声明 `required_capabilities`，但不能放回调对象或自行获得能力。
+详见 [MCP 交互](MCP_INTERACTION.md#插件授权和就绪检查)。
+
+`load_plugins(..., strict=True)` 将任何加载诊断视为失败，包括插件资源被跳过、
+配置项不受支持，以及 MCP 连接失败。失败时抛出 `ConfigurationError`，
+关闭已启动的连接并执行插件的资源清理。默认仍允许带警告加载。
+严格加载不会自动运行自检，也不会猜测应用需要哪些能力。
+
+使用 `readiness()` 执行已登记的自检，并核对明确要求的能力：
+
+```python
+async with load_plugins(["sandbox-plugin"], options=options, strict=True) as plugins:
+    status = await plugins.readiness(
+        required_tools=["mcp__sandbox__execute"],
+        required_skills=["sandbox-rules"],
+        required_mcp_servers=["sandbox"],
+        required_checks=[("sandbox-plugin", "health")],
+    )
+    status.require_ready()  # 不满足要求时，抛出 ConfigurationError 并列出原因
+    agent = plugins.agent(provider=provider)
+```
+
+返回的 `ReadinessResult` 分别记录是否已加载（`loaded`）、缺少的工具/技能/MCP 服务、
+缺少的自检，以及实际执行的自检结果。自检用 `(插件名, 自检名)` 标识。
+与 `all(c.passed for c in await plugins.check())` 不同，要求的自检没有登记时，
+`ready` 为假。如果没有要求任何自检，空自检列表可以通过；已登记的自检仍全部执行，
+任何一项失败都会使 `ready` 为假。
+
+工具要求检查插件提供的工具，包括自动生成的 `read_skill` 和 `subagent`，不包括后来
+另外传给 `Agent` 的工具。MCP 服务必须当前已连接；被禁用或连接失败的配置不算存在。
+每次 `readiness()` 都会并发 ping MCP 会话，每个服务最多等待 `mcp_timeout` 秒（默认 5 秒）。
+失败或超时的服务及其能力不计入本次快照；后续 ping 成功时恢复可用状态。
+这是检查时的快照，不是持续监控；ping 只验证协议响应，业务功能仍须登记相应自检。
+宽松模式下，诊断信息会随结果返回，但本身不会使就绪检查失败。
+在上下文管理器内部调用 `require_ready()`，失败退出时会关闭资源。
+插件集打开前或关闭后，`loaded` 和 `ready` 都为假。
 
 ## 多个插件处理同一个钩子
 
@@ -237,3 +311,27 @@ Pi 的命令行程序负责查找和加载 package；本库没有应用程序，
 - MCP 服务器不支持 OAuth、工具暴露模式、单次请求超时和 `!命令` 形式的值。
 
 逐项对照见 [验收映射](../../compat/COVERAGE.md)。完整的插件示例在 [examples/plugins/lab_tools](../../examples/plugins/lab_tools)，[examples/plugin_demo.py](../../examples/plugin_demo.py) 可以离线运行它。
+
+
+## 声明框架能力要求
+
+目录插件可以添加 `pi-plugin.json`：
+
+```json
+{"requires": ["plugin-requires-v1", "task-scope-v1", "loop-portal-v1"]}
+```
+
+加载器在导入 `plugin.py` 前检查此文件。能力不足时会在插件导入和初始化前拒绝加载。
+文件只接受 `requires` 字段，值为非空字符串集合。严格或普通加载都会拒绝未知能力。
+不声明要求的旧插件仍可加载。
+
+代码插件可以写 `Plugin("example", setup, requires=("task-scope-v1",))`。
+单个 Python 文件、入口点模块或函数可以声明 `__requires__`。
+这些 Python 声明在导入后、任何插件初始化前检查；需要导入前检查时使用目录声明。
+根目录声明与 Python 声明会合并，归一化结果保存在 `Plugin.requires`。
+旧框架可能忽略声明文件，因此安装约束仍应选择提供 `plugin-requires-v1` 的构建。
+
+`api.task_scope()` 创建任务作用域并自动注册关闭回调。
+先注册任务依赖资源的关闭回调，再创建作用域，因为关闭按注册顺序逆序执行。
+不要在受管任务中关闭插件。作用域不取得宿主 Provider 或事件循环的所有权。
+具体调用方式见 [API 文档](API.md)。

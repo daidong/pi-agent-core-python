@@ -1,3 +1,5 @@
+import asyncio
+import os
 import sys
 from pathlib import Path
 from types import SimpleNamespace as NS
@@ -8,6 +10,16 @@ from pi_python.mcp import connect_stdio, mcp_tools
 
 SERVER = Path(__file__).parent / "servers" / "mcp_server.py"
 PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+
+
+@pytest.mark.parametrize("sdk_version", ["1.10.0", "1.30.0", "2.2.0", "3.0.0"])
+async def test_interactive_sdk_requirement_is_explicit(monkeypatch, sdk_version):
+    import pi_python._mcp_interaction as interaction
+    from pi_python.mcp import MCPCallbacks
+
+    monkeypatch.setattr(interaction, "version", lambda package: sdk_version)
+    with pytest.raises(ConfigurationError, match="SDK >=2.3,<3"):
+        interaction._Interaction(MCPCallbacks(), "server", None)
 
 
 class FakeSession:
@@ -45,6 +57,49 @@ def spec(name, schema=None, camel=False, **extra):
     return NS(
         name=name, description=extra.get("description"), title=extra.get("title"), **{key: schema}
     )
+
+
+async def test_call_metadata_is_private_and_isolated_per_wrapper_and_call():
+    class Session(FakeSession):
+        async def call_tool(self, name, arguments=None, progress_callback=None, *, meta=None):
+            original = meta["nested"]["context_id"]
+            meta["nested"]["context_id"] = "changed by SDK"
+            await asyncio.sleep(0)
+            await progress_callback(1, 1, original)
+            return NS(content=[NS(type="text", text=original)])
+
+    schema = {"type": "object", "properties": {"q": {"type": "string"}}}
+    session = Session([spec("echo", schema)], {})
+    metadata = {"nested": {"context_id": "first"}}
+    (first,) = await mcp_tools(session, call_metadata=metadata)
+    metadata["nested"]["context_id"] = "second"
+    (second,) = await mcp_tools(session, call_metadata=metadata)
+    updates = []
+
+    async def emit(value):
+        updates.append(value)
+
+    context = ToolContext("run", "c", CancelToken(), emit)
+    results = await asyncio.gather(
+        *(t.execute({"q": "x"}, context) for t in (first, second, first, second))
+    )
+    assert [r.content[0].text for r in results] == ["first", "second", "first", "second"]
+    assert first.input_schema == second.input_schema == schema
+    assert metadata == {"nested": {"context_id": "second"}}
+    assert len(updates) == 4
+
+
+@pytest.mark.parametrize("metadata", [{}, {"context_id": "private"}])
+async def test_old_sdk_rejects_metadata_at_registration(metadata):
+    session = FakeSession([spec("echo")], {})
+    with pytest.raises(ConfigurationError, match=r"call_metadata.*call_tool.*meta"):
+        await mcp_tools(session, call_metadata=metadata)
+
+
+@pytest.mark.parametrize("metadata", [[], "bad", {"bad": object()}, {"bad": float("nan")}])
+async def test_call_metadata_must_be_a_json_object(metadata):
+    with pytest.raises(ConfigurationError, match="call_metadata.*JSON"):
+        await mcp_tools(FakeSession([], {}), call_metadata=metadata)
 
 
 @pytest.mark.parametrize("camel", [False, True], ids=["sdk2", "sdk1"])
@@ -144,11 +199,22 @@ async def test_failures_and_input_requests_become_error_results():
     assert asked.is_error and "asked for input" in asked.content[0].text
 
 
-async def test_stdio_server_tools_run_through_the_agent():
+@pytest.mark.parametrize("process_scope", [False, True])
+async def test_stdio_server_tools_run_through_the_agent(process_scope):
     pytest.importorskip("mcp")
-    async with connect_stdio(sys.executable, [str(SERVER)], prefix="demo") as tools:
+    if process_scope and os.name != "posix":
+        pytest.skip("POSIX process ownership")
+    async with connect_stdio(
+        sys.executable, [str(SERVER)], prefix="demo", process_scope=process_scope
+    ) as tools:
         by_name = {t.name: t for t in tools}
-        assert sorted(by_name) == ["demo_add", "demo_count", "demo_fail", "demo_pixel_png"]
+        assert sorted(by_name) == [
+            "demo_add",
+            "demo_count",
+            "demo_fail",
+            "demo_metadata",
+            "demo_pixel_png",
+        ]
         assert by_name["demo_add"].description == "Add two integers."
         calls = [
             ToolCall("c1", "demo_add", {"a": 2, "b": 3}),

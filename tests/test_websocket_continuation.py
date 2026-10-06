@@ -215,3 +215,145 @@ async def test_cache_retention_none_uses_one_shot_sockets():
         assert not transport._sockets
     assert server.connections == 2
     assert all("previous_response_id" not in r for _, r in server.requests)
+
+
+async def test_cancellation_at_lock_handoff_does_not_block_the_session():
+    import asyncio
+    import hashlib
+    import pytest
+
+    async with Server(lambda n, r: text_turn(f"resp_{n}")) as server, HTTPTransport() as transport:
+        headers = {}
+        key = (
+            server.url.replace("http://", "ws://"),
+            "race",
+            hashlib.sha256(json.dumps(headers, sort_keys=True).encode()).hexdigest(),
+        )
+        lock = asyncio.Lock()
+        await lock.acquire()
+        transport._socket_locks[key] = lock
+        cancel = CancelToken()
+        stream = transport.websocket(server.url, {}, headers, cancel, session_id="race")
+        waiter = asyncio.create_task(anext(stream))
+        for _ in range(10):
+            await asyncio.sleep(0)
+        lock.release()
+        cancel.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await waiter
+        await stream.aclose()
+        assert not lock.locked()
+        async with asyncio.timeout(2):
+            events = [
+                e
+                async for e in transport.websocket(
+                    server.url, {}, headers, CancelToken(), session_id="race"
+                )
+            ]
+        assert events[-1]["type"] == "response.completed"
+
+
+async def test_new_sessions_reclaim_expired_cached_connections():
+    now = [0.0]
+    async with (
+        Server(lambda n, r: text_turn(f"resp_{n}")) as server,
+        HTTPTransport(
+            websocket_idle_ttl=1,
+        ) as transport,
+    ):
+        transport._clock = lambda: now[0]
+        previous = None
+        for index in range(5):
+            events = [
+                e
+                async for e in transport.websocket(
+                    server.url, {}, {}, CancelToken(), session_id=str(index)
+                )
+            ]
+            assert events[-1]["type"] == "response.completed"
+            if previous is not None:
+                assert previous.state.name == "CLOSED"
+            assert len(transport._sockets) == 1
+            assert not transport._socket_locks
+            previous = next(iter(transport._sockets.values())).socket
+            now[0] += 2
+
+
+async def test_websocket_cache_capacity_evicts_oldest_idle_connection():
+    async with (
+        Server(lambda n, r: text_turn(f"resp_{n}")) as server,
+        HTTPTransport(
+            websocket_cache_size=2,
+        ) as transport,
+    ):
+        sockets = []
+        for index in range(3):
+            async for _ in transport.websocket(
+                server.url, {}, {}, CancelToken(), session_id=str(index)
+            ):
+                pass
+            sockets.append(list(transport._sockets.values())[-1].socket)
+        assert len(transport._sockets) == 2
+        assert sockets[0].state.name == "CLOSED"
+        assert all(s.state.name == "OPEN" for s in sockets[1:])
+
+
+async def test_cancelled_waiter_keeps_the_lock_for_other_requests():
+    import asyncio
+    import pytest
+
+    async with Server(lambda n, r: text_turn(f"resp_{n}")) as server, HTTPTransport() as transport:
+        first = transport.websocket(server.url, {}, {}, CancelToken(), session_id="shared")
+        await anext(first)  # Keep the response stream open, holding the session lock.
+        cancelled = CancelToken()
+
+        async def consume(token):
+            return [
+                e async for e in transport.websocket(server.url, {}, {}, token, session_id="shared")
+            ]
+
+        second = asyncio.create_task(consume(cancelled))
+        third = asyncio.create_task(consume(CancelToken()))
+        try:
+            async with asyncio.timeout(2):
+                while sum(transport._socket_users.values()) != 3:
+                    await asyncio.sleep(0)
+                cancelled.cancel()
+                with pytest.raises(asyncio.CancelledError):
+                    await second
+                assert not third.done()
+                assert server.connections == 1
+                await first.aclose()
+                result = await third
+            assert result[-1]["type"] == "response.completed"
+            assert not transport._socket_locks
+        finally:
+            await first.aclose()
+            for task in (second, third):
+                task.cancel()
+            await asyncio.gather(second, third, return_exceptions=True)
+
+
+async def test_transport_close_does_not_recache_an_inflight_response():
+    async with Server(lambda n, r: [{"type": "response.completed"}]) as server:
+        transport = HTTPTransport()
+        stream = transport.websocket(server.url, {}, {}, CancelToken(), session_id="active")
+        await anext(stream)
+        await transport.aclose()
+        await stream.aclose()
+        assert not transport._sockets
+        assert not transport._socket_locks
+
+
+async def test_zero_websocket_cache_size_disables_retention():
+    async with (
+        Server(lambda n, r: text_turn(f"resp_{n}")) as server,
+        HTTPTransport(
+            websocket_cache_size=0,
+        ) as transport,
+    ):
+        for _ in range(2):
+            async for _ in transport.websocket(server.url, {}, {}, CancelToken(), session_id="s"):
+                pass
+            assert not transport._sockets
+        assert server.connections == 2

@@ -2,6 +2,9 @@
 
 **English** | [中文](zh/PLUGINS.md)
 
+For a complete starter package with an offline test and wheel installation steps,
+follow the [plugin development workflow](PLUGIN_DEVELOPMENT.md).
+
 A plugin is a named bundle of additions to an agent: tools, instructions for the system prompt, hooks, skills, prompt templates, subagents and MCP servers. Packing them into a plugin lets you install them with pip, share them between projects, and switch them on or off as a unit. A plugin gives the agent nothing it could not do before. It assembles the tools, system prompt and hooks that you would otherwise wire into `Agent(...)` by hand, and the agent loop itself is unchanged.
 
 The format follows Pi's packages. A Pi package corresponds to a plugin here, and the TypeScript extension code inside a Pi package corresponds to the plugin's Python `setup` function. Skills, prompt templates and subagent definitions are the same Markdown files Pi uses, so most of them can be copied over unchanged.
@@ -37,6 +40,10 @@ Each source is one of these:
 | A `Plugin` object | `Plugin("audit", setup)` | A plugin defined in your own code |
 
 A string counts as a path when it starts with `.` or `~`, contains a slash, or ends in `.py`. Plugins load in the order given. Opening the set runs each plugin's setup and connects its MCP servers. Closing it disconnects the servers and runs the plugins' cleanup.
+
+Concurrent close calls share one cleanup task. Cancellation of a waiting caller is propagated only after cleanup finishes; callbacks run once in reverse registration order. A closing set rejects new agent/configuration assembly. Cleanup callbacks must cooperate and finish; no implicit shutdown deadline is imposed.
+
+Startup is transactional: setup failure, cancellation, or a warning promoted to an error releases registered resources. Closing during startup first cancels and joins setup, including its `finally` blocks, before releasing resources. The set cannot reopen after closing. A setup or cleanup callback cannot close its own set. Cancellation from a cleanup callback or its error reporter is propagated after the remaining cleanup callbacks run.
 
 `plugins.agent(...)` takes the same arguments as `Agent` and returns an Agent that combines yours with the plugins':
 
@@ -193,6 +200,13 @@ The main agent sees a single `subagent` tool. Its description lists the availabl
 
 Each task runs a fresh Agent with its own history, so the main conversation sees only the answers. Each subagent run has the main agent's `RunLimits`, such as `max_model_requests`; a chain has no step limit, as in Pi, so set limits when untrusted text can reach the model. Their token usage is added to the tool result's `usage`, and each task's details go in `details`. Cancelling the main agent aborts its subagents. Pi runs each subagent as a separate process; here a subagent is an Agent in the same event loop.
 
+The built-in subagent tool uses `ToolContext.run_agent` in all three modes. An
+unknown external outcome stops the parent and requires reconciliation; it is not
+converted to an ordinary task failure. Unfinished descendant work remains owned
+after cancellation or a cleanup timeout. The parent cannot report cleanup complete
+or become reusable until that work actually finishes. Normal subagent failures
+still follow the single, parallel, and chain behavior described above.
+
 ## MCP servers
 
 `mcp.json` uses the same format as Pi and other MCP clients:
@@ -209,6 +223,77 @@ Each task runs a fresh Agent with its own history, so the main conversation sees
 A server with a `command` is started over stdio, with optional `args`, `env` and `cwd`. A server with a `url` is reached over streamable HTTP, with optional `headers`. In these strings, `${PLUGIN_ROOT}` is the plugin directory and `${PYTHON}` is the running Python interpreter; any other `${NAME}` is an environment variable. `enabled: false` keeps an entry without connecting it. Tools are named `mcp__<server>__<tool>`. Values taken from environment variables are masked as `***` in warnings, and a header or URL containing a control character, such as the trailing newline of a pasted token, is rejected. An HTTP server may redirect within its own origin; a redirect to another origin is not followed, so headers are never sent there.
 
 An invalid entry in `mcp.json`, such as one that uses an unset variable, is skipped with a warning; the same mistake in `add_mcp_server` raises `ConfigurationError`. A server that fails to start or connect is also skipped with a warning, and everything else still loads. Settings this library does not support, such as `timeout`, `exposure` and `oauth`, are ignored with a warning; use `RunLimits(tool_timeout=...)` for timeouts. The SSE transport is rejected, as in Pi. MCP needs `pip install 'pi-python-core[mcp]'`. Outside plugins, `pi_python.mcp.connect_http(url, headers=...)` connects to an HTTP server the same way `connect_stdio` starts a local one.
+
+Stdio entries also accept `"process_scope": true` on POSIX. This applies to both
+`mcp.json` and `api.add_mcp_server`: the connection owns surviving process groups
+and inherited nested pi-python stdio connections until it closes. The value must be
+a boolean and is not accepted for HTTP. See [process ownership](MCP_INTERACTION.md)
+for cancellation behavior and platform limits.
+
+Both transports accept `call_metadata`, a JSON object sent as the MCP tool request's
+`_meta`, separate from the tool schema and model arguments. Supply runtime values
+through plugin options:
+
+```python
+def setup(api):
+    api.add_mcp_server("sandbox", {
+        "url": api.options["url"],
+        "call_metadata": {"context_id": api.options["context_id"]},
+    })
+```
+
+The application passes `options={"sandbox-plugin": {"url": sandbox_url, "context_id": task_id}}`
+to `load_plugins`. Metadata is copied at registration and for every call. Strings stay
+literal, without environment expansion. The framework does not interpret `context_id`.
+Load a separate plugin set for each task context; changing options after registration
+does not retarget a connection. `mcp.json` accepts the same field. Without plugins,
+pass `call_metadata` to `connect_stdio`, `connect_http`, or `mcp_tools`.
+The SDK still manages progress tokens and notifications. If `ClientSession.call_tool`
+lacks `meta`, configuring metadata (even `{}`) raises `ConfigurationError` and aborts
+loading. Omitting metadata keeps older SDKs supported.
+
+## Strict loading and readiness
+
+MCP services can also request host models and user forms. The host grants these with
+`load_plugins(..., mcp_callbacks={(plugin_name, server_name): MCPCallbacks(...)})`.
+Server JSON may list `required_capabilities`, but cannot contain executable callbacks
+or grant itself capabilities. See [MCP interaction](MCP_INTERACTION.md#plugin-grants-and-readiness).
+
+`load_plugins(..., strict=True)` rejects any loading diagnostic, including skipped
+plugin resources, unsupported settings, and failed MCP connections. It raises
+`ConfigurationError` and closes started connections and plugin resources. The default
+remains permissive. Strict loading does not run self-checks or infer required capabilities.
+
+Use `readiness()` to run registered self-checks and check explicit requirements:
+
+```python
+async with load_plugins(["sandbox-plugin"], options=options, strict=True) as plugins:
+    status = await plugins.readiness(
+        required_tools=["mcp__sandbox__execute"],
+        required_skills=["sandbox-rules"],
+        required_mcp_servers=["sandbox"],
+        required_checks=[("sandbox-plugin", "health")],
+    )
+    status.require_ready()  # raises ConfigurationError with unmet requirements
+    agent = plugins.agent(provider=provider)
+```
+
+`ReadinessResult` separates `loaded`, missing tools/skills/MCP servers, missing checks,
+and executed check results. Checks are identified by `(plugin_name, check_name)`.
+Unlike `all(c.passed for c in await plugins.check())`, a required but unregistered
+check makes `ready` false. Without required checks, an empty check list is acceptable;
+every registered check is still run, and any failure makes `ready` false.
+
+Tool requirements cover plugin-contributed tools, including generated `read_skill`
+and `subagent`, not extra tools later passed to `Agent`. MCP names must identify
+responsive sessions; disabled or failed entries do not count. Each `readiness()` call
+pings MCP sessions concurrently, bounded by `mcp_timeout` seconds per server (default 5).
+Failed or timed-out sessions lose their available status and capability grants in the
+snapshot; a later successful ping restores them. This is not continuous monitoring,
+and a ping does not verify business functionality; register self-checks for that.
+Diagnostics are included but do not themselves fail readiness in
+permissive mode. Call `require_ready()` inside the context manager so failure also
+closes resources. Before opening or after closing, `loaded` and `ready` are false.
 
 ## Hooks from several plugins
 
@@ -237,3 +322,30 @@ Pi's command-line application finds and loads packages; this library has no appl
 - MCP servers have no OAuth, tool exposure modes, per-request timeouts or `!command` values.
 
 The item-by-item comparison is in the [coverage map](../compat/COVERAGE.md) (Chinese). A complete plugin is in [examples/plugins/lab_tools](../examples/plugins/lab_tools), and [examples/plugin_demo.py](../examples/plugin_demo.py) runs it offline.
+
+
+## Declaring required framework features
+
+A directory can include `pi-plugin.json`:
+
+```json
+{"requires": ["plugin-requires-v1", "task-scope-v1", "loop-portal-v1"]}
+```
+
+The loader checks this manifest **before importing `plugin.py`**, so a missing API
+fails with a capability error before plugin imports or setup. Only `requires` is
+accepted; its value is a collection of nonempty strings. Unknown features fail in
+both strict and ordinary loading. Plugins without a declaration remain compatible.
+
+For code plugins, use `Plugin("example", setup, requires=("task-scope-v1",))`.
+Python files and entry-point modules/functions can expose `__requires__` instead.
+Those declarations are checked after import, before any setup; use the directory
+manifest when pre-import validation is needed. A root manifest and Python
+requirements are combined. The resolved `Plugin.requires` contains the normalized
+requirements. A framework predating this facility may ignore a manifest; package
+constraints still need to select a build that implements `plugin-requires-v1`.
+
+`api.task_scope()` creates a `TaskScope` and registers its `aclose` callback.
+Register resources used by tasks first, then create the scope: cleanup callbacks
+run in reverse order. Do not call plugin shutdown from an owned task. This owns
+application tasks, not the host's Provider or event loop. See [the API guide](API.md#owned-tasks-and-calls-from-worker-threads).

@@ -6,6 +6,9 @@
 
 PyPI 上的 `pi-agent-core` 是另一个独立项目，移植的是 2026 年初 pi-mono 中的旧版本。本库对照 Pi v1.0.0 的行为，与上游的实际运行结果逐组比较；并自带 Claude、OpenAI、DeepSeek 和本地模型的接入，不需要安装任何模型 SDK。
 
+**使用 coding agent 开发？** 先读 [library 接入指南](docs/zh/CODING_AGENTS.md)。
+需要扩展能力时，按 [插件开发流程与完整示例](docs/zh/PLUGIN_DEVELOPMENT.md) 实现、打包和验证。
+
 ## 安装
 
 支持 Python 3.11–3.14（包括无 GIL 的 3.14t）和 PyPy 3.11，不需要 Node 或任何模型 SDK。
@@ -22,6 +25,7 @@ pip install pi-python-core      # 或 uv add pi-python-core
 | `[oauth]` | 用 ChatGPT 账号登录（`openai-chatgpt`）时校验身份令牌，会带进需要编译的 `cryptography`。Claude 订阅和 Codex 登录不需要它 |
 | `[providers]` | 与 `[oauth]` 相同，让 0.8.1 及以前的安装命令仍然可用 |
 | `[mcp]` | 把 MCP 服务器的工具交给 agent，插件声明的 MCP 服务器也需要它 |
+| `[mcp-interactive]` | 允许 MCP 服务请求宿主模型调用及用户表单，支持配置选择、计量与重试。见 [MCP 交互](docs/zh/MCP_INTERACTION.md) |
 
 依赖写的是版本范围而不是固定版本，能和大多数已有环境共存。
 
@@ -76,6 +80,8 @@ agent = Agent(provider=llm, model=llm.model("qwen3:8b", context_window=40960), t
 
 ## 文档
 
+- [Coding agents：接入 library、运行离线示例、验证行为](docs/zh/CODING_AGENTS.md)
+- [插件开发：目录结构、就绪检查、打包与安装验证](docs/zh/PLUGIN_DEVELOPMENT.md)
 - [一页看懂：五个概念和一轮的流程](docs/zh/CONCEPTS.md)
 - [公开 API](docs/zh/API.md)
 - [模型接入、订阅登录与本地模型](docs/zh/PROVIDERS.md)
@@ -87,7 +93,7 @@ agent = Agent(provider=llm, model=llm.model("qwen3:8b", context_window=40960), t
 ## 开发
 
 ```bash
-uv sync --locked --extra oauth --extra mcp
+uv sync --locked --extra oauth --extra mcp-interactive
 uv run pytest -q
 uv run python scripts/verify.py      # 全部检查，含与上游的差分（需要 Node）
 ```
