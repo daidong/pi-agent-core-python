@@ -1,6 +1,7 @@
 """Plugins: loading, combining hooks, skills, prompt templates, subagents, MCP servers."""
 
 import asyncio
+import functools
 import importlib
 import importlib.util
 import inspect
@@ -1278,6 +1279,55 @@ async def test_registrations_must_be_callable():
         with pytest.raises(ConfigurationError, match="must be callable"):
             async with load_plugins(Plugin("p", register)):
                 pass
+
+
+async def test_registrations_must_accept_their_arguments():
+    """A callback that cannot take its call's arguments fails when registered; before,
+    a hook handler failed on every call, was logged and skipped, and the run completed."""
+
+    def bad_wrapper(function):
+        @functools.wraps(function)
+        def wrapper(messages):  # calls a correct handler with the wrong arguments
+            return function(messages, None)
+
+        return wrapper
+
+    for register, expected in (
+        (lambda api: api.on("transform_context", lambda messages: None), r"\(messages, cancel\)"),
+        (
+            lambda api: api.on("before_tool_call", lambda call, args: None),
+            r"\(call, args, context\)",
+        ),
+        (lambda api: api.on("get_api_key", lambda: "key"), r"\(provider\)"),
+        (lambda api: api.on("finish_turn", lambda context, cancel, *, mode: None), "mode"),
+        (lambda api: api.on("transform_context", bad_wrapper(lambda m, c: m)), "cancel"),
+        (lambda api: api.subscribe(lambda: None), r"\(event\)"),
+        (lambda api: api.add_check(lambda value: True), "no arguments"),
+        (lambda api: api.on_close(lambda value: None), "no arguments"),
+    ):
+        with pytest.raises(ConfigurationError, match=expected):
+            async with load_plugins(Plugin("p", register)):
+                pass
+
+    class Listener:
+        def __call__(self, event, extra=None):
+            pass
+
+    async def passthrough(*args):
+        return None
+
+    def accepted(api):
+        api.on("transform_context", lambda messages, cancel=None, *rest: None)
+        api.on("prepare_request", passthrough)
+        api.on("after_tool_call", functools.partial(lambda tag, call, result, context: None, "t"))
+        api.on("before_tool_call", lambda *args, **kwargs: None)
+        api.on("on_payload", print)  # a builtin
+        api.subscribe(Listener())
+        api.add_check(lambda strict=True: True)
+
+    async with load_plugins(Plugin("p", accepted)) as plugins:
+        agent = plugins.agent(provider=ScriptedProvider([AssistantMessage.text("ok")]))
+        assert (await agent.prompt("hi")).status == "completed"
 
 
 async def test_bad_mcp_json_entry_is_skipped_with_a_warning(tmp_path, monkeypatch):

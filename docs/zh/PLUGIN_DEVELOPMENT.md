@@ -222,6 +222,7 @@ Windows 下把 `.venv-installed/bin/python` 换成 `.venv-installed/Scripts/pyth
 | 与插件生命周期绑定的异步工作 | 先注册所用资源的清理，再创建 `scope = api.task_scope()`。带 `ToolContext` 参数的异步工具中，用 `await scope.run(client.fetch(...), cancel=context.cancel)` 调用。使用时声明 `task-scope-v1`。 |
 | 工作线程访问绑定事件循环的连接 | 宿主在连接所属循环创建 `LoopPortal`，通过 service 传入。同步工具用 `portal.call(async_function, ...)`。见 [API](API.md)。 |
 | 钩子 | 注册 `@api.on("before_tool_call")`，返回 `False` 阻止调用。按[文档签名](API.md)实现，并验证被阻止的路径。 |
+| 插件内调用模型 | 用 `provider = api.service("provider")` 取得 Provider；模型取 `api.options.get("model")`，没有时用 `context.agent_context.model`。在异步工具里执行 `await context.run_agent(Agent(provider=provider, model=...), text)`。见[在插件里调用模型](PLUGINS.md#在插件里调用模型)。 |
 | 子 Agent | 添加 `agents/reviewer.md`，包含 `name`、`description`、可选 `tools`/`model` 和系统提示正文。见 [lab_tools 示例](../../examples/plugins/lab_tools)。 |
 | MCP 服务 | 添加 `mcp.json` 或调用 `api.add_mcp_server`。安装 `[mcp]`，并在 readiness 中要求对应服务和工具。宿主模型或表单回调按 [MCP 交互流程](MCP_INTERACTION.md)配置。 |
 

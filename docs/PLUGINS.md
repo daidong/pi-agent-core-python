@@ -311,6 +311,62 @@ Several plugins can handle the same hook. Handlers run in this order: your own h
 
 When a plugin's handler raises an exception or returns the wrong type, a `PluginFailure` report goes to the `on_error` callback of `load_plugins`, which may be sync or async and logs the failure by default. That handler's contribution is skipped and the other handlers still run, so one faulty plugin does not stop the agent. The exception is `before_tool_call`, where an error fails that tool call, as in Pi. Your own hooks keep the core behavior described in the [API](API.md#hooks).
 
+A handler that cannot accept the arguments its hook passes, such as a `transform_context` handler written as `def inject(messages)` instead of `def inject(messages, cancel)`, is rejected when it is registered: `api.on` raises `ConfigurationError` naming the expected arguments, and loading stops. The same check applies to `subscribe` (one argument, the event), `add_check` and `on_close` (no arguments). Otherwise such a handler would fail on every call and only be logged.
+
+## Calling a model from a plugin
+
+The application owns providers and credentials, so a plugin has no model of its own. A plugin that needs a model call, for example to summarize or to merge notes, asks for the Provider as the `"provider"` service and reads the model name from its options:
+
+```python
+from pi_python import Agent, ToolContext
+
+
+def setup(api):
+    provider = api.service("provider")
+
+    async def summarize(text: str, context: ToolContext) -> str:
+        """Summarize a text in three sentences.
+
+        Args:
+            text: The text to summarize.
+        """
+        writer = Agent(
+            provider=provider,
+            model=api.options.get("model") or context.agent_context.model,
+            system_prompt="Summarize the text in three sentences.",
+        )
+        result = await context.run_agent(writer, text)  # aborting the run aborts this call
+        reply = "".join(getattr(block, "text", "") for block in result.messages[-1].content)
+        if result.status != "completed" or not reply:
+            raise RuntimeError(f"The summary failed: {result.status}")
+        return reply
+
+    api.add_tool(summarize)
+```
+
+The application passes `services={"provider": provider}`, and `options={"summary": {"model": "claude-haiku-4-5"}}` to use a cheaper model for the plugin named `summary`. Without the option, the call uses the model of the agent that called the tool. Inside a tool, run the call with `context.run_agent`, so that aborting the main run also aborts it. When the model call is optional, use `api.service("provider", default=None)` and say in the plugin's documentation what happens without it.
+
+## Memory across conversations
+
+Neither this library nor Pi's core has built-in memory. Pi's application remembers through instruction files it reads into the system prompt (`AGENTS.md`), saved sessions and compaction. What is worth remembering, and where to keep it, differs between applications. A plugin can add memory with two parts: tools that save facts to storage the application chooses, and a `transform_context` handler that puts the saved facts into every request.
+
+[examples/plugins/memory](../examples/plugins/memory) does this in one file, and [examples/memory_demo.py](../examples/memory_demo.py) runs it offline:
+
+```python
+async with load_plugins(
+    ["./examples/plugins/memory"],
+    services={"provider": provider},  # optional: merges facts when the list is full
+    options={"memory": {"path": "memory.json", "max_facts": 50}},
+) as plugins:
+    agent = plugins.agent(provider=provider, model="claude-sonnet-5-5")
+```
+
+- The model saves a fact with `remember` and removes one with `forget`. The facts are kept in the JSON file.
+- Before every request, the facts become the `memory` section of the system prompt (`SystemMessage.sections`). The stored conversation does not change. The section changes only when the facts do, so the cached prompt prefix stays valid in between.
+- When a new fact would make the list longer than `max_facts`, the plugin asks a model to merge the list, as in [Calling a model from a plugin](#calling-a-model-from-a-plugin). Without a provider, the oldest facts are dropped.
+
+Copy the directory and change what your application needs: what is worth saving, retrieval when there are too many facts to list, or a database in place of the file. The example assumes that one process writes the file at a time.
+
 ## Differences from Pi
 
 Pi's command-line application finds and loads packages; this library has no application, so your code names the plugins to load. The other differences:

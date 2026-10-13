@@ -65,6 +65,7 @@ To try it offline first: `python examples/quickstart.py`.
 | Use MCP tools | `async with connect_stdio(...) as tools`, or `connect_http(url)` for a remote server | [mcp_tools](examples/mcp_tools.py) |
 | Let one agent call another | Wrap the sub-agent as a tool; cancellation propagates down. Plugins can also define subagents in Markdown | [subagent](examples/subagent.py) |
 | Package and share capabilities | A plugin bundles tools, instructions, hooks, skills, prompt templates, subagents and MCP servers; load it by name or path with `load_plugins` and build the agent with `plugins.agent(...)` | [plugin_demo](examples/plugin_demo.py) |
+| Remember across conversations | Not built in, as in Pi's core; an example plugin saves facts to a file and puts them in the system prompt, ready to copy and adapt | [memory_demo](examples/memory_demo.py) |
 | Intervene mid-run | `steer` injects guidance, `follow_up` queues the next task, `abort` cancels at any time (callable from any thread) | |
 | Context full, service errors | `is_context_overflow` and `is_retryable_error` tell you why, `continue_run()` retries, `transform_context` compacts | [recovery](examples/recovery.py) |
 | Save and restore conversations | `encode_messages` / `decode_messages`; your application decides where to store them | [save_restore](examples/save_restore.py) |

@@ -300,6 +300,62 @@ async with load_plugins(["sandbox-plugin"], options=options, strict=True) as plu
 
 插件的处理函数抛出异常或返回了错误的类型时，一份 `PluginFailure` 报告交给 `load_plugins` 的 `on_error` 回调；回调可以是普通函数或 async 函数，默认写进日志。这个处理函数的结果被跳过，其他处理函数照常运行，所以一个有问题的插件不会让 agent 停下。`before_tool_call` 例外：和 Pi 一样，那里的错误会让这次工具调用失败。你自己的钩子保持核心原来的行为，见 [API](API.md#钩子)。
 
+处理函数接收不了钩子传入的参数时，注册那一刻就会被拒绝。例如把 `transform_context` 的处理函数写成 `def inject(messages)`，少了 `cancel`：`api.on` 抛出 `ConfigurationError`，写明应接收哪些参数，加载随之停止。`subscribe`（一个参数，即事件）、`add_check` 和 `on_close`（没有参数）也做同样的检查。如果不在注册时检查，这样的处理函数每次调用都会失败，却只留下一行日志。
+
+## 在插件里调用模型
+
+Provider 和凭据归应用所有，插件自己没有模型。插件需要调用模型时，比如做摘要或合并笔记，通过 `"provider"` 服务取得 Provider，从自己的 options 里读模型名：
+
+```python
+from pi_python import Agent, ToolContext
+
+
+def setup(api):
+    provider = api.service("provider")
+
+    async def summarize(text: str, context: ToolContext) -> str:
+        """Summarize a text in three sentences.
+
+        Args:
+            text: The text to summarize.
+        """
+        writer = Agent(
+            provider=provider,
+            model=api.options.get("model") or context.agent_context.model,
+            system_prompt="Summarize the text in three sentences.",
+        )
+        result = await context.run_agent(writer, text)  # 中止主运行时，这次调用一起中止
+        reply = "".join(getattr(block, "text", "") for block in result.messages[-1].content)
+        if result.status != "completed" or not reply:
+            raise RuntimeError(f"The summary failed: {result.status}")
+        return reply
+
+    api.add_tool(summarize)
+```
+
+应用传入 `services={"provider": provider}`；想让名为 `summary` 的插件用便宜一些的模型，再传 `options={"summary": {"model": "claude-haiku-4-5"}}`。不给这个选项时，用调用这个工具的 agent 的模型。在工具里用 `context.run_agent` 运行这次调用，这样中止主运行时它也会中止。模型调用可有可无时，用 `api.service("provider", default=None)`，并在插件文档里写明没有 provider 时会怎样。
+
+## 跨对话的记忆
+
+本库和 Pi 的核心都没有内置记忆。Pi 的应用靠三样东西记住信息：读进系统提示的说明文件（`AGENTS.md`）、保存的会话和上下文压缩。哪些信息值得记、存在哪里，各个应用差别很大。插件可以用两部分加上记忆：把事实存进应用指定位置的工具，以及一个 `transform_context` 处理函数，在每次请求时把已存的事实放进去。
+
+[examples/plugins/memory](../../examples/plugins/memory) 用一个文件实现了这种做法，[examples/memory_demo.py](../../examples/memory_demo.py) 离线运行它：
+
+```python
+async with load_plugins(
+    ["./examples/plugins/memory"],
+    services={"provider": provider},  # 可选：列表满了时用来合并事实
+    options={"memory": {"path": "memory.json", "max_facts": 50}},
+) as plugins:
+    agent = plugins.agent(provider=provider, model="claude-sonnet-5-5")
+```
+
+- 模型用 `remember` 保存一条事实，用 `forget` 删除一条。事实保存在 JSON 文件里。
+- 每次请求之前，这些事实成为系统提示里名为 `memory` 的一段（`SystemMessage.sections`）。保存的对话不变。只有事实变化时这一段才变，所以两次变化之间，提示缓存的前缀一直有效。
+- 新事实会让列表超过 `max_facts` 时，插件请模型合并列表，做法见[在插件里调用模型](#在插件里调用模型)。没有 provider 时，删掉最早的事实。
+
+复制这个目录，再按应用的需要修改：哪些信息值得存，事实太多、无法全部列出时怎样检索，或者用数据库代替文件。这个示例假定同一时间只有一个进程写这个文件。
+
 ## 与 Pi 的差别
 
 Pi 的命令行程序负责查找和加载 package；本库没有应用程序，所以要加载哪些插件由你的代码指定。其他差别：

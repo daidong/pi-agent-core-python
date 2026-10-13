@@ -65,6 +65,7 @@ agent = Agent(provider=llm, model=llm.model("qwen3:8b", context_window=40960), t
 | 用 MCP 工具 | `async with connect_stdio(...) as tools`；远程服务器用 `connect_http(url)` | [mcp_tools](examples/mcp_tools.py) |
 | 让一个 agent 调用另一个 | 把子 agent 包成工具，取消会一路传下去；插件也可以用 Markdown 定义子 agent | [subagent](examples/subagent.py) |
 | 打包和分享能力 | 插件把工具、说明、钩子、技能、提示模板、子 agent 和 MCP 服务器打成一组；用 `load_plugins` 按名字或路径加载，再用 `plugins.agent(...)` 构造 agent | [plugin_demo](examples/plugin_demo.py) |
+| 跨对话记住信息 | 与 Pi 的核心一样不内置；示例插件把事实存进文件，再放进系统提示，可以复制后修改 | [memory_demo](examples/memory_demo.py) |
 | 中途干预 | `steer` 插入指导，`follow_up` 排队后续任务，`abort` 随时取消（任何线程都可以调用） | |
 | 上下文满了、服务出错 | `is_context_overflow`、`is_retryable_error` 判断原因，`continue_run()` 重试，`transform_context` 压缩 | [recovery](examples/recovery.py) |
 | 保存与恢复对话 | `encode_messages` / `decode_messages`，应用决定存在哪里 | [save_restore](examples/save_restore.py) |

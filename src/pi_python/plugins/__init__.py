@@ -21,6 +21,7 @@ import hashlib
 import importlib
 import importlib.machinery
 import importlib.util
+import inspect
 import json
 import math
 import os
@@ -49,6 +50,7 @@ from ..tools import Tool, ToolContext, ToolResult, invoke
 from .._mcp_interaction import MCPCallbacks
 from ._compose import (
     HOOK_NAMES,
+    HOOK_PARAMETERS,
     PluginFailure,
     compose_hooks,
     isolated_listener,
@@ -286,7 +288,9 @@ class PluginAPI:
             raise ConfigurationError(f"Unknown hook {hook!r}; hooks are {', '.join(HOOK_NAMES)}")
 
         def register(function: F) -> F:
-            _require_callable(function, f"the {hook} handler of plugin {self.name!r}")
+            _require_callable(
+                function, f"the {hook} handler of plugin {self.name!r}", HOOK_PARAMETERS[hook]
+            )
             self._handlers.append((hook, function))
             return function
 
@@ -294,7 +298,7 @@ class PluginAPI:
 
     def subscribe(self, listener: EventListener) -> None:
         """Receive the events of agents built from this set; failures are reported, not raised."""
-        _require_callable(listener, f"an event listener of plugin {self.name!r}")
+        _require_callable(listener, f"an event listener of plugin {self.name!r}", ("event",))
         self._listeners.append(listener)
 
     def _path(self, path: str | os.PathLike[str]) -> Path:
@@ -1087,9 +1091,21 @@ def _redact(text: str, secrets: set[str] | None) -> str:
     return text
 
 
-def _require_callable(value: Any, what: str) -> None:
+def _require_callable(value: Any, what: str, arguments: tuple[str, ...] = ()) -> None:
+    """Reject a callback now if it cannot take the positional `arguments` it will be called
+    with; otherwise each call would fail and, for a hook, only be logged and skipped."""
     if not callable(value):
         raise ConfigurationError(f"{what} must be callable, not {type(value).__name__}")
+    try:
+        # Not following __wrapped__: a decorator's own wrapper is what gets called.
+        signature = inspect.signature(value, follow_wrapped=False)
+    except (TypeError, ValueError):
+        return  # no signature to inspect, as for some builtins
+    try:
+        signature.bind(*arguments)
+    except TypeError as exc:
+        expected = f"the arguments ({', '.join(arguments)})" if arguments else "no arguments"
+        raise ConfigurationError(f"{what} must accept {expected}: {exc}") from None
 
 
 def _looks_like_path(text: str) -> bool:

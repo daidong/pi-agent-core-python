@@ -34,6 +34,21 @@ from ..hooks import Hooks, RunContext, TurnUpdate
 from ..tools import ToolResult, ToolResultUpdate, apply_result_update, invoke
 
 HOOK_NAMES = tuple(f.name for f in fields(Hooks))
+# The positional arguments the composed hooks below pass to each handler.
+HOOK_PARAMETERS: dict[str, tuple[str, ...]] = {
+    "before_tool_call": ("call", "args", "context"),
+    "after_tool_call": ("call", "result", "context"),
+    "transform_context": ("messages", "cancel"),
+    "convert_to_llm": ("messages",),
+    "prepare_request": ("context", "cancel"),
+    "prepare_next_turn": ("context", "cancel"),
+    "finish_turn": ("context", "cancel"),
+    "get_api_key": ("provider",),
+    "on_payload": ("payload",),
+    "on_response": ("response",),
+    "on_provider_stream_event": ("event",),
+}
+assert set(HOOK_PARAMETERS) == set(HOOK_NAMES)
 logger = logging.getLogger("pi_python.plugins")
 
 

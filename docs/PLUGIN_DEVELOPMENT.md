@@ -258,6 +258,7 @@ install. Do not claim packaging is verified merely because directory loading wor
 | Async work tied to plugin lifetime | Create `scope = api.task_scope()` after registering resources it uses. Await `scope.run(client.fetch(...), cancel=context.cancel)` in an async tool with a `ToolContext` parameter. Declare `task-scope-v1` if using it. |
 | Worker thread needs a loop-bound connection | Host creates a `LoopPortal` on the connection's loop and passes it as a service. The synchronous tool uses `portal.call(async_function, ...)`. See [API](API.md#owned-tasks-and-calls-from-worker-threads). |
 | A hook | Register `@api.on("before_tool_call")`; return `False` to block. Use [documented hook signatures](API.md#hooks), and test the blocked path. |
+| Model call inside the plugin | Ask for `provider = api.service("provider")`; take the model from `api.options.get("model")`, else `context.agent_context.model`. In an async tool, run `await context.run_agent(Agent(provider=provider, model=...), text)`. See [Calling a model from a plugin](PLUGINS.md#calling-a-model-from-a-plugin). |
 | Subagent | Add `agents/reviewer.md` with `name`, `description`, optional `tools`/`model`, and a system-prompt body. See the [lab_tools example](../examples/plugins/lab_tools). |
 | MCP server | Add `mcp.json` or call `api.add_mcp_server`. Install `[mcp]`; specify required servers/tools in readiness. Use the [interactive workflow](MCP_INTERACTION.md) for host model/form callbacks. |
 

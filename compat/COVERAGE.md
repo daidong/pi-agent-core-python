@@ -133,6 +133,7 @@ CI 第一次在 GitHub 上运行，Linux 和 macOS 全部通过，另外发现�
 - 上游由命令行程序发现和加载 package（`pi install`、`settings.json`、项目信任）。本库没有应用程序，由应用代码指定加载哪些插件，不自动发现。已安装的插件通过 entry point 组 `pi_python.plugins` 注册，对应 `pi install npm:...`。
 - 插件代码是 Python 的 `setup(api)`，对应 Pi 扩展的工厂函数。`PluginAPI` 只保留与界面无关的部分（工具、系统提示、钩子、事件、MCP），没有命令、快捷键、渲染器等终端界面接口；另加了 `service`（应用提供的对象）、`options`（按插件分开的设置）、`add_check`（自检）和 `on_close`。
 - 插件处理函数出错时交给 `on_error`，默认写日志；上游交给 `emitError`，显示在界面上。`before_tool_call` 与上游一样，出错时让这次调用失败。应用自己的钩子保持核心行为，不做隔离。
+- 插件注册处理函数时检查它能否接收该钩子传入的位置参数（`subscribe` 为事件一个参数，`add_check` 和 `on_close` 没有参数），不能就报 `ConfigurationError`，加载停止（0.10.1 加入）。上游没有这一步：TypeScript 在编译时检查类型，JavaScript 调用时多出的参数会被忽略。Python 会在每次调用时抛出 `TypeError`，插件处理函数的错误又只写日志，不检查的话这样的处理函数会悄悄失效。应用自己的钩子不做这项检查。
 - 模型用 `read_skill` 工具读取技能（上游让模型用通用的 `read` 工具）。它只能读技能目录里的文件，单个文件不超过 256 KiB。
 - 子 agent 在同一进程、同一事件循环里运行（上游为每个子 agent 启动一个 pi 子进程），使用主 agent 的 Provider 和合并后的全部钩子。上游的子进程会加载同样的扩展，所以插件的处理函数同样作用于子 agent，这一点与上游一致。不指定模型时，子 agent 用调用那一刻主 agent 的模型（上游从设置里取默认模型）。没有上游的 `agentScope`、`cwd` 参数和项目级 agent 的确认步骤。
 - MCP：工具名为 `mcp__<服务器>__<工具>`，但工具名里的 `-` 保留（上游换成 `_`）。字符串里只展开 `${PLUGIN_ROOT}`、`${PYTHON}` 和环境变量，前两个是本库新增；不支持 `!命令`。不支持 OAuth、`exposure` / `toolExposure` 和单次请求超时，这些设置会被忽略并给出警告。新增 `pi_python.mcp.connect_http`，连接 streamable HTTP 服务器；在 MCP SDK 1.10、1.30 和 2.3 上测过。
