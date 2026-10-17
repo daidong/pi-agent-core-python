@@ -10,6 +10,15 @@ Skills are available in `.agents/skills` (Codex) and `.claude/skills` (Claude). 
 
 <!-- pipilot:end -->
 
+## 上层应用兼容性审查（用户决定）
+
+今后对本项目的所有开发，必须审查是否会影响使用本软件的上层应用，而不只检查 core 自身是否通过测试。
+
+- 审查公开 API、事件与结果字段、消息编解码及历史持久化、钩子与插件行为、配置默认值、生命周期和依赖等兼容性边界。新增字段也可能影响严格解析这些结构的应用，不能自动视为无影响。
+- 如果会影响上层应用，必须先说明受影响的使用方式、具体行为变化、迁移要求及验证范围，并请求用户确认；获得确认后才能实施有影响的变更。开发中才发现影响时，应暂停相关变更并请求确认。
+- 库内回归通过不等于所有上层应用均兼容。无法验证的应用或使用方式必须明确列为未验证，不作全面兼容保证。
+- 此决定不是对任何具体兼容性影响的预先批准。
+
 ## Library and plugin integration
 
 When using this library in an application, start with [the coding-agent guide](docs/CODING_AGENTS.md) ([中文](docs/zh/CODING_AGENTS.md)). To build a pi-python plugin, follow [the development workflow and complete example](docs/PLUGIN_DEVELOPMENT.md) ([中文](docs/zh/PLUGIN_DEVELOPMENT.md)). These guides cover public APIs, resource ownership, offline verification, and installed-plugin packaging.

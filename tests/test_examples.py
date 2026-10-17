@@ -11,6 +11,7 @@ import pytest
 
 EXAMPLES = Path(__file__).resolve().parents[1] / "examples"
 CASES = {
+    "capability_composition.py": "run=completed; domain_passed=False",
     "in_memory.py": "3 complete records",
     "quickstart.py": "status=completed",
     "subagent.py": "specialist said: The line has 6 words",

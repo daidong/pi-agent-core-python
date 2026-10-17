@@ -6,11 +6,12 @@ Import the public types from `pi_python`. The minimum Python version is 3.11, an
 
 ## Agent and run results
 
-`Agent(provider=..., model="mock" or ModelInfo(...), options={}, system_prompt="", tools=[], messages=[], hooks=Hooks(), limits=RunLimits(), execution_mode="parallel", steering_mode="one_at_a_time", follow_up_mode="one_at_a_time")`. If there is neither a `provider` nor a default stream set with `set_default_stream_fn`, `prompt` raises `ConfigurationError` immediately.
+`Agent(provider=..., model="mock" or ModelInfo(...), options={}, system_prompt="", tools=[], messages=[], hooks=Hooks(), limits=RunLimits(), execution_mode="parallel", steering_mode="one_at_a_time", follow_up_mode="one_at_a_time", include_tool_origin=False)`. If there is neither a `provider` nor a default stream set with `set_default_stream_fn`, `prompt` raises `ConfigurationError` immediately.
 
 | Method | Behavior |
 |---|---|
 | `await prompt(str_or_message_or_list)` | Appends the input and runs; returns a `RunResult` |
+| `await execute_tools(invocations, source=None)` | Runs a nonempty `list[ToolInvocation]` without requesting a model; returns `RunResult` |
 | `await continue_run()` | Continues from a valid user/tool-result history, or consumes input queued after the final answer; if the last answer failed or was cancelled, retries that turn (see "Recovering from failures"); never replays past tools |
 | `prompt_sync(...)` / `continue_run_sync()` | Blocking versions for plain scripts; Ctrl+C cancels the current run; see "Using it from plain scripts" |
 | `steer(message)` | Accepts guidance at the next safe boundary; also takes a string |
@@ -22,11 +23,39 @@ Import the public types from `pi_python`. The minimum Python version is 3.11, an
 | `clear_queues(steering=True, follow_up=True)` | Explicitly clears the given queues |
 | `await aclose()` | Requests cancellation and waits for this instance's cleanup; does not close a shared Provider |
 
-One instance does not accept overlapping `prompt` / `continue_run` calls; the second call raises `AgentBusyError` immediately. `async with Agent(...)` is supported. `state` returns a defensive copy; changing it does not change the history.
+One instance does not accept overlapping `prompt` / `continue_run` / `execute_tools` calls; the second call raises `AgentBusyError` immediately. `async with Agent(...)` is supported. `state` returns a defensive copy; changing it does not change the history.
 
 `RunResult` contains `status` (`completed` / `failed` / `cancelled` / `limit_reached`), the `messages` added by this run, the accumulated numeric `usage`, `stop_reason`, `errors`, `tool_outcomes`, `reconciliation_required`, `cleanup_complete`, and the number of items left in each queue. Usage only sums the top-level numeric fields the Provider reports; it does not estimate cost.
 
 `tool_outcomes` records, in call order, the raw arguments, the prepared arguments, `raw_result` and the final `result`. `execution_status` is `not_started`, `running`, `succeeded`, `failed`, `cancelled` or `unknown`. `cancelled` means the tool was cancelled or timed out; `unknown` only comes from a `ToolOutcomeUnknownError` that the tool raised itself. If execution succeeded but the output check or the after-hook failed, the status is still `succeeded` and the final result is an error. No error triggers an automatic retry.
+
+## Application-selected tools and capability composition
+
+Use `require_features(["application-tool-batches-v1"])` to check that an installed build supports this contract.
+
+```python
+from pi_python import ToolInvocation
+
+result = await agent.execute_tools(
+    [ToolInvocation("check_sample", {"value": -1})], source="sample-checks@1"
+)
+# Inspect tool_outcomes here; completed does not mean a domain check passed.
+await agent.prompt("Interpret the application check results.")
+```
+
+`ToolInvocation(name, arguments)` accepts a registered tool name and a JSON object. Core assigns a unique call ID. Unknown names and schema failures become per-call error results. Empty batches and invalid invocation envelopes are rejected before a run starts. No Provider is required for this entry point.
+
+Each batch is an independent run. It shares argument preparation, schema validation, tool hooks, execution order/concurrency, output checks, tool-call budgets, deadlines and cancellation ownership with model-selected calls. The entire batch is refused if it exceeds `max_tool_calls`. It does not invoke model preparation/conversion hooks or `finish_turn`, consume either input queue, or follow a tool's `terminate` flag into a model loop. Tools and configuration stay fixed during the batch; explicit configuration updates made during it wait until the next run (or a later idle `update_config`), in submission order. Task-wide budgets across several runs belong to the application.
+
+Tool-event payloads keep their previous field sets by default. Set `Agent(include_tool_origin=True)` to add `origin` (`"application"` or `"model"`) and `source` (the caller's diagnostic string, or None) to tool events, for either entry point. This option is captured at run start. `ToolContext` and `ToolOutcome` expose provenance as read-only properties, not dataclass fields: `dataclasses.asdict()` keeps the previous shape and does not include provenance. Read `.origin` / `.source` explicitly or use the batch history record when storing it. Model-selected calls always have `source=None`. A source label is not an authenticated identity.
+
+Existing model runs retain integer `turn_id` values and do not create `application_tool_batch` messages. Application events have `turn_id=None`, because no model turn occurred. Code that computes with turn IDs or stores them in integer-only columns must handle this before adopting `execute_tools` or reading its event logs. An exception from a critical subscriber can fail the run; None itself is valid in the new event codec. Critical end subscribers finish before the Agent becomes idle, subject to the existing cancellation and delivery-failure rules.
+
+History gets one `CustomMessage(custom_type="application_tool_batch", data=...)`, including accepted calls that failed, were cancelled or never started. It contains each call's ID, name, original/prepared arguments, origin/source, execution status, error flag/code and final visible content. It never invents an assistant tool call or an unmatched `ToolResultMessage`. Raw results, structured content and local details stay in `tool_outcomes`; they are not automatically sent to the model. On a subsequent model request, remaining built-in batch messages are converted after the application's `convert_to_llm` hook into explicitly labeled application-result text. Other custom types still require an application converter. This default visibility policy is not a sandbox: application hooks can deliberately expose other fields.
+
+**Custom-converter compatibility:** no converter is needed for built-in batch messages. If an application already supplies `transform_context` or `convert_to_llm`, it should preserve these messages for core to convert, or explicitly convert them itself. Rejecting unknown custom types will fail a subsequent model run; filtering all custom messages may silently remove the feedback. These cases arise when adopting the new entry point or importing its history, not in ordinary pre-existing model history. The `application_tool_batch` type name is now reserved for the built-in record; an application previously using that same custom name must review its converter and payload.
+
+The [offline composition example](../examples/capability_composition.py) uses the same tool with model-selected and application-fixed calls. Plain Python objects supply instruction sections, tools, hooks and validation. The application owns their state and lifecycle, rejects duplicate instruction names, and composes hooks with explicit order and veto rules. Core rejects duplicate tool names. Configuration is recorded in an application-converted `capability_configuration` message; core does not interpret package versions or load a new package format. The example ends with `status="completed"` but `domain_passed=False`: execution success is separate from domain acceptance.
 
 ## Provider
 
@@ -122,7 +151,7 @@ Every hook can be a sync or an async function. Contexts and arguments are passed
 | `prepare_request(context, cancel)` | Returns a `TurnUpdate` or None; called before every model request |
 | `prepare_next_turn(context, cancel)` | Returns a `TurnUpdate` or None; called from the second turn on |
 | `transform_context(messages, cancel)` | Returns the message list used for the model request; runs before convert |
-| `convert_to_llm(messages)` | Returns the message list that can be sent to the model; must handle or explicitly filter out `CustomMessage` |
+| `convert_to_llm(messages)` | Returns the message list that can be sent to the model; must handle or explicitly filter out custom types other than the built-in `application_tool_batch` |
 | `before_tool_call(call, args, context)` | True / None allows, False blocks, or return a `ToolResult` to use without executing; if the hook raises, that call gets an error result (`hook_error`) and the run continues, as in Pi |
 | `after_tool_call(call, result, context)` | Returns a full `ToolResult`, a partial `ToolResultUpdate`, or None |
 | `finish_turn(context, cancel)` | Returns `"continue"`, `"end"` or None |

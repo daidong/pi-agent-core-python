@@ -1,6 +1,6 @@
 # 验收映射
 
-首期测试证明的是本文列出的文本和工具行为，不是完整 Pi 或模型智能。27 行是设计中的用例组，不是 27 个单独测试。具体测试总数与命令见 [验证记录](results/verification.json)，逐 fixture 结果见 [差分记录](results/conformance.json)。
+首期测试证明的是本文列出的文本和工具行为，不是完整 Pi 或模型智能。C01–C29 是设计中的用例组，不是 29 个单独测试。具体测试总数与命令见 [验证记录](results/verification.json)，逐 fixture 结果见 [差分记录](results/conformance.json)。
 
 | 用例组 | Python 行为证据 | 上游证据 / 分类 |
 |---|---|---|
@@ -31,6 +31,19 @@
 | C25 JSON、版本、导入 | 两个 test_C25、事件编解码 | Python 合同；没有持久化或导入后自动执行 |
 | C26 release 候选 | test_C26_noop_duplicate_and_synthetic_upgrade 及参数化拒绝测试 | 合成接口演练；独立远端校验脚本另存实际记录 |
 | C27 wheel 安装 | Linux 容器内断网安装、示例、全部 pytest | 实际组合见 linux-3.11/3.12/3.13.json |
+
+## D9：应用工具批次与能力包最小接入
+
+2026-10-16 设计修订的新增合同由 `tests/test_application_tools.py`（C28）和 `tests/test_capability_composition.py`（C29）覆盖。它们是 Python 新增合同，不算作与上游直接一致。
+
+| 用例组 | Python 行为证据 | 分类 |
+|---|---|---|
+| C28 应用工具批次 | 零模型请求；来源与空轮次事件编解码；共享准备、验证、钩子、预算、取消和超时；忙碌互斥；订阅故障保留结果；配置快照；可见性与历史无伪造调用 | intentional_difference，D9 |
+| C29 普通 Python 能力组合 | 同一工具的两种调用方式；名称冲突拒绝；状态与配置隔离；否决不可覆盖；运行完成不掩盖领域验证失败 | intentional_difference，D9；`examples/capability_composition.py` 无网络示例 |
+
+兼容性修订：按用户要求，工具事件的 `origin/source` 改为显式 `Agent(include_tool_origin=True)` 才输出，默认不新增键；两种调用入口都遵守此选项。工具上下文和执行结果通过只读属性提供来源，不改变原有 dataclass 字段及 `asdict` 输出。应用批次历史仍保存来源。`tests/test_application_compatibility.py` 对照 v0.10.1 的字段集合，检查旧解析器、整数轮次及自定义消息转换器；新接口接入时可能的订阅失败和消息被过滤也有明确断言。这是对设计草案中“所有工具事件都携带来源”的兼容性调整，不是将缺失来源默认为已记录。
+
+本次沿用现行版本的默认无预算上限、已知取消与显式未知结果的区分，以及可选扩展能力，不把它们按早期草案回退。跨 run 预算、领域效果、科研判断内化和新的包加载器不在本次实现范围内。上述旧验证文件记录的是各自运行时的版本，不自动成为 D9 的验证证据。
 
 ## 有意差异与范围外行为
 

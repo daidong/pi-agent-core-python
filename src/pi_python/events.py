@@ -16,7 +16,7 @@ from .messages import validate_json
 class Event:
     type: str
     run_id: str
-    turn_id: int
+    turn_id: int | None
     sequence: int
     call_id: str | None = None
     data: dict[str, Any] = field(default_factory=dict)
@@ -50,8 +50,7 @@ def decode_event(value: str) -> Event:
         if (
             type(e.sequence) is not int
             or e.sequence < 1
-            or type(e.turn_id) is not int
-            or e.turn_id < 0
+            or (e.turn_id is not None and (type(e.turn_id) is not int or e.turn_id < 0))
         ):
             raise MessageValidationError("Invalid event sequence or turn")
         if e.call_id is not None and not isinstance(e.call_id, str):
@@ -85,7 +84,7 @@ class EventDispatcher:
         self,
         kind: str,
         run_id: str,
-        turn_id: int,
+        turn_id: int | None,
         data: dict[str, Any],
         call_id: str | None,
         await_owned: Callable,

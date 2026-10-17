@@ -15,7 +15,9 @@ from .errors import ConfigurationError
 from .hooks import AgentConfigUpdate, Hooks, RunContext, TurnUpdate
 from .messages import (
     AssistantMessage,
+    CustomMessage,
     Message,
+    ToolCall,
     ToolResultMessage,
     message_to_dict,
     validate_history,
@@ -23,7 +25,7 @@ from .messages import (
 from .errors import SubscriptionError
 from .tools import ToolOutcome, error_result, invoke
 from .transcript import declare_tool_changes
-from .loop import abort_error, failure_message, run_loop
+from .loop import abort_error, failure_message, run_loop, run_application_batch
 
 if TYPE_CHECKING:
     from .agent import Agent
@@ -58,11 +60,24 @@ def merge(target: Any, update: AgentConfigUpdate) -> None:
 class Run:
     """State that lives for one run. The Agent keeps everything that outlives it."""
 
-    def __init__(self, agent: Agent, skip_initial_steering: bool = False):
+    def __init__(
+        self,
+        agent: Agent,
+        skip_initial_steering: bool = False,
+        *,
+        application_calls: list[ToolCall] | None = None,
+        source: str | None = None,
+    ):
         self.agent = agent
         self.token = CancelToken()
         self.id = str(uuid4())
         self.turn = 0
+        self.application_batch = application_calls is not None
+        self.origin = "application" if self.application_batch else "model"
+        self.source = source
+        self.include_tool_origin = agent.include_tool_origin
+        self._limits = agent.limits
+        self._execution_mode = agent.execution_mode
         defaults = agent._defaults
         self.context = RunContext(
             deepcopy(agent._messages),
@@ -74,8 +89,16 @@ class Run:
         self.skip_initial_steering = skip_initial_steering
         self.partial: Any = None
         self.started = False  # message_start was published for the current response
-        self.outcomes: list[ToolOutcome] = []
-        self.active_batch: list[ToolOutcome] = []
+        self.outcomes: list[ToolOutcome] = [
+            ToolOutcome(
+                deepcopy(call),
+                original_arguments=deepcopy(call.arguments),
+            )
+            for call in application_calls or []
+        ]
+        for outcome in self.outcomes:
+            outcome._set_origin("application", source)
+        self.active_batch: list[ToolOutcome] = list(self.outcomes)
         self._committed: set[int] = set()
         self._ended: set[int] = set()
         self._owned: set[asyncio.Future] = set()
@@ -95,11 +118,11 @@ class Run:
 
     @property
     def limits(self) -> RunLimits:
-        return self.agent.limits
+        return self._limits if self.application_batch else self.agent.limits
 
     @property
     def execution_mode(self) -> str:
-        return self.agent.execution_mode
+        return self._execution_mode if self.application_batch else self.agent.execution_mode
 
     @property
     def pending_calls(self) -> tuple[str, ...]:
@@ -199,7 +222,16 @@ class Run:
                 await asyncio.gather(cancel_wait, return_exceptions=True)
 
     async def emit(self, kind: str, call_id: str | None = None, **data: Any) -> None:
-        await self.agent._events.emit(kind, self.id, self.turn, data, call_id, self.await_owned)
+        if self.include_tool_origin and kind.startswith("tool_execution_"):
+            data.update(origin=self.origin, source=self.source)
+        await self.agent._events.emit(
+            kind,
+            self.id,
+            None if self.application_batch else self.turn,
+            data,
+            call_id,
+            self.await_owned,
+        )
 
     async def hook(self, name: str, *args: Any) -> Any:
         callback = getattr(self.hooks, name)
@@ -307,6 +339,8 @@ class Run:
         result = outcome.result
         outcome._settled = True
         self._committed.add(id(outcome))
+        if self.application_batch:
+            return  # One custom batch record is appended after all accepted calls settle.
         message = ToolResultMessage(
             outcome.call.id,
             outcome.call.name,
@@ -330,6 +364,37 @@ class Run:
             execution_status=outcome.execution_status,
         )
 
+    async def append_application_batch(self) -> None:
+        calls = []
+        for outcome in self.outcomes:
+            result = outcome.result
+            assert result is not None  # commit_outcome fills unresolved calls during cleanup.
+            calls.append(
+                {
+                    "id": outcome.call.id,
+                    "name": outcome.call.name,
+                    "arguments": deepcopy(outcome.original_arguments),
+                    "prepared_arguments": deepcopy(outcome.prepared_arguments),
+                    "origin": outcome.origin,
+                    "source": outcome.source,
+                    "execution_status": outcome.execution_status,
+                    "is_error": result.is_error,
+                    "error_code": result.error_code,
+                    "content": [asdict(block) for block in result.content],
+                }
+            )
+        await self.append(
+            CustomMessage(
+                "application_tool_batch",
+                {
+                    "run_id": self.id,
+                    "origin": self.origin,
+                    "source": self.source,
+                    "calls": calls,
+                },
+            )
+        )
+
     async def drive(self, pending: list[Message]) -> RunResult:
         agent = self.agent
         self.driver_started = True
@@ -339,7 +404,11 @@ class Run:
         # or aborted assistant message, followed by turn_end.
         failure: AssistantMessage | None = None
         try:
-            status, reason = await run_loop(self, pending)
+            status, reason = (
+                await run_application_batch(self)
+                if self.application_batch
+                else await run_loop(self, pending)
+            )
         except asyncio.CancelledError:
             status, reason, failure = self.cancelled_outcome()
         except Exception as exc:
@@ -363,6 +432,16 @@ class Run:
             except asyncio.CancelledError:
                 status = "cancelled"
                 errors.append("Result event delivery cancelled")
+            except Exception as exc:
+                status = "failed"
+                errors.append(f"{type(exc).__name__}: {exc}")
+        if self.application_batch:
+            failure = None  # No model turn occurred, including on abort or failure.
+            try:
+                await self.append_application_batch()
+            except asyncio.CancelledError:
+                status = "cancelled" if status != "limit_reached" else status
+                errors.append("Batch message delivery cancelled")
             except Exception as exc:
                 status = "failed"
                 errors.append(f"{type(exc).__name__}: {exc}")
@@ -420,9 +499,10 @@ class Run:
             self.fail(errors[-1])
             await self.cleanup()
         # Explicit config updates persist even if no further model request occurred.
-        for update in agent._updates:
-            merge(agent._defaults, update)
-        agent._updates.clear()
+        if not self.application_batch:
+            for update in agent._updates:
+                merge(agent._defaults, update)
+            agent._updates.clear()
         usage: dict[str, Any] = {}
         for m in agent._messages[self.start :]:
             if isinstance(m, AssistantMessage):

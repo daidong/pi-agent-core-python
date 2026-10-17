@@ -14,6 +14,7 @@ COMMANDS = [
     ["uv", "run", "mypy", "src/pi_python"],
     ["uv", "run", "pytest", "-q"],
     ["uv", "run", "python", "examples/in_memory.py"],
+    ["uv", "run", "python", "examples/capability_composition.py"],
     [
         "npm",
         "test",

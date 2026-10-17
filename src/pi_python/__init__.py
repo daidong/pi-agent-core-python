@@ -64,6 +64,7 @@ from .recovery import (
 )
 from .tools import (
     Tool,
+    ToolInvocation,
     ToolContext,
     ToolExecutor,
     ToolResult,
@@ -151,6 +152,7 @@ __all__ = [
     "is_recoverable_length",
     "is_retryable_error",
     "retry_delay",
+    "ToolInvocation",
     "ToolContext",
     "ToolExecutor",
     "ToolResult",

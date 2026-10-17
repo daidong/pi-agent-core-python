@@ -9,6 +9,7 @@ import asyncio
 from copy import copy, deepcopy
 from dataclasses import dataclass
 from typing import Any, Callable
+from uuid import uuid4
 
 from .cancellation import CancelToken
 from .errors import (
@@ -29,6 +30,7 @@ from .messages import (
     TextContent,
     Message,
     SystemMessage,
+    ToolCall,
     UserMessage,
     validate_history,
     validate_json,
@@ -37,7 +39,7 @@ from .provider import Provider, DefaultProvider, FunctionProvider, has_default_s
 from .queues import MessageQueues
 from .run import CALLER_CANCELLED, Run, RunResult, merge
 from .sync import run_sync
-from .tools import Tool
+from .tools import Tool, ToolInvocation
 from .transcript import current_system_message
 
 
@@ -78,9 +80,13 @@ class Agent:
         execution_mode: str = "parallel",
         steering_mode: str = "one_at_a_time",
         follow_up_mode: str = "one_at_a_time",
+        include_tool_origin: bool = False,
     ):
         if execution_mode not in {"parallel", "sequential"}:
             raise ConfigurationError("Invalid execution mode")
+        if type(include_tool_origin) is not bool:
+            raise ConfigurationError("include_tool_origin must be a boolean")
+        self.include_tool_origin = include_tool_origin
         self._queues = MessageQueues(steering_mode, follow_up_mode)
         if provider is not None and stream_fn is not None:
             raise ConfigurationError("Pass provider or stream_fn, not both")
@@ -204,6 +210,10 @@ class Agent:
         if self._running:
             self._updates.append(update)
         else:
+            # Preserve submission order after an application batch deferred updates.
+            for pending in self._updates:
+                merge(self._defaults, pending)
+            self._updates.clear()
             merge(self._defaults, update)
 
     @staticmethod
@@ -332,6 +342,31 @@ class Agent:
             raise AgentBusyError("Agent already running")
         return await self._start(self._input(message))
 
+    async def execute_tools(
+        self, invocations: list[ToolInvocation], *, source: str | None = None
+    ) -> RunResult:
+        """Execute a nonempty batch without a model request or consuming queued input.
+
+        Shares the model tool path, limits and cancellation ownership. Results are
+        recorded as application feedback, never as assistant/tool-result pairs.
+        ``source`` is caller-supplied diagnostic metadata, not an identity claim.
+        """
+        self._usable()
+        if self._running:
+            raise AgentBusyError("Agent already running")
+        validate_history(self._messages)
+        if not isinstance(invocations, list) or not invocations:
+            raise ConfigurationError("execute_tools requires a nonempty list of ToolInvocation")
+        if source is not None and not isinstance(source, str):
+            raise ConfigurationError("source must be a string or None")
+        calls = []
+        for invocation in invocations:
+            if not isinstance(invocation, ToolInvocation):
+                raise ConfigurationError("Expected ToolInvocation")
+            invocation.__post_init__()
+            calls.append(ToolCall(str(uuid4()), invocation.name, deepcopy(invocation.arguments)))
+        return await self._start([], application_calls=calls, source=source)
+
     def prompt_sync(
         self, message: str | Message | list[Message], images: list[ImageContent] | None = None
     ) -> RunResult:
@@ -369,18 +404,32 @@ class Agent:
         return await self._start([])
 
     async def _start(
-        self, pending: list[Message], skip_initial_steering: bool = False
+        self,
+        pending: list[Message],
+        skip_initial_steering: bool = False,
+        *,
+        application_calls: list[ToolCall] | None = None,
+        source: str | None = None,
     ) -> RunResult:
-        if isinstance(self.provider, DefaultProvider) and not has_default_stream():
+        if (
+            application_calls is None
+            and isinstance(self.provider, DefaultProvider)
+            and not has_default_stream()
+        ):
             raise ConfigurationError(
                 "No model provider: pass Agent(provider=...) or call set_default_stream_fn(...)"
             )
+        for update in self._updates:
+            merge(self._defaults, update)
+        self._updates.clear()
         self._running = True
         self._idle.clear()
         self._settled.clear()
         self._last_error = None
         self._events.failed = False
-        run = self._run = Run(self, skip_initial_steering)
+        run = self._run = Run(
+            self, skip_initial_steering, application_calls=application_calls, source=source
+        )
         run.loop = asyncio.get_running_loop()
         # Driver starts with a checkpoint so cancellation before scheduling still finalizes.
         run.driver = asyncio.create_task(self._drive(run, pending))

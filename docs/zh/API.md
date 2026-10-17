@@ -6,11 +6,12 @@
 
 ## Agent 与运行结果
 
-`Agent(provider=..., model="mock" 或 ModelInfo(...), options={}, system_prompt="", tools=[], messages=[], hooks=Hooks(), limits=RunLimits(), execution_mode="parallel", steering_mode="one_at_a_time", follow_up_mode="one_at_a_time")`。既没有 `provider` 也没有用 `set_default_stream_fn` 设置默认流时，`prompt` 直接抛 `ConfigurationError`。
+`Agent(provider=..., model="mock" 或 ModelInfo(...), options={}, system_prompt="", tools=[], messages=[], hooks=Hooks(), limits=RunLimits(), execution_mode="parallel", steering_mode="one_at_a_time", follow_up_mode="one_at_a_time", include_tool_origin=False)`。既没有 `provider` 也没有用 `set_default_stream_fn` 设置默认流时，`prompt` 直接抛 `ConfigurationError`。
 
 | 方法 | 行为 |
 |---|---|
 | `await prompt(str_or_message_or_list)` | 追加输入并运行，返回 `RunResult` |
+| `await execute_tools(invocations, source=None)` | 执行非空 `list[ToolInvocation]`，不请求模型，返回 `RunResult` |
 | `await continue_run()` | 从合法的用户/工具结果历史继续，或消费最终回答之后的排队输入；最后一条回答失败或被取消时，重试这一轮（见“从失败中恢复”）；不重放历史工具 |
 | `prompt_sync(...)` / `continue_run_sync()` | 普通脚本里的阻塞版本，按 Ctrl+C 会取消本次运行；见“在普通脚本里使用” |
 | `steer(message)` | 在下一安全边界接纳指导；也接受字符串 |
@@ -22,11 +23,39 @@
 | `clear_queues(steering=True, follow_up=True)` | 显式清除指定队列 |
 | `await aclose()` | 请求取消并等待本实例的清理，不关闭共享 Provider |
 
-同一实例不接受重叠的 `prompt` / `continue_run`，第二次调用立即抛 `AgentBusyError`。支持 `async with Agent(...)`。`state` 返回防御性复制；修改它不会改变历史。
+同一实例不接受重叠的 `prompt` / `continue_run` / `execute_tools`，第二次调用立即抛 `AgentBusyError`。支持 `async with Agent(...)`。`state` 返回防御性复制；修改它不会改变历史。
 
 `RunResult` 包含 `status`（`completed` / `failed` / `cancelled` / `limit_reached`）、本次新增 `messages`、数值用量累计 `usage`、`stop_reason`、`errors`、`tool_outcomes`、`reconciliation_required`、`cleanup_complete` 和两个队列的剩余数量。用量只累加 Provider 报告的顶层数值字段；不推算费用。
 
 `tool_outcomes` 按调用顺序记录原始参数、准备后参数、`raw_result` 和最终 `result`。`execution_status` 是 `not_started`、`running`、`succeeded`、`failed`、`cancelled`、`unknown`。`cancelled` 表示工具被取消或超时；`unknown` 只来自工具主动抛出的 `ToolOutcomeUnknownError`。执行成功但输出检查或后置钩子失败时，状态仍为 `succeeded`，最终结果为错误。所有错误都不触发自动重试。
+
+## 应用直接执行工具与能力包组合
+
+可用 `require_features(["application-tool-batches-v1"])` 检查已安装版本是否支持此合同。
+
+```python
+from pi_python import ToolInvocation
+
+result = await agent.execute_tools(
+    [ToolInvocation("check_sample", {"value": -1})], source="sample-checks@1"
+)
+# 在这里检查 tool_outcomes；completed 不等于领域检查通过。
+await agent.prompt("解释应用执行的检查结果。")
+```
+
+`ToolInvocation(name, arguments)` 接收已注册工具名和 JSON 对象参数，core 分配唯一调用 ID。未知工具名、schema 验证失败成为该调用的错误结果。空批次和不合法的调用对象在运行开始前拒绝。这个入口不要求配置 Provider。
+
+每个批次占用一次独立运行，与模型调用共用参数准备、schema 验证、工具钩子、执行顺序与并发、输出检查、工具预算、超时和取消清理。超过 `max_tool_calls` 时整批不执行。它不调用模型准备或转换钩子，不调用 `finish_turn`，不消费两类输入队列，也不根据工具的 `terminate` 字段启动模型循环。批次的工具与配置保持固定；期间提交的配置更新按提交顺序留到下次运行前应用，或在之后空闲时的 `update_config` 中先应用。跨多次运行的任务总预算由应用管理。
+
+工具事件默认保持原有字段集合。显式设置 `Agent(include_tool_origin=True)` 后，两种入口的工具事件才增加 `origin`（`"application"` 或 `"model"`）及 `source`（调用者提供的诊断字符串或 None）。该选项在每次运行开始时固定。`ToolContext` 和 `ToolOutcome` 通过只读属性提供来源，不新增 dataclass 字段；`dataclasses.asdict()` 保持旧结构，不包含来源信息。需要持久化来源时，显式读取 `.origin` / `.source`，或保存批次历史记录。模型调用的 `source` 始终为 None。来源标签不是认证身份。
+
+原有模型运行仍使用整数 `turn_id`，也不会产生 `application_tool_batch` 消息。应用批次事件的 `turn_id=None`，因为没有发生模型轮次。在采用 `execute_tools` 或读取其事件日志前，对轮次做整数运算或使用仅允许整数的数据库列的应用需要适配。None 本身在新事件编解码器中合法，但关键订阅者抛错可能使运行失败。正常情况下，关键结束订阅完成后实例才空闲；取消和订阅失败仍遵守既有规则。
+
+历史追加一条 `CustomMessage(custom_type="application_tool_batch", data=...)`，记录已接纳调用，包括失败、取消和未执行的调用。每项包含 ID、工具名、原始及准备后参数、来源、执行状态、错误标志与代码、整理后的可见内容。不伪造 assistant 调用，不产生悬空 `ToolResultMessage`。原始结果、结构化内容和本地详情留在 `tool_outcomes`，不自动送模型。后续模型请求中，应用的 `convert_to_llm` 钩子执行后，剩余的内置批次消息自动转成明确标注“应用执行结果”的文本。其他自定义类型仍需应用转换。默认可见性规则不是隔离环境；应用钩子仍可主动公开其他字段。
+
+**已有转换器的兼容性：** 内置批次消息不要求应用编写转换器。若已有 `transform_context` 或 `convert_to_llm`，应保留这类消息交给 core 转换，或自行明确转换。拒绝未知自定义类型会导致后续模型运行失败；过滤所有自定义消息则可能静默丢掉检查结果。这些情况发生在采用新接口或导入其历史之后，普通旧模型历史不会新增这类消息。`application_tool_batch` 现在是内置记录使用的类型名；旧应用若恰好已使用同名自定义类型，需要检查转换器和数据格式。
+
+[无网络组合示例](../../examples/capability_composition.py) 在同一个工具上演示模型选择调用和应用固定调用。普通 Python 对象提供指令段、工具、钩子和验证方法。应用拥有状态与生命周期，拒绝重复指令段名，并明确组合钩子的顺序与否决规则；core 拒绝重复工具名。配置以 `capability_configuration` 自定义消息记录，由应用转换；core 不解释包版本，也不新增包加载格式。示例最终得到 `status="completed"`，但 `domain_passed=False`，保留执行完成与领域验收的区别。
 
 ## Provider
 
@@ -110,7 +139,7 @@ def search_papers(query: str, year: int | None = None, limit: int = 10) -> list[
 | `prepare_request(context, cancel)` | 返回 `TurnUpdate` 或 None，在每次模型请求前调用 |
 | `prepare_next_turn(context, cancel)` | 返回 `TurnUpdate` 或 None，从第二轮开始调用 |
 | `transform_context(messages, cancel)` | 返回模型请求使用的消息列表，先于 convert |
-| `convert_to_llm(messages)` | 返回可送模型的消息列表，必须处理或显式过滤 `CustomMessage` |
+| `convert_to_llm(messages)` | 返回可送模型的消息列表，必须处理或显式过滤除内置 `application_tool_batch` 外的自定义消息类型 |
 | `before_tool_call(call, args, context)` | True / None 允许，False 阻止，或返回无需执行的 `ToolResult`；抛异常时该调用得到错误结果（`hook_error`），运行继续，与 Pi 相同 |
 | `after_tool_call(call, result, context)` | 返回完整 `ToolResult`、部分 `ToolResultUpdate` 或 None |
 | `finish_turn(context, cancel)` | 返回 `"continue"`、`"end"` 或 None |

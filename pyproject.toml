@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pi-python-core"
-version = "0.10.1"
+version = "0.10.2"
 description = "An embeddable asyncio agent core with opt-in Claude and OpenAI providers"
 readme = "README.md"
 requires-python = ">=3.11"

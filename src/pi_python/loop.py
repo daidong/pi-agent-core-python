@@ -19,6 +19,7 @@ from .messages import (
     message_from_dict,
     message_to_dict,
     validate_history,
+    convert_application_tool_batch,
 )
 from .models import ModelInfo
 from .provider import ModelRequest
@@ -82,6 +83,12 @@ async def stream_response(run: Run) -> tuple[AssistantMessage, bool]:
         messages = await run.hook("transform_context", messages, run.token)
     if run.hooks.convert_to_llm:
         messages = await run.hook("convert_to_llm", deepcopy(messages))
+    messages = [
+        convert_application_tool_batch(m)
+        if isinstance(m, CustomMessage) and m.custom_type == "application_tool_batch"
+        else m
+        for m in messages
+    ]
     if any(isinstance(m, CustomMessage) for m in messages):
         raise UnsupportedCapabilityError("Custom messages require convert_to_llm")
     validate_history(messages)
@@ -212,6 +219,8 @@ async def execute_batch(run: Run, outcomes: list[ToolOutcome]) -> None:
             agent_context=snapshot["context"],
             _on_reconciliation_required=lambda: run.require_reconciliation(),
         )
+        if run.application_batch:
+            contexts[id(outcome)]._set_origin(outcome.origin, outcome.source)
         return contexts[id(outcome)]
 
     def abort_before_start(outcome: ToolOutcome) -> bool:
@@ -300,6 +309,32 @@ async def execute_batch(run: Run, outcomes: list[ToolOutcome]) -> None:
             await run.commit_outcome(outcome)
 
 
+def exceeds_tool_budget(run: Run, outcomes: list[ToolOutcome], used: int = 0) -> bool:
+    maximum = run.limits.max_tool_calls
+    if maximum is None or used + len(outcomes) <= maximum:
+        return False
+    for outcome in outcomes:
+        outcome.result = error_result("limit", "Entire tool batch exceeds remaining budget")
+    return True
+
+
+async def run_application_batch(run: Run) -> tuple[str, str]:
+    run.checkpoint()
+    await run.emit("agent_start")
+    if exceeds_tool_budget(run, run.active_batch):
+        return "limit_reached", "max_tool_calls"
+    await execute_batch(run, run.active_batch)
+    if run.agent._unknown:
+        return "failed", "outcome_unknown"
+    if run.stuck():
+        run.fail("Tool did not stop after cancellation")
+        return "cancelled" if run.token.cancelled else "failed", "tool_not_stopped"
+    if run.token.cancelled:
+        status, reason, _ = run.cancelled_outcome()
+        return status, reason
+    return "completed", "stop"
+
+
 async def run_loop(run: Run, initial: list[Message]) -> tuple[str, str]:
     context = run.context
     assert context is not None
@@ -366,13 +401,8 @@ async def run_loop(run: Run, initial: list[Message]) -> tuple[str, str]:
             else:
                 status, reason = "cancelled", run.token.reason or "aborted"
         elif outcomes:
-            max_calls = run.limits.max_tool_calls
-            if max_calls is not None and tool_count + len(outcomes) > max_calls:
+            if exceeds_tool_budget(run, outcomes, tool_count):
                 status, reason = "limit_reached", "max_tool_calls"
-                for outcome in outcomes:
-                    outcome.result = error_result(
-                        "limit", "Entire tool batch exceeds remaining budget"
-                    )
             elif message.stop_reason == "length":
                 for outcome in outcomes:
                     await run.emit(

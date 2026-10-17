@@ -361,6 +361,63 @@ def message_from_dict(data: dict[str, Any]) -> Message:
         raise MessageValidationError(str(exc)) from exc
 
 
+def convert_application_tool_batch(message: CustomMessage) -> UserMessage:
+    """Project built-in application feedback, never local details or raw results.
+
+    An allowlist also protects the default visibility boundary for imported records
+    with extra fields. Applications can override conversion with convert_to_llm.
+    """
+    data = message.data
+    if not isinstance(data, dict) or not isinstance(data.get("calls"), list):
+        raise MessageValidationError("Invalid application tool batch")
+    calls = []
+    for call in data["calls"]:
+        if not isinstance(call, dict):
+            raise MessageValidationError("Invalid application tool call record")
+        keys = (
+            "id",
+            "name",
+            "arguments",
+            "prepared_arguments",
+            "origin",
+            "source",
+            "execution_status",
+            "is_error",
+            "error_code",
+            "content",
+        )
+        try:
+            visible = {key: call[key] for key in keys}
+        except KeyError as exc:
+            raise MessageValidationError("Incomplete application tool call record") from exc
+        validate_json(visible)
+        if (
+            visible["origin"] != "application"
+            or not isinstance(visible["id"], str)
+            or not visible["id"]
+            or not isinstance(visible["name"], str)
+            or not visible["name"]
+            or not isinstance(visible["arguments"], dict)
+            or (
+                visible["prepared_arguments"] is not None
+                and not isinstance(visible["prepared_arguments"], dict)
+            )
+            or (visible["source"] is not None and not isinstance(visible["source"], str))
+            or type(visible["is_error"]) is not bool
+            or visible["execution_status"]
+            not in ("not_started", "running", "succeeded", "failed", "cancelled", "unknown")
+            or (visible["error_code"] is not None and not isinstance(visible["error_code"], str))
+        ):
+            raise MessageValidationError("Invalid application tool call record")
+        _blocks(visible["content"], images=True)
+        calls.append(visible)
+    return UserMessage(
+        "Application tool execution results (application-selected, not model tool calls):\n"
+        + json.dumps({"calls": calls}, ensure_ascii=False, allow_nan=False),
+        timestamp=message.timestamp,
+    )
+
+
 def validate_history(messages: list[Message]) -> None:
     pending: dict[str, str] = {}
     for message in messages:

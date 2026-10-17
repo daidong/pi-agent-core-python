@@ -348,8 +348,45 @@ def apply_result_update(result: ToolResult, update: ToolResultUpdate) -> None:
         result.terminate = update.terminate
 
 
+@dataclass(frozen=True)
+class ToolInvocation:
+    """An application-requested call; the Agent assigns its ID."""
+
+    name: str
+    arguments: dict[str, Any]
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.name, str) or not self.name:
+            raise ConfigurationError("ToolInvocation requires a nonempty tool name")
+        validate_json(self.arguments)
+        if not isinstance(self.arguments, dict):
+            raise ConfigurationError("ToolInvocation arguments must be an object")
+
+
+class _ToolOrigin:
+    """Read-only provenance without changing legacy dataclass fields/asdict output.
+
+    Model calls need no per-instance storage. Application calls attach provenance
+    explicitly; deepcopy preserves it even though dataclasses.asdict excludes it.
+    """
+
+    _origin = "model"
+    _source: str | None = None
+
+    @property
+    def origin(self) -> str:
+        return self._origin
+
+    @property
+    def source(self) -> str | None:
+        return self._source
+
+    def _set_origin(self, origin: str, source: str | None) -> None:
+        self._origin, self._source = origin, source
+
+
 @dataclass
-class ToolContext:
+class ToolContext(_ToolOrigin):
     run_id: str
     call_id: str
     cancel: CancelToken
@@ -449,7 +486,7 @@ class Tool:
 
 
 @dataclass
-class ToolOutcome:
+class ToolOutcome(_ToolOrigin):
     call: ToolCall
     execution_status: str = "not_started"
     original_arguments: dict[str, Any] = field(default_factory=dict)

@@ -44,6 +44,7 @@ jobs:
           cd /tmp
           /tmp/installed/bin/python -c 'import importlib.util as u; assert u.find_spec("httpx") and u.find_spec("websockets"); assert u.find_spec("jwt") is None'
           /tmp/installed/bin/python "$GITHUB_WORKSPACE/examples/in_memory.py"
+          /tmp/installed/bin/python "$GITHUB_WORKSPACE/examples/capability_composition.py"
           /tmp/installed/bin/python -c 'from pi_python.mcp import MCP_FEATURES; assert {"sampling-host-state-v1", "sampling-profiles-v1", "sampling-metering-v1", "sampling-retry-v1"} <= MCP_FEATURES'
       # Exercise the deployed wheel outside the checkout, without an editable install.
       - run: |
@@ -53,6 +54,8 @@ jobs:
           /tmp/installed/bin/python "$GITHUB_WORKSPACE/examples/mcp_interactive.py"
           /tmp/installed/bin/python -m pytest -q -o pythonpath= \
             "$GITHUB_WORKSPACE/tests/test_tasks.py" \
+            "$GITHUB_WORKSPACE/tests/test_application_tools.py" \
+            "$GITHUB_WORKSPACE/tests/test_application_compatibility.py" \
             "$GITHUB_WORKSPACE/tests/test_nested_agents.py" \
             "$GITHUB_WORKSPACE/tests/test_typeddict_annotations.py" \
             "$GITHUB_WORKSPACE/tests/test_sync.py" \
