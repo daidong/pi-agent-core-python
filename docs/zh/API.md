@@ -257,6 +257,8 @@ SDK 不支持 `meta` 时，注册会抛出 `ConfigurationError`。
 
 构造 Agent 还可传 `thinking_level`、`thinking_budgets`、`transport`、`session_id`、`get_api_key`、`on_payload`、`on_response`、`on_provider_stream_event`。后四项也可放在 Hooks 中，明确的构造参数优先。它们的协议与 Provider 参数详见 [接入说明](PROVIDERS.md)。
 
+`auto_session_id=True` 为主动声明支持的 Provider（内置 Codex Provider）提供 Agent 管理的缓存专用标识。用 `agent.cache_session_id` 读取后备标识，用 `Agent(cache_session_id=saved_id, ...)` 恢复。显式 `session_id` 优先；`reset()` 更新后备标识，`auto_session_id=False` 关闭自动处理。自动或恢复的缓存标识不会开启连接复用。详见[缓存会话、持久化与 Provider 能力声明](PROVIDERS.md#codex-自动缓存会话)。
+
 ## 消息、工具结果与事件的字段
 
 `SystemMessage.content` 接受字符串或文本块列表。`AssistantMessage` 还包含 `response_model`、`response_id`、`thinking_level`、`diagnostics`、`raw_stop_reason`、`end_turn` 和 `deferred`。`provider_thinking_level` 是原生 effort，`thinking_level` 是请求等级。任意用户 JSON 中值为 null 的字段完整保留。

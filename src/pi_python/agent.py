@@ -69,6 +69,8 @@ class Agent:
         thinking_budgets: dict[str, int] | None = None,
         transport: str | None = None,
         session_id: str | None = None,
+        auto_session_id: bool = True,
+        cache_session_id: str | None = None,
         get_api_key: Callable | None = None,
         on_payload: Callable | None = None,
         on_response: Callable | None = None,
@@ -87,6 +89,21 @@ class Agent:
         if type(include_tool_origin) is not bool:
             raise ConfigurationError("include_tool_origin must be a boolean")
         self.include_tool_origin = include_tool_origin
+        if type(auto_session_id) is not bool:
+            raise ConfigurationError("auto_session_id must be a boolean")
+        if cache_session_id is not None:
+            if (
+                not isinstance(cache_session_id, str)
+                or not 1 <= len(cache_session_id) <= 64
+                or any(not "!" <= char <= "~" for char in cache_session_id)
+            ):
+                raise ConfigurationError(
+                    "cache_session_id must contain 1–64 printable ASCII characters without spaces"
+                )
+            if not auto_session_id:
+                raise ConfigurationError("cache_session_id requires auto_session_id=True")
+        self._auto_session_id = auto_session_id
+        self._cache_session_id = cache_session_id
         self._queues = MessageQueues(steering_mode, follow_up_mode)
         if provider is not None and stream_fn is not None:
             raise ConfigurationError("Pass provider or stream_fn, not both")
@@ -147,6 +164,23 @@ class Agent:
         # marks actual completion of the run and all operations it owns.
         self._settled = asyncio.Event()
         self._settled.set()
+
+    @property
+    def cache_session_id(self) -> str | None:
+        """Agent-managed Codex cache fallback, independent of explicit session_id.
+
+        Save this alongside history and restore it with cache_session_id=... .
+        Reading it does not enable connection reuse. Explicit session_id takes
+        precedence on requests; cache_retention='none' suppresses both on the wire.
+        """
+        if (
+            not self._auto_session_id
+            or getattr(self.provider, "supports_agent_cache_session", False) is not True
+        ):
+            return None
+        if self._cache_session_id is None:
+            self._cache_session_id = str(uuid4())
+        return self._cache_session_id
 
     @property
     def steering_mode(self) -> str:
@@ -265,6 +299,7 @@ class Agent:
             raise AgentBusyError("Cannot reset while running")
         baseline = current_system_message(self._messages)
         self._messages = [baseline] if baseline else []
+        self._cache_session_id = None
         self._last_error = None
         self._run = None
         self.clear_all_queues()

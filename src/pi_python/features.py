@@ -20,6 +20,7 @@ FEATURES = MCP_FEATURES | frozenset(
         "loop-portal-v1",
         "nested-agent-ownership-v1",
         "application-tool-batches-v1",
+        "codex-auto-cache-session-v1",
         "plugin-requires-v1",
     }
 )

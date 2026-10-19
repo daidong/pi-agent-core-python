@@ -139,6 +139,8 @@ Do not move that connection to `run_sync`'s separate loop. See
 These APIs and feature declarations are part of the 0.10.0 source line; check
 `require_features(["task-scope-v1", "loop-portal-v1"])` when depending on them.
 
+For Codex subscriptions, Agent supplies a stable cache ID by default. Save `agent.cache_session_id` alongside the message history and restore it with `Agent(cache_session_id=..., messages=...)`. This retains cache-only behavior; it does not enable connection reuse. Use `auto_session_id=False` to opt out. Other built-in Providers and custom streams keep their existing behavior. See [cache sessions](PROVIDERS.md#automatic-codex-cache-sessions).
+
 ## 5. Choose the smallest integration surface
 
 | Need | Start here |

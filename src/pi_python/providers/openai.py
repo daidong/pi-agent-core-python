@@ -318,6 +318,14 @@ class OpenAIProvider(RemoteProvider):
                 position += 1
         return items, transcript
 
+    def _cache_key(self, request: ModelRequest) -> str | None:
+        if request.options.get("cache_retention", "short") == "none":
+            return None
+        key = request.options.get("session_id")
+        if not key and getattr(self, "supports_agent_cache_session", False) is True:
+            key = request.cache_session_id
+        return key[:64] if isinstance(key, str) else key
+
     def build_request(self, request: ModelRequest, chatgpt_sign_in: bool = False) -> dict[str, Any]:
         model = self.model_info(request)
         compat = model.compat
@@ -334,9 +342,7 @@ class OpenAIProvider(RemoteProvider):
         retention = options.get("cache_retention", "short")
         if retention not in {"none", "short", "long"}:
             raise ConfigurationError("Invalid cache_retention")
-        key = options.get("session_id") if retention != "none" else None
-        if isinstance(key, str) and len(key) > 64:
-            key = key[:64]
+        key = self._cache_key(request)
         body: dict[str, Any] = {
             "model": request.model,
             "input": items,
@@ -436,13 +442,17 @@ class OpenAIProvider(RemoteProvider):
                     "OpenAI-Beta": "responses=experimental",
                 }
             )
-            if (
-                request.options.get("session_id")
-                and request.options.get("cache_retention") != "none"
-            ):
-                headers["session-id"] = headers["x-client-request-id"] = request.options[
-                    "session_id"
-                ][:64]
+            cache_key = self._cache_key(request)
+            if cache_key:
+                if request.options.get("session_id"):
+                    # Preserve the existing precedence of explicit session_id.
+                    headers["session-id"] = headers["x-client-request-id"] = cache_key
+                else:
+                    # Automatic defaults must not overwrite application headers.
+                    supplied = {name.lower() for name in headers}
+                    for name in ("session-id", "x-client-request-id"):
+                        if name not in supplied:
+                            headers[name] = cache_key
         if (
             self.name == "openai"
             and request.options.get("session_id")
@@ -458,7 +468,8 @@ class OpenAIProvider(RemoteProvider):
         body = await self.payload(request, self.build_request(request, chatgpt))
         if transport == "websocket-cached" and not request.options.get("session_id"):
             raise ConfigurationError("websocket-cached requires session_id")
-        # Pi caches a connection per session unless caching is disabled for the request.
+        # Only an application-supplied session_id can opt into connection reuse
+        # and response continuation. The Agent's cache fallback never reaches here.
         cached = (
             request.options.get("session_id")
             if request.options.get("cache_retention") != "none"
@@ -645,6 +656,7 @@ class OpenAIProvider(RemoteProvider):
 class OpenAICodexProvider(OpenAIProvider):
     name = "openai-codex"
     api = "openai-codex-responses"
+    supports_agent_cache_session = True
 
     def __init__(
         self, *, base_url: str = "https://chatgpt.com/backend-api/codex", **kwargs: Any

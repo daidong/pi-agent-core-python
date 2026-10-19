@@ -271,6 +271,8 @@ The event stream uses a bounded queue. If you only wait for the result, `result(
 
 An Agent can also be constructed with `thinking_level`, `thinking_budgets`, `transport`, `session_id`, `get_api_key`, `on_payload`, `on_response` and `on_provider_stream_event`. The last four can also go in Hooks; explicit constructor arguments take precedence. Their protocols, and the Provider parameters, are described in [the connector guide](PROVIDERS.md).
 
+`auto_session_id=True` supplies an Agent-owned cache-only ID to Providers that opt in (the built-in Codex Provider). `agent.cache_session_id` reads that managed fallback; restore it with `Agent(cache_session_id=saved_id, ...)`. Explicit `session_id` takes precedence. `reset()` rotates the managed fallback, and `auto_session_id=False` disables it. Automatic/restored cache IDs never enable connection reuse. See [cache sessions, persistence and Provider opt-in](PROVIDERS.md#automatic-codex-cache-sessions).
+
 ## Fields of messages, tool results and events
 
 `SystemMessage.content` accepts a string or a list of text blocks. `AssistantMessage` also contains `response_model`, `response_id`, `thinking_level`, `diagnostics`, `raw_stop_reason`, `end_turn` and `deferred`. `provider_thinking_level` is the provider's native effort; `thinking_level` is the requested level. Fields whose value is null in arbitrary user JSON are preserved intact.

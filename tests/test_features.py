@@ -17,6 +17,7 @@ def test_feature_inventory_and_unknown_requirement():
             "plugin-requires-v1",
             "nested-agent-ownership-v1",
             "application-tool-batches-v1",
+            "codex-auto-cache-session-v1",
         ]
     )
     with pytest.raises(ConfigurationError, match="missing-feature"):

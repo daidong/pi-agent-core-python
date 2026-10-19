@@ -100,7 +100,7 @@ Claude 的推理方式由模型记录决定：`compat["forceAdaptiveThinking"]` 
 
 OpenAI 将 `thinking_level` 映射到 reasoning effort。`options` 支持 `max_tokens`、`reasoning_summary`、`temperature`、`top_p`、`tool_choice`、`parallel_tool_calls`、`metadata`、`service_tier`、`text`、`headers`；Claude 另支持 `thinking_budgets`、`thinking_display`、`interleaved_thinking`、`top_k`、`stop_sequences`，以及直接覆盖的 `thinking` 和 `output_config`。与上游一致，Claude 只转发 `metadata.user_id`，字符串形式的 `tool_choice` 写成 `{"type": ...}`；推理开启、模型不支持或使用强度标记时不发送 `temperature`。具体模型允许哪些参数由服务端决定。
 
-Claude 使用 SSE。OpenAI/Codex 支持 `sse`、`websocket`、`websocket-cached` 和 `auto`。`websocket-cached` 要求 `session_id`；与上游一致，`auto` 在有 `session_id` 时也复用连接。`cache_retention="none"` 时每次请求使用一次性连接。连接按端点、会话和请求头隔离，同一连接串行使用；空闲 5 分钟或建立满 55 分钟后不再复用，已被服务端关闭的连接也会重建，而不是在旧连接上失败。时限可用 `HTTPTransport(websocket_idle_ttl=..., websocket_max_age=...)` 调整。
+Claude 使用 SSE。OpenAI/Codex 支持 `sse`、`websocket`、`websocket-cached` 和 `auto`。`websocket-cached` 要求应用显式提供 `session_id`；与上游一致，`auto` 在有显式 `session_id` 时也复用连接。Agent 自动管理的缓存标识不会启用上述行为。`cache_retention="none"` 时每次请求使用一次性连接。连接按端点、会话和请求头隔离，同一连接串行使用；空闲 5 分钟或建立满 55 分钟后不再复用，已被服务端关闭的连接也会重建，而不是在旧连接上失败。时限可用 `HTTPTransport(websocket_idle_ttl=..., websocket_max_age=...)` 调整。
 
 每次 WebSocket 请求及归还连接时清扫过期的空闲连接。默认最多保留 64 条空闲连接，超限时先关闭最早归还的连接；可用 `HTTPTransport(websocket_cache_size=...)` 调整，设为 `0` 则不保留连接。会话锁在最后一个运行或等待中的请求退出后移除。清扫由请求触发，没有后台定时器。结束后调用 `await provider.aclose()`；共享 transport 由应用管理生命周期。
 
@@ -119,6 +119,42 @@ Codex 复用连接时采用上游的增量请求：如果本次请求除输入�
 OpenAI 对已知模型默认发送模型输出上限（按上下文估算截短，最少 16）。使用 ChatGPT 登录令牌直连 `api.openai.com` 时（令牌不以 `sk-` 开头），与上游一样不发送服务端拒绝的 `prompt_cache_retention`、`prompt_cache_options`、`max_output_tokens` 和 `temperature`。
 
 用量归一化为 `input`、`output`、`cache_read`、`cache_write`、`reasoning`、`total_tokens`。工具自己的用量独立保存在工具结果中，不混入主模型 token 计数。
+
+## Codex 自动缓存会话
+
+从 0.11.0 起，使用 `OpenAICodexProvider` 的 Agent 在应用未传 `session_id` 时，自动提供稳定的缓存标识，用于 `session-id`、`x-client-request-id` 请求头和 `prompt_cache_key`。这针对 ChatGPT Codex 订阅通道，不适用于 OpenAI API key 通道或 Claude。Codex CLI [明确说明会话头用于缓存亲和性](https://github.com/openai/codex/blob/e4568a3538c9cab6627d64ff8cdfc7d98b79b7db/codex-rs/core/src/client.rs#L660)；发送标识不保证命中，也不保证具体的订阅配额节省。
+
+标识属于 Agent，不属于共享 Provider 或单次请求。同一 Agent 的工具循环、后续 prompt、重试和配置替换保持标识；不同 Agent（包括子 Agent）各自生成。`reset()` 丢弃自动管理的标识，包括恢复时传入的标识，下次读取或请求时生成新值。应用显式传入的 `session_id` 始终优先，并保持原有 reset 行为。自动请求头尊重应用自行设置的同名头，包括不同大小写形式。
+
+自动标识**不会启用连接复用或上一响应续接**。默认传输仍为 SSE。使用 `auto` 或 `websocket` 时，除非应用显式传入 `session_id` 并选择支持复用的模式，否则仍使用一次性连接、发送完整上下文。`websocket-cached` 仍要求显式 `session_id`。缓存亲和性与传输会话状态分开管理。
+
+用 `Agent(auto_session_id=False, ...)` 恢复旧默认行为；该开关不屏蔽显式 `session_id`。`options={"cache_retention": "none"}` 对两类标识都停止自动设置缓存键和关联会话头。
+
+将只读属性 `agent.cache_session_id` 与历史一起保存，并通过构造参数 `cache_session_id=` 恢复：
+
+```python
+from pi_python import Agent, encode_messages, decode_messages
+
+# provider 是应用管理的 OpenAICodexProvider。
+agent = Agent(provider=provider, model=model_id)
+await agent.prompt("记住任务约束。")
+saved = {
+    "messages": encode_messages(list(agent.state.messages)),
+    "cache_session_id": agent.cache_session_id,
+}
+restored = Agent(
+    provider=provider, model=model_id,
+    messages=decode_messages(saved["messages"]),
+    cache_session_id=saved["cache_session_id"],
+)
+await restored.prompt("继续任务。")
+```
+
+上述对象由应用自行持久化，消息编码格式没有变化。`cache_session_id` 表示 Agent 管理的后备标识；当显式 `session_id` 或自定义请求头覆盖它时，该属性不代表实际请求的路由标识。自行管理 `session_id` 的应用仍需保存自己的配置。通过 `cache_session_id=` 恢复保持“只用于缓存”；改用 `session_id=` 恢复则会采用原有传输语义。恢复值须为 1–64 个不含空格的可打印 ASCII 字符，且 `auto_session_id` 须为 True。关闭自动处理或当前 Provider 未声明支持时，该属性返回 None。
+
+core 通过可选的 Provider 能力 `supports_agent_cache_session = True` 判断，不检查模型名，也不导入 Codex 适配器。内置 Provider 中只有 Codex 开启它。自定义 Provider 可主动声明支持并读取 `request.cache_session_id`；已有 Provider 和 `stream_fn` 不需要修改。主动声明支持的包装器应保留原请求或使用 `deepcopy`；通过序列化的 dataclass 字段重建请求会丢失这项缓存专用元数据。默认流包装器会转发底层 Provider 的能力。标识不放入 `request.options`，不增加 `ModelRequest` 的 dataclass 字段，也不增加消息、事件或结果字段。直接调用底层 Provider 不会自动生成标识。
+
+这是与官方 Pi core 的有意差异：上游底层 Agent 只转发可选标识，由 coding-agent 的 `SessionManager` 提供；pi-python 在主要的 Agent 接入入口补齐该便利功能。上游参照版本不变。应用可用 `require_features(["codex-auto-cache-session-v1"])` 检查支持情况。兼容性与验证范围见 [0.11.0 发布说明](../releases/0.11.0.md)。
 
 ## 模型能力表和 DeepSeek
 

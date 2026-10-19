@@ -28,6 +28,20 @@ class ModelRequest:
     on_response: Callable | None = field(default=None, repr=False)
     on_provider_stream_event: Callable | None = field(default=None, repr=False)
 
+    def _set_cache_session_id(self, value: str) -> None:
+        # Per-request metadata, deliberately outside the public dataclass fields
+        # and options. It must never be interpreted as a transport session_id.
+        self._agent_cache_session_id = value
+
+    @property
+    def cache_session_id(self) -> str | None:
+        """Optional Agent-owned cache affinity, never a transport session.
+
+        Providers opt in with supports_agent_cache_session=True. This property
+        is not a dataclass field and does not change serialized request options.
+        """
+        return getattr(self, "_agent_cache_session_id", None)
+
 
 @dataclass
 class ModelEvent:
@@ -109,6 +123,10 @@ def has_default_stream() -> bool:
 
 
 class DefaultProvider:
+    @property
+    def supports_agent_cache_session(self) -> bool:
+        return getattr(_default_stream, "supports_agent_cache_session", False) is True
+
     @property
     def name(self) -> str:
         return getattr(_default_stream, "name", "custom")

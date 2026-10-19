@@ -2,6 +2,7 @@
 
 import base64
 import json
+import pytest
 
 from pi_python import *
 from pi_python.providers import HTTPTransport, OpenAICodexProvider
@@ -60,9 +61,11 @@ class Server:
         self.script = script
         self.requests = []
         self.connections = 0
+        self.headers = []
 
     async def handle(self, socket):
         self.connections += 1
+        self.headers.append(socket.request.headers)
         connection = self.connections
         async for raw in socket:
             request = json.loads(raw)
@@ -96,18 +99,19 @@ def agent(server, transport, **options):
         model="gpt-5.5",
         system_prompt="Use the tool.",
         tools=[Tool("add", "Add", SCHEMA, add)],
-        transport="websocket-cached",
+        transport=options.pop("transport_mode", "websocket-cached"),
         session_id="session",
         options=options,
     )
 
 
-async def test_cached_websocket_sends_only_new_input_after_each_response():
+@pytest.mark.parametrize("mode", ["websocket-cached", "auto"])
+async def test_cached_websocket_sends_only_new_input_after_each_response(mode):
     def script(n, request):
         return call_turn("resp_1") if n == 1 else text_turn(f"resp_{n}")
 
     async with Server(script) as server, HTTPTransport() as transport:
-        bot = agent(server, transport)
+        bot = agent(server, transport, transport_mode=mode)
         first = await bot.prompt("add 2 and 3")
         second = await bot.prompt("again")
     assert first.status == second.status == "completed"
@@ -129,6 +133,48 @@ async def test_cached_websocket_sends_only_new_input_after_each_response():
 
     assert strip(bodies[1]) == strip(bodies[0])
     assert transport.stats["websocket_delta_requests"] == 2
+
+
+@pytest.mark.parametrize("mode", ["auto", "websocket"])
+@pytest.mark.parametrize("restored", [False, True])
+async def test_auto_cache_id_never_enables_connection_reuse_or_continuation(mode, restored):
+    def script(n, request):
+        return call_turn("resp_1") if n == 1 else text_turn(f"resp_{n}")
+
+    async with Server(script) as server, HTTPTransport() as transport:
+        provider = OpenAICodexProvider(api_key=TOKEN, base_url=server.url, transport=transport)
+        previous = Agent(provider=provider, model="gpt-5.5")
+        cache_id = previous.cache_session_id if restored else None
+        bot = Agent(
+            provider=provider,
+            model="gpt-5.5",
+            transport=mode,
+            cache_session_id=cache_id,
+            tools=[Tool("add", "Add", SCHEMA, add)],
+        )
+        assert (await bot.prompt("add 2 and 3")).status == "completed"
+        assert (await bot.prompt("again")).status == "completed"
+    assert server.connections == 3
+    bodies = [body for _, body in server.requests]
+    assert all("previous_response_id" not in body for body in bodies)
+    assert len(bodies[1]["input"]) > len(bodies[0]["input"])
+    assert len(bodies[2]["input"]) > len(bodies[1]["input"])
+    assert {body["prompt_cache_key"] for body in bodies} == {bot.cache_session_id}
+    assert {headers["session-id"] for headers in server.headers} == {bot.cache_session_id}
+    assert transport.stats["websocket_reuses"] == 0
+    assert transport.stats["websocket_delta_requests"] == 0
+    if restored:
+        assert bot.cache_session_id == cache_id
+
+
+async def test_websocket_cached_still_requires_an_explicit_session_id():
+    async with Server(lambda n, request: text_turn(str(n))) as server, HTTPTransport() as transport:
+        provider = OpenAICodexProvider(api_key=TOKEN, base_url=server.url, transport=transport)
+        bot = Agent(provider=provider, model="gpt-5.5", transport="websocket-cached")
+        result = await bot.prompt("hello")
+    assert result.status == "failed"
+    assert "websocket-cached requires session_id" in " ".join(result.errors)
+    assert server.connections == 0
 
 
 async def test_changed_options_or_missing_response_state_resend_full_context():

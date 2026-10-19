@@ -56,6 +56,8 @@ jobs:
             "$GITHUB_WORKSPACE/tests/test_tasks.py" \
             "$GITHUB_WORKSPACE/tests/test_application_tools.py" \
             "$GITHUB_WORKSPACE/tests/test_application_compatibility.py" \
+            "$GITHUB_WORKSPACE/tests/test_cache_sessions.py" \
+            "$GITHUB_WORKSPACE/tests/test_websocket_continuation.py" \
             "$GITHUB_WORKSPACE/tests/test_nested_agents.py" \
             "$GITHUB_WORKSPACE/tests/test_typeddict_annotations.py" \
             "$GITHUB_WORKSPACE/tests/test_sync.py" \

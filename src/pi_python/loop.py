@@ -105,6 +105,14 @@ async def stream_response(run: Run) -> tuple[AssistantMessage, bool]:
         deepcopy(context.options),
         model_info=deepcopy(model) if isinstance(model, ModelInfo) else None,
     )
+    if (
+        getattr(run.provider, "supports_agent_cache_session", False) is True
+        and not request.options.get("session_id")
+        and request.options.get("cache_retention") != "none"
+    ):
+        cache_session_id = run.agent.cache_session_id
+        if cache_session_id is not None:
+            request._set_cache_session_id(cache_session_id)
     if run.hooks.get_api_key:
         request.api_key = await run.hook(
             "get_api_key", getattr(run.provider, "name", request.model)

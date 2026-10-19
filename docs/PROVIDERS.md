@@ -100,7 +100,7 @@ Claude models that support changing reasoning effort mid-conversation (`supports
 
 OpenAI maps `thinking_level` to reasoning effort. `options` supports `max_tokens`, `reasoning_summary`, `temperature`, `top_p`, `tool_choice`, `parallel_tool_calls`, `metadata`, `service_tier`, `text` and `headers`; Claude also supports `thinking_budgets`, `thinking_display`, `interleaved_thinking`, `top_k`, `stop_sequences`, and direct overrides of `thinking` and `output_config`. As upstream does, Claude forwards only `metadata.user_id`, writes a string `tool_choice` as `{"type": ...}`, and does not send `temperature` when reasoning is on, when the model does not support it, or when effort markers are in use. Which parameters a given model accepts is up to the server.
 
-Claude uses SSE. OpenAI and Codex support `sse`, `websocket`, `websocket-cached` and `auto`. `websocket-cached` requires `session_id`; as upstream does, `auto` also reuses the connection when there is a `session_id`. With `cache_retention="none"`, each request uses a one-off connection. Connections are kept apart by endpoint, session and request headers, and each connection is used by one request at a time. A connection is no longer reused after 5 idle minutes or 55 minutes after it was opened, and a connection the server has closed is rebuilt instead of failing on the old one. These limits can be changed with `HTTPTransport(websocket_idle_ttl=..., websocket_max_age=...)`.
+Claude uses SSE. OpenAI and Codex support `sse`, `websocket`, `websocket-cached` and `auto`. `websocket-cached` requires an application-supplied `session_id`; as upstream does, `auto` also reuses the connection when there is an application-supplied `session_id`. The Agent-managed cache ID does not enable either behavior. With `cache_retention="none"`, each request uses a one-off connection. Connections are kept apart by endpoint, session and request headers, and each connection is used by one request at a time. A connection is no longer reused after 5 idle minutes or 55 minutes after it was opened, and a connection the server has closed is rebuilt instead of failing on the old one. These limits can be changed with `HTTPTransport(websocket_idle_ttl=..., websocket_max_age=...)`.
 
 Expired idle connections are swept on WebSocket requests and cache returns. At most 64 idle connections are retained, evicting the least recently returned first; set `HTTPTransport(websocket_cache_size=...)` to change this limit, or `0` to disable retention. Session locks are removed when their last active or waiting request exits. Sweeping is demand-driven, with no background timer. Call `await provider.aclose()` when you are done; the application manages the lifetime of a shared transport.
 
@@ -122,6 +122,42 @@ Usage is normalized to `input`, `output`, `cache_read`, `cache_write`, `reasonin
 `{"type": "usage_unavailable"}` to `AssistantMessage.diagnostics`. Their legacy normalized
 counters remain present for compatibility; those default zeros are not measured consumption.
 MCP sampling observations report `usage=None` for this case. A tool's own usage is stored separately in the tool result and is not mixed into the main model's token counts.
+
+## Automatic Codex cache sessions
+
+From 0.11.0, `Agent` supplies a stable cache ID when using `OpenAICodexProvider` without an application-supplied `session_id`. It fills the `session-id` and `x-client-request-id` headers and `prompt_cache_key`. This applies to the ChatGPT Codex subscription channel, not to OpenAI API-key calls or Claude. The Codex CLI [identifies the session header as the cache-affinity input](https://github.com/openai/codex/blob/e4568a3538c9cab6627d64ff8cdfc7d98b79b7db/codex-rs/core/src/client.rs#L660); sending an ID does not guarantee a cache hit or a particular subscription quota saving.
+
+The ID belongs to the Agent, not to the shared Provider or an individual request. Tool loops, later prompts, retries and configuration replacement keep it. Different Agents, including nested Agents, receive independent IDs. `reset()` discards the managed ID, including a restored one; the next access or request generates a new ID. An explicit `session_id` always takes precedence and retains its existing reset behavior. Automatic headers respect application-supplied header values, including differently cased names.
+
+The automatic ID **never enables connection reuse or response continuation**. The default transport remains SSE. In `auto` or `websocket` mode it still uses one-off connections and full context unless the application explicitly supplies `session_id` to an eligible mode. `websocket-cached` still requires an explicit `session_id`. Cache affinity and transport session state are separate.
+
+Use `Agent(auto_session_id=False, ...)` to keep the previous default. This does not suppress an explicit `session_id`. `options={"cache_retention": "none"}` suppresses library-generated cache keys and session headers for either kind of ID.
+
+Save the read-only `agent.cache_session_id` alongside history and restore it through the constructor's `cache_session_id=` argument:
+
+```python
+from pi_python import Agent, encode_messages, decode_messages
+
+# provider is an application-owned OpenAICodexProvider.
+agent = Agent(provider=provider, model=model_id)
+await agent.prompt("Remember the task constraints.")
+saved = {
+    "messages": encode_messages(list(agent.state.messages)),
+    "cache_session_id": agent.cache_session_id,
+}
+restored = Agent(
+    provider=provider, model=model_id,
+    messages=decode_messages(saved["messages"]),
+    cache_session_id=saved["cache_session_id"],
+)
+await restored.prompt("Continue the task.")
+```
+
+The application chooses how to store this object; message encoding itself has not changed. `cache_session_id` is the Agent-managed fallback, not a report of a request's effective routing ID when an explicit `session_id` or custom headers override it. Applications that manage `session_id` must persist that configuration themselves. Restoring with `cache_session_id=` retains cache-only behavior; restoring it as `session_id=` opts into the existing transport semantics. Restored cache IDs must contain 1–64 printable ASCII characters without spaces and require `auto_session_id=True`. The property returns `None` when automatic handling is disabled or the current Provider does not opt in.
+
+The core uses an optional Provider capability, `supports_agent_cache_session = True`, rather than inspecting model names or importing a Codex adapter. Only the built-in Codex Provider enables it. Custom Providers may opt in and read `request.cache_session_id`; existing Providers and `stream_fn` implementations require no changes. Wrappers that opt in must preserve the request object or use `deepcopy`: rebuilding it from its serialized dataclass fields drops this cache-only metadata. The default-stream wrapper forwards the underlying Provider's capability. The ID is separate from `request.options`, and does not add dataclass fields to `ModelRequest` or fields to messages, events or results. Calling a Provider directly does not generate an ID.
+
+This is an intentional difference from Pi's core Agent, which only forwards an optional ID. Pi's coding-agent layer supplies it through `SessionManager`; pi-python provides that convenience at its primary Agent entry point. The upstream baseline is unchanged. Applications can check `require_features(["codex-auto-cache-session-v1"])` before using this API. See the [0.11.0 compatibility and verification notes](releases/0.11.0.md).
 
 ## Model table and DeepSeek
 

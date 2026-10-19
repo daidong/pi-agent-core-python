@@ -45,6 +45,16 @@
 
 本次沿用现行版本的默认无预算上限、已知取消与显式未知结果的区分，以及可选扩展能力，不把它们按早期草案回退。跨 run 预算、领域效果、科研判断内化和新的包加载器不在本次实现范围内。上述旧验证文件记录的是各自运行时的版本，不自动成为 D9 的验证证据。
 
+## D10：Agent 管理 Codex 缓存会话标识
+
+0.11.0 在 Agent 入口补齐缓存会话生命周期。官方 Pi v1.0.0 的底层 Agent 只转发 `sessionId`，由 coding-agent 的 `createAgentSession()` 从 `SessionManager` 取值；这一分工在核查的 v1.3.0 中也相同。Python 没有对应的完整上层应用，因而默认在 Agent 提供此便利能力。它是经用户确认的有意差异，不是上游 core 行为完全一致的声明，也不升级固定参照。
+
+core 只识别可选的 `supports_agent_cache_session=True` 能力，不绑定模型名或 Provider 类。内置 Codex Provider 使用 `request.cache_session_id` 作为缓存键与会话头的后备值；其他内置 Provider、自定义流和未声明支持的 Provider 不接收自动标识。`DefaultProvider` 转发实际接入的能力。
+
+自动值不写入 `options.session_id`，因此不能满足 `websocket-cached` 的显式配置要求，也不能启动连接复用或 `previous_response_id` 续接。原有显式值、钩子及配置更新的优先级保留；自动值尊重应用自定义请求头。`auto_session_id=False` 恢复旧默认，`cache_retention="none"` 抑制库生成的缓存字段。新增属性与构造参数支持保存、恢复后备标识；消息编解码、事件、结果和 ModelRequest 的 dataclass 字段不变。
+
+证据：`tests/test_cache_sessions.py` 捕获实际构造的 HTTP 请求，覆盖默认头、工具循环、重试、配置替换、跨 Agent/子 Agent 隔离、重置、恢复、显式优先、禁用、通道切换、自定义 Provider 能力及旧请求结构；`tests/test_websocket_continuation.py` 用本地服务器检查连接数、完整输入和续接字段。恢复的自动值也不触发连接复用；显式标识的原有增量行为单独验证。真实后端命中率、订阅配额节省与所有上层应用不在这些离线检查的证明范围内。
+
 ## 有意差异与范围外行为
 
 D1–D8 保持原设计的含义。D1 严格输入；D2 执行前钩子不能通过原地修改参数改变调用；D3 资源预算；D4 Python 取消及未知结果；D5 状态复制；D6 输出检查；D7 诊断、原始结果和完整流校验；D8 文本与工具子集。每项有独立 Python 断言，不以 skip 代替验收。

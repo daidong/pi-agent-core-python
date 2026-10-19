@@ -111,6 +111,8 @@ finally:
 
 应用自己的异步工作可以交给 `TaskScope`。同步工具的工作线程需要访问已有异步连接时，由连接所属事件循环创建 `LoopPortal`，再用它提交调用，不要把连接移到 `run_sync` 的独立循环。见 [任务归属和线程调用](API.md)。这些 API 和能力声明属于 0.10.0 源码系列；依赖它们时可用 `require_features(["task-scope-v1", "loop-portal-v1"])` 检查。
 
+使用 Codex 订阅通道时，Agent 默认提供稳定的缓存标识。将 `agent.cache_session_id` 与消息历史一起保存，并用 `Agent(cache_session_id=..., messages=...)` 恢复，仍保持“只用于缓存”，不会开启连接复用。用 `auto_session_id=False` 关闭自动处理。其他内置 Provider 和自定义流保持原有行为。详见[缓存会话](PROVIDERS.md#codex-自动缓存会话)。
+
 ## 5. 按需求选择接入方式
 
 | 需要什么 | 从哪里开始 |
