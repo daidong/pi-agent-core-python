@@ -591,7 +591,7 @@ class OpenAIProvider(RemoteProvider):
         blocks: list[TextContent | ThinkingContent | ToolCall] = []
         for item in output:
             block = response_block(item)
-            if isinstance(block, ThinkingContent) and item.get("encrypted_content"):
+            if isinstance(block, ThinkingContent):
                 old = next(
                     (
                         slot["item"]
@@ -600,11 +600,13 @@ class OpenAIProvider(RemoteProvider):
                     ),
                     None,
                 )
-                if old is not None and not old.get("encrypted_content"):
+                # Pi keeps the output_item.done reasoning item and only backfills a missing
+                # encrypted_content; OpenAI may re-encrypt the blob in response.completed.
+                if old is not None:
+                    if not old.get("encrypted_content") and item.get("encrypted_content"):
+                        old = {**old, "encrypted_content": item["encrypted_content"]}
                     block.thinking_signature = json.dumps(
-                        {**old, "encrypted_content": item["encrypted_content"]},
-                        separators=(",", ":"),
-                        ensure_ascii=False,
+                        old, separators=(",", ":"), ensure_ascii=False
                     )
             blocks.append(block)
         status = final_response.get("status", "completed")

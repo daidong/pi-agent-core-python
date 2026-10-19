@@ -136,6 +136,60 @@ async def test_thinking_signatures_replayed(kind):
     assert ("thinking" if kind == "anthropic" else "reasoning") in body
 
 
+@pytest.mark.parametrize(
+    "done_blob, final_blob, final_summary, replayed",
+    [
+        # Issue #2: OpenAI re-encrypts the blob in response.completed; Pi keeps the done copy.
+        ("done-blob", "completed-blob", "检查输入", "done-blob"),
+        # Azure-style late backfill: only the terminal response carries the blob.
+        (None, "completed-blob", "检查输入", "completed-blob"),
+        # Visible reasoning must still match between output_item.done and completion.
+        ("done-blob", "completed-blob", "changed", None),
+    ],
+)
+async def test_openai_reasoning_blob_from_done_item_with_backfill_only(
+    done_blob, final_blob, final_summary, replayed
+):
+    thinking = json.loads(json.dumps(events("openai-thinking")))
+    for event in thinking:
+        items = (
+            [event["item"]]
+            if event["type"].startswith("response.output_item.")
+            else event["response"]["output"]
+            if event["type"] == "response.completed"
+            else []
+        )
+        for item in items:
+            if item["type"] != "reasoning":
+                continue
+            item.pop("encrypted_content")
+            if event["type"] == "response.completed":
+                item["encrypted_content"] = final_blob
+                item["summary"][0]["text"] = final_summary
+            elif done_blob and event["type"] == "response.output_item.done":
+                item["encrypted_content"] = done_blob
+    provider, requests, streams, client = remote("openai", [thinking, events("openai-text")])
+    async with client:
+        agent = Agent(provider=provider, model="test-model", thinking_level="medium")
+        result = await agent.prompt("reason")
+        if replayed is None:
+            assert result.status == "failed"
+            assert "End/final content mismatch" in str(result.errors)
+            return
+        assert result.status == "completed", result.errors
+        signature = json.loads(result.messages[-1].content[0].thinking_signature)
+        assert signature["encrypted_content"] == replayed
+        assert decode_messages(encode_messages(list(agent.state.messages))) == list(
+            agent.state.messages
+        )
+        result = await agent.prompt("continue")
+    assert result.status == "completed", result.errors
+    reasoning = [
+        i for i in json.loads(requests[1].content)["input"] if i.get("type") == "reasoning"
+    ]
+    assert [i["encrypted_content"] for i in reasoning] == [replayed]
+
+
 @pytest.mark.parametrize("kind", ["anthropic", "openai"])
 @pytest.mark.parametrize("corruption", ["truncated", "bad_json", "bad_final", "error"])
 async def test_broken_stream_never_executes_tool(kind, corruption):
