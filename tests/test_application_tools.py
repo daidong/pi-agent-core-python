@@ -246,7 +246,10 @@ async def test_C28_timeouts(kind):
     agent, _ = make_agent(execute, limits=limits)
     result = await agent.execute_tools([ToolInvocation("check", {})])
     assert result.status == ("completed" if kind == "tool" else "limit_reached")
-    assert result.tool_outcomes[0].execution_status == "cancelled"
+    # A run deadline includes setup and may expire before execution on a busy
+    # runner. A tool deadline only starts once the tool has entered execution.
+    expected = {"cancelled"} if kind == "tool" else {"cancelled", "not_started"}
+    assert result.tool_outcomes[0].execution_status in expected
     assert batch_record(result.messages)[0]["is_error"]
 
 
