@@ -251,6 +251,42 @@ async def test_auth_payload_response_and_raw_event_hooks():
     assert json.loads(requests[0].content)["metadata"] == {"test": "yes"}
 
 
+async def test_anthropic_tool_without_arguments_streams_empty_delta():
+    values = [
+        {
+            "type": "message_start",
+            "message": {"id": "m", "usage": {"input_tokens": 1, "output_tokens": 0}},
+        },
+        {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {"type": "tool_use", "id": "toolu_1", "name": "status", "input": {}},
+        },
+        {
+            "type": "content_block_delta",
+            "index": 0,
+            "delta": {"type": "input_json_delta", "partial_json": ""},
+        },
+        {"type": "content_block_stop", "index": 0},
+        {
+            "type": "message_delta",
+            "delta": {"stop_reason": "tool_use"},
+            "usage": {"output_tokens": 1},
+        },
+        {"type": "message_stop"},
+    ]
+    provider, _, _, client = remote("anthropic", [values])
+    request = ModelRequest(
+        [SystemMessage("s"), UserMessage("go")],
+        [ToolDeclaration("status", "", {"type": "object", "properties": {}})],
+        model="test-model",
+    )
+    async with client:
+        final = [e async for e in provider.stream(request, CancelToken())][-1]
+    assert final.type == "done"
+    assert [(c.name, c.arguments) for c in final.message.tool_calls] == [("status", {})]
+
+
 async def test_claude_subscription_headers_and_tool_case():
     values = events("anthropic-tool")
     values[1]["content_block"]["name"] = "Read"

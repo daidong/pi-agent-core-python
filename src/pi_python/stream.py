@@ -178,7 +178,8 @@ async def checked_events(
             elif isinstance(old, ToolCall) and isinstance(new, ToolCall):
                 if old.id != new.id or old.name != new.name:
                     raise ProviderProtocolError("Tool identity changed")
-                if event.index in arguments:
+                # Anthropic streams an empty input_json_delta for a tool without arguments.
+                if event.index in arguments and arguments[event.index].strip():
                     try:
                         assembled = json.loads(arguments[event.index])
                     except ValueError as exc:
