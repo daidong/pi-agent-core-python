@@ -15,7 +15,7 @@ def test_C25_roundtrip_and_no_execution():
     for bad in [float("nan"), float("inf"), object(), {1: "x"}]:
         with pytest.raises(MessageValidationError):
             encode_messages([CustomMessage("x", bad)])
-    for version in [0, 1, 2, 4, True, "3"]:
+    for version in [0, 1, 2, 5, True, "3"]:
         with pytest.raises(MessageValidationError):
             decode_messages(json.dumps({"schema_version": version, "messages": []}))
 

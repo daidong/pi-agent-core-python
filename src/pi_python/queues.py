@@ -17,6 +17,8 @@ class MessageQueues:
     """
 
     def __init__(self, steering_mode: str = "one_at_a_time", follow_up_mode: str = "one_at_a_time"):
+        steering_mode = steering_mode.replace("-", "_")
+        follow_up_mode = follow_up_mode.replace("-", "_")
         if steering_mode not in MODES or follow_up_mode not in MODES:
             raise ConfigurationError("Invalid queue mode")
         self.steering_mode, self.follow_up_mode = steering_mode, follow_up_mode

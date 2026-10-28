@@ -2,11 +2,15 @@
 
 [English](../API.md) | **中文**
 
+## 核心与研究入口
+
+本页描述研究便利 API 及已有迁移合同。`pi_python.core` 在同一引擎上提供官方对应的钩子、事件字典、状态名称与低层继续规则。迁移钩子或事件消费者前，请读[核心 API 与迁移说明](CORE_AND_RESEARCH.md)。共用 Provider 现支持模型端点/headers/采样默认值及逐请求超时重试；严格模型记录解析器和自定义认证头需按该说明核对。
+
 从 `pi_python` 导入公开类型。最低 Python 版本为 3.11，只使用 `asyncio` 后端。先读 [一页概念](CONCEPTS.md)。`Agent` 通过 Provider 发起模型请求，不隐式读取密钥，也不关闭调用者传入的共享 Provider。真实接入见 [模型接入](PROVIDERS.md)。
 
 ## Agent 与运行结果
 
-`Agent(provider=..., model="mock" 或 ModelInfo(...), options={}, system_prompt="", tools=[], messages=[], hooks=Hooks(), limits=RunLimits(), execution_mode="parallel", steering_mode="one_at_a_time", follow_up_mode="one_at_a_time", include_tool_origin=False)`。既没有 `provider` 也没有用 `set_default_stream_fn` 设置默认流时，`prompt` 直接抛 `ConfigurationError`。
+`Agent(provider=..., model="mock" 或 ModelInfo(...), options={}, system_prompt="", tools=[], messages=[], hooks=Hooks(), limits=RunLimits(), execution_mode="parallel", steering_mode="one_at_a_time", follow_up_mode="one_at_a_time", include_tool_origin=False, identity=None)`。既没有 `provider` 也没有用 `set_default_stream_fn` 设置默认流时，`prompt` 直接抛 `ConfigurationError`。
 
 | 方法 | 行为 |
 |---|---|
@@ -47,7 +51,7 @@ await agent.prompt("解释应用执行的检查结果。")
 
 每个批次占用一次独立运行，与模型调用共用参数准备、schema 验证、工具钩子、执行顺序与并发、输出检查、工具预算、超时和取消清理。超过 `max_tool_calls` 时整批不执行。它不调用模型准备或转换钩子，不调用 `finish_turn`，不消费两类输入队列，也不根据工具的 `terminate` 字段启动模型循环。批次的工具与配置保持固定；期间提交的配置更新按提交顺序留到下次运行前应用，或在之后空闲时的 `update_config` 中先应用。跨多次运行的任务总预算由应用管理。
 
-工具事件默认保持原有字段集合。显式设置 `Agent(include_tool_origin=True)` 后，两种入口的工具事件才增加 `origin`（`"application"` 或 `"model"`）及 `source`（调用者提供的诊断字符串或 None）。该选项在每次运行开始时固定。`ToolContext` 和 `ToolOutcome` 通过只读属性提供来源，不新增 dataclass 字段；`dataclasses.asdict()` 保持旧结构，不包含来源信息。需要持久化来源时，显式读取 `.origin` / `.source`，或保存批次历史记录。模型调用的 `source` 始终为 None。来源标签不是认证身份。
+已执行工具的结束事件现在默认增加 `duration_ms`，见下文耗时迁移说明。显式设置 `Agent(include_tool_origin=True)` 后，两种入口的工具事件才增加 `origin`（`"application"` 或 `"model"`）及 `source`（调用者提供的诊断字符串或 None）。该选项在每次运行开始时固定。`ToolContext` 和 `ToolOutcome` 通过只读属性提供来源，不新增 dataclass 字段；`dataclasses.asdict()` 不包含来源信息，但 `ToolOutcome` 新增可选 `duration_ms` 字段。需要持久化来源时，显式读取 `.origin` / `.source`，或保存批次历史记录。模型调用的 `source` 始终为 None。来源标签不是认证身份。
 
 原有模型运行仍使用整数 `turn_id`，也不会产生 `application_tool_batch` 消息。应用批次事件的 `turn_id=None`，因为没有发生模型轮次。在采用 `execute_tools` 或读取其事件日志前，对轮次做整数运算或使用仅允许整数的数据库列的应用需要适配。None 本身在新事件编解码器中合法，但关键订阅者抛错可能使运行失败。正常情况下，关键结束订阅完成后实例才空闲；取消和订阅失败仍遵守既有规则。
 
@@ -169,13 +173,13 @@ def search_papers(query: str, year: int | None = None, limit: int = 10) -> list[
 
 不合作的协程和普通函数所在的线程都不能被 Python 强制终止。取消或超时后，工具在清理期限内仍未结束时，它的结果是错误 `not_stopped`，运行立即停止，不再发模型请求。在它真正结束之前，实例保持非空闲状态，`cleanup_complete=False`，`prompt`、`wait_for_idle` 和 `aclose` 抛 `CleanupTimeoutError`；它一结束，实例自动恢复可用。应用若需要强制终止，应自行管理子进程。超时或取消结果不代表外部操作已回滚。
 
-事件包括 `agent_start/end`、`turn_start/end`、`message_start/update/end`、`tool_execution_start/update/end`，以及显式配置变化的 `config_update`。信封包含 `schema_version=1`、run ID、turn ID、单调序号和可选调用 ID。每个订阅者收到独立副本。订阅者按顺序等待，失败时停止执行并在 `state.diagnostics` 记录失败者与未处理订阅者；不会递归调用失败的订阅者。
+事件包括 `agent_start/end`、`turn_start/end`、`message_start/update/end`、`tool_execution_start/update/end`，以及显式配置变化的 `config_update`。信封包含 `schema_version=2`、run ID、turn ID、单调序号和可选调用 ID。每个订阅者收到独立副本。订阅者按顺序等待，失败时停止执行并在 `state.diagnostics` 记录失败者与未处理订阅者；不会递归调用失败的订阅者。
 
 订阅回调不得等待本实例 idle，否则会形成循环等待。显示层可用有界 `EventQueue(maxsize=128, drop_text_updates=True)`，只有消息增量可丢弃，计数保存在 `dropped_updates`，工具最终事件始终采用背压。正常路径的 `prompt` 返回意味着结束事件的关键订阅完成。
 
 ## 从失败中恢复
 
-模型出错或被取消时，这次回答以 `stop_reason="error"` 或 `"aborted"` 留在历史里，`error` 字段是错误原文；HTTP 失败时还带服务器返回的正文（最多 4000 字符，本次请求用的密钥会被替换成 `[redacted]`）。下面这些函数从上游 pi-ai 移植，读这条回答来判断原因，44 条共享样例的判断结果与上游一致：
+模型出错或被取消时，这次回答以 `stop_reason="error"` 或 `"aborted"` 留在历史里，`error` 字段是错误原文；HTTP 失败时还带服务器返回的正文（最多 4000 字符，本次请求用的密钥会被替换成 `[redacted]`）。下面这些函数从上游 pi-ai 移植，读这条回答来判断原因，55 条共享样例的判断结果与上游一致：
 
 | 函数 | 作用 |
 |---|---|
@@ -240,7 +244,7 @@ SDK 不支持 `meta` 时，注册会抛出 `ConfigurationError`。
 
 公开消息类型为 `SystemMessage`、`UserMessage`、`AssistantMessage`、`ToolResultMessage`、`CustomMessage`，内容块为 `TextContent`、`ImageContent`、`ThinkingContent`、`ToolCall`。用户和工具结果可带图片；助手可带签名文本、推理、工具调用。`SystemMessage` 的文本追加指令，`sections` 按名替换、None 删除；工具声明通过 `tools_added` / `tools_removed` 重放。
 
-`encode_messages` / `decode_messages` 和 `encode_event` / `decode_event` 是纯字符串转换，不读写文件。消息 schema 版本为 3，事件信封版本为 1，其他版本一律拒绝。不接受 NaN、Infinity、函数或文件句柄；拒绝悬空调用、重复结果和未知版本。历史导入只校验数据，不执行模型或工具。`current_tools`、`current_system_message`、`current_system_prompt` 可用于外部适配器的状态重放。
+`encode_messages` / `decode_messages` 和 `encode_event` / `decode_event` 是纯字符串转换，不读写文件。写出消息 schema 4 和事件信封 schema 2；读取器同时接受旧消息 schema 3、旧事件 schema 1，拒绝其他版本。旧读取器必须先迁移才能消费新输出。不接受 NaN、Infinity、函数或文件句柄；拒绝悬空调用、重复结果和未知版本。历史导入只校验数据，不执行模型或工具。`current_tools`、`current_system_message`、`current_system_prompt` 可用于外部适配器的状态重放。
 
 
 ## 独立循环与新增便利接口
@@ -249,7 +253,7 @@ SDK 不支持 `meta` 时，注册会抛出 `ConfigurationError`。
 
 配置包含 `provider` 或 `stream_fn`、`model`、`options`、`hooks`、`limits`、`tool_execution` 及 `get_steering_messages` / `get_follow_up_messages`。队列回调在上游对应边界调用，可以同步或异步返回消息列表。
 
-事件流使用有界队列。只等待结果时 `result()` 会消费事件；使用 async for 时应消费到结束，再读取结果。中途放弃应调用 `await stream.aclose()`；不要在暂停消费期间仅等待生产者结束，否则背压会阻塞。
+仅迭代时，事件积累到 128 个会施加背压。调用 `result()` 后，本条流剩余期间解除此上限，因此尚未迭代或只读了部分事件都能直接等待结果。它不消费事件：结果完成后，未读事件仍可按顺序读取。这与上游的结果/事件保留行为一致，同时保留 Python 仅迭代场景的背压。只等结果而不消费时，剩余事件历史可能全部驻留内存。取消结果等待者不会取消生产者；中途放弃应调用 `await stream.aclose()`。不要直接等待内部生产者 task。
 
 `set_default_stream_fn(provider_or_function)` 设置显式进程级默认流，传 None 清除。`Agent` 可省略 provider，也可用 `stream_fn=`。`reset()` 清除对话和队列，但保留重放后的系统提示与工具声明；运行中拒绝 reset。工具主动报告结果未知的实例仍需对账后重建，reset 不清除此保护。
 
@@ -258,6 +262,12 @@ SDK 不支持 `meta` 时，注册会抛出 `ConfigurationError`。
 构造 Agent 还可传 `thinking_level`、`thinking_budgets`、`transport`、`session_id`、`get_api_key`、`on_payload`、`on_response`、`on_provider_stream_event`。后四项也可放在 Hooks 中，明确的构造参数优先。它们的协议与 Provider 参数详见 [接入说明](PROVIDERS.md)。
 
 `auto_session_id=True` 为主动声明支持的 Provider（内置 Codex Provider）提供 Agent 管理的缓存专用标识。用 `agent.cache_session_id` 读取后备标识，用 `Agent(cache_session_id=saved_id, ...)` 恢复。显式 `session_id` 优先；`reset()` 更新后备标识，`auto_session_id=False` 关闭自动处理。自动或恢复的缓存标识不会开启连接复用。详见[缓存会话、持久化与 Provider 能力声明](PROVIDERS.md#codex-自动缓存会话)。
+
+## 默认耗时与结构迁移
+
+`AssistantMessage.duration_ms` 记录模型流时间；消息已有耗时或 timestamp 早于本次流时，不再补写。转发旧历史不重新计时；本次新生成的 deferred 回答可以有耗时，但不表示其后台任务已经完成。内置 Provider 的 assistant timestamp 表示请求开始时间，Python 使用 Unix 秒。`ToolOutcome.duration_ms`、`ToolResultMessage.duration_ms` 和 `tool_execution_end.data["duration_ms"]` 只记录工具执行时间，排除参数准备和前后钩子。失败或取消后已停止的执行也计时；未启动或仍未停止的调用没有耗时。耗时单位为单调时钟测得的非负整数毫秒。
+
+消息和事件编码省略未测得的耗时；`dataclasses.asdict()` 会包含 `duration_ms=None`。应用工具批次历史也保存已执行耗时，默认转换给模型时省略它。严格字段白名单及持久化解析器必须接受新字段和 schema 4/2；此默认变更与 `include_tool_origin` 无关。新读取器兼容旧 schema 3/1，旧读取器不能消费新输出。可用 `require_features(["default-duration-ms-v1"])` 检查此合同。
 
 ## 消息、工具结果与事件的字段
 
@@ -273,11 +283,11 @@ OpenAI 可在最终响应中补回 encrypted_content。若可见推理和其余�
 
 `render_system_update(message)` 返回后续系统消息原位发送时的文本：正文之后，每个段落写成 `Updated system prompt section "名称":` 加新内容，或 `Removed system prompt section "名称".`。一条系统消息由多个文本块组成时，块之间用单个换行连接，与上游 `contentText` 相同。会话中途改变工具、指令和推理强度时各 Provider 如何发送，见 [模型接入说明](PROVIDERS.md#会话中途的变更)。
 
-`estimate_context_tokens(messages)` 移植上游的字符估算：最近一次有效用量记录加上其后消息的估算，每 4 个 UTF-16 字符约 1 个 token，每张图片按 4800 字符计。它不是 tokenizer。`clamp_max_tokens_to_context(context_window, messages, max_tokens)` 用它预留 4096 个安全 token，结果至少为 1；Provider 用它截短已知模型的输出上限。
+`estimate_context_tokens(messages)` 移植上游的字符估算：最近一次有效用量记录加上其后消息的估算，每 3.5 个 UTF-16 字符约 1 个 token，每张图片按 4800 字符计。它不是 tokenizer。`clamp_max_tokens_to_context(context_window, messages, max_tokens)` 用它预留 4096 个安全 token，结果至少为 1；Provider 用它截短已知模型的输出上限。
 
-`AssistantMessage.provider_thinking_level` 与上游相同：只在使用推理强度标记的 Claude 模型上记录本次强度，用于在后续请求中重建历史标记。需要请求等级时读取 `thinking_level`。
+`AssistantMessage.provider_thinking_level` 与上游相同：在使用推理强度标记的 Claude 模型及支持配置更新的 OpenAI API 模型上记录本次原生强度，用于在后续请求中重建历史标记。需要请求等级时读取 `thinking_level`。
 
-Provider 重放历史时按上游规则跳过 `error` / `aborted` 回答；跨模型的推理转为普通文本，签名丢弃；一条系统消息位于工具调用和结果之间时移到结果之后。会话历史本身不变。
+Provider 重放历史时按上游规则跳过 `error` / `aborted` 回答；跨模型的推理内容及签名都不再发给模型；一条系统消息位于工具调用和结果之间时移到结果之后。会话历史本身不变。
 
 MCP 的宿主配置、用量观察、重试策略和构建能力标识见 [MCP 交互文档](MCP_INTERACTION.md#真实-provider配置选择与计量)。
 

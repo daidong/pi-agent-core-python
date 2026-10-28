@@ -58,7 +58,7 @@ def cache_identity(request):
 
 async def test_default_codex_agent_sends_stable_session_headers(wire):
     provider, requests, _ = wire
-    agent = Agent(provider=provider, model="gpt-5.5")
+    agent = Agent(provider=provider, model="gpt-6.1-sol")
     assert (await agent.prompt("first")).status == "completed"
     assert (await agent.prompt("second")).status == "completed"
     identity = cache_identity(requests[0])
@@ -74,7 +74,7 @@ async def test_codex_cache_id_survives_tool_loop_config_replacement_and_retry(wi
     def echo(value: str) -> str:
         return value
 
-    agent = Agent(provider=provider, model="gpt-5.5", tools=[echo])
+    agent = Agent(provider=provider, model="gpt-6.1-sol", tools=[echo])
     identity = agent.cache_session_id
     result = await agent.prompt("use echo")
     assert result.status == "completed", result.errors
@@ -89,13 +89,13 @@ async def test_codex_cache_id_survives_tool_loop_config_replacement_and_retry(wi
 
 async def test_reset_and_restore_preserve_only_the_intended_cache_session(wire):
     provider, requests, _ = wire
-    agent = Agent(provider=provider, model="gpt-5.5")
+    agent = Agent(provider=provider, model="gpt-6.1-sol")
     assert (await agent.prompt("remember this")).status == "completed"
     identity = agent.cache_session_id
     history = encode_messages(list(agent.state.messages))
     restored = Agent(
         provider=provider,
-        model="gpt-5.5",
+        model="gpt-6.1-sol",
         messages=decode_messages(history),
         cache_session_id=identity,
     )
@@ -111,7 +111,7 @@ async def test_reset_and_restore_preserve_only_the_intended_cache_session(wire):
 
 async def test_agents_sharing_a_provider_have_independent_cache_ids(wire):
     provider, requests, _ = wire
-    agents = [Agent(provider=provider, model="gpt-5.5") for _ in range(3)]
+    agents = [Agent(provider=provider, model="gpt-6.1-sol") for _ in range(3)]
     results = await asyncio.gather(*(agent.prompt("hello") for agent in agents))
     assert all(result.status == "completed" for result in results)
     assert len({cache_identity(request) for request in requests}) == 3
@@ -120,7 +120,7 @@ async def test_agents_sharing_a_provider_have_independent_cache_ids(wire):
 async def test_nested_agent_keeps_its_own_cache_session(wire):
     provider, requests, responses = wire
     responses.extend([reply("openai-tool"), reply(), reply()])
-    child = Agent(provider=provider, model="gpt-5.5")
+    child = Agent(provider=provider, model="gpt-6.1-sol")
 
     @tool
     async def echo(value: str, context: ToolContext) -> str:
@@ -128,7 +128,7 @@ async def test_nested_agent_keeps_its_own_cache_session(wire):
         assert result.status == "completed"
         return "child completed"
 
-    parent = Agent(provider=provider, model="gpt-5.5", tools=[echo])
+    parent = Agent(provider=provider, model="gpt-6.1-sol", tools=[echo])
     assert (await parent.prompt("delegate")).status == "completed"
     assert [cache_identity(request) for request in requests] == [
         parent.cache_session_id,
@@ -149,7 +149,7 @@ async def test_explicit_session_id_has_precedence_and_survives_reset(wire, where
         kwargs["hooks"] = Hooks(
             prepare_request=lambda ctx, cancel: TurnUpdate(options={"session_id": "explicit"})
         )
-    agent = Agent(provider=provider, model="gpt-5.5", options=options, **kwargs)
+    agent = Agent(provider=provider, model="gpt-6.1-sol", options=options, **kwargs)
     if where == "update":
         agent.update_config(AgentConfigUpdate(options={"session_id": "explicit"}))
     for _ in range(2):
@@ -163,7 +163,7 @@ async def test_opt_out_omits_auto_cache_fields(wire, disabled):
     provider, requests, _ = wire
     agent = Agent(
         provider=provider,
-        model="gpt-5.5",
+        model="gpt-6.1-sol",
         auto_session_id=disabled != "automatic",
         options={"cache_retention": "none"} if disabled == "retention" else {},
     )
@@ -175,7 +175,9 @@ async def test_opt_out_omits_auto_cache_fields(wire, disabled):
 
 async def test_opt_out_does_not_disable_explicit_session_and_retention_none_does(wire):
     provider, requests, _ = wire
-    agent = Agent(provider=provider, model="gpt-5.5", auto_session_id=False, session_id="explicit")
+    agent = Agent(
+        provider=provider, model="gpt-6.1-sol", auto_session_id=False, session_id="explicit"
+    )
     assert (await agent.prompt("hello")).status == "completed"
     assert cache_identity(requests[-1]) == "explicit"
     agent.update_config(
@@ -187,7 +189,7 @@ async def test_opt_out_does_not_disable_explicit_session_and_retention_none_does
 
 async def test_low_level_provider_does_not_invent_a_session(wire):
     provider, requests, _ = wire
-    request = ModelRequest([UserMessage("hello")], model="gpt-5.5")
+    request = ModelRequest([UserMessage("hello")], model="gpt-6.1-sol")
     async for _ in provider.stream(request, CancelToken()):
         pass
     assert cache_identity(requests[-1]) is None
@@ -197,7 +199,7 @@ async def test_automatic_headers_preserve_case_insensitive_application_overrides
     provider, requests, _ = wire
     agent = Agent(
         provider=provider,
-        model="gpt-5.5",
+        model="gpt-6.1-sol",
         options={"headers": {"Session-Id": "app-routing", "X-Client-Request-Id": "app-request"}},
     )
     assert (await agent.prompt("hello")).status == "completed"
@@ -207,7 +209,7 @@ async def test_automatic_headers_preserve_case_insensitive_application_overrides
 
 async def test_default_provider_routes_cache_id_only_to_codex(wire):
     provider, requests, _ = wire
-    agent = Agent(model="gpt-5.5")
+    agent = Agent(model="gpt-6.1-sol")
     try:
         set_default_stream_fn(provider)
         assert (await agent.prompt("hello")).status == "completed"
@@ -234,7 +236,7 @@ async def test_public_request_options_and_dataclass_schema_stay_unchanged(wire):
         return original(deepcopy(request), chatgpt_sign_in)
 
     provider.build_request = build
-    agent = Agent(provider=provider, model="gpt-5.5", options={"temperature": 0.2})
+    agent = Agent(provider=provider, model="gpt-6.1-sol", options={"temperature": 0.2})
     assert (await agent.prompt("hello")).status == "completed"
     request = seen[0]
     assert request.options == {"temperature": 0.2}
@@ -255,7 +257,7 @@ async def test_public_request_options_and_dataclass_schema_stay_unchanged(wire):
 async def test_other_providers_and_function_streams_do_not_receive_auto_metadata(wire):
     codex, requests, _ = wire
     provider = OpenAIProvider(api_key="sk-fixture", transport=codex.transport)
-    agent = Agent(provider=provider, model="gpt-5.5")
+    agent = Agent(provider=provider, model="gpt-6.1-sol")
     assert agent.cache_session_id is None
     assert (await agent.prompt("hello")).status == "completed"
     assert cache_identity(requests[-1]) is None

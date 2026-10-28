@@ -6,7 +6,7 @@ from pi_python.providers import AnthropicProvider, OpenAIProvider, DeepSeekProvi
 
 def test_model_catalog_provenance_copies_registration_and_thinking_clamp():
     catalog = ModelCatalog.bundled()
-    assert len(catalog.list()) == 71
+    assert len(catalog.list()) == 68
     model = catalog.get("openai", "gpt-5.4-mini")
     assert model and model.clamp_thinking_level("minimal") == "low"
     assert model.clamp_thinking_level("max") == "xhigh"

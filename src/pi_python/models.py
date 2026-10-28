@@ -32,6 +32,9 @@ class ModelInfo:
     input_limits: dict = field(default_factory=dict)
     prompt_cache: dict = field(default_factory=dict)
     base_url: str = ""
+    headers: dict[str, str] = field(default_factory=dict)
+    sampling_params: dict[str, Any] = field(default_factory=dict)
+    sampling_params_by_thinking_level: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     def supported_thinking_levels(self) -> tuple[str, ...]:
         if not self.reasoning:
@@ -149,6 +152,9 @@ class ModelCatalog:
                 input_limits=m.get("inputLimits", {}),
                 prompt_cache=m.get("promptCache", {}),
                 base_url=m.get("baseUrl", ""),
+                headers=m.get("headers", {}),
+                sampling_params=m.get("samplingParams", {}),
+                sampling_params_by_thinking_level=m.get("samplingParamsByThinkingLevel", {}),
             )
             for m in data["models"]
         ]

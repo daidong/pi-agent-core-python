@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator
 from ..cancellation import CancelToken
 from ..provider import ModelRequest
-from ..messages import ToolDeclaration
+from ..messages import ToolDeclaration, now
 from typing import Any
 import json
 import re
@@ -26,7 +26,6 @@ from ..estimate import clamp_max_tokens_to_context
 from ..transcript import (
     current_tools,
     declared_tools,
-    has_tool_redefinitions,
     initial_system_message,
     render_system_update,
     resolve_transcript,
@@ -37,6 +36,7 @@ from ..tools import invoke
 from ..stream import event_contract
 from .common import RemoteProvider, normalize_usage, transform_messages
 from .transport import stream_error
+from ..identity import apply_identity
 
 _CC_NAMES = "Read Write Edit Bash Grep Glob AskUserQuestion EnterPlanMode ExitPlanMode KillShell NotebookEdit Skill Task TaskOutput TodoWrite WebFetch WebSearch".split()
 _CC = {name.lower(): name for name in _CC_NAMES}
@@ -47,7 +47,7 @@ _INTERLEAVED_THINKING = "interleaved-thinking-2025-05-14"
 _SERVER_SIDE_FALLBACK = "server-side-fallback-2026-07-01"
 _MID_CONVERSATION_OUTPUT_CONFIG = "mid-conversation-output-config-2026-07-01"
 _THINKING_BINDING_CONTROLS = "thinking-binding-controls-2026-08-01"
-_MID_CONVERSATION_TOOL_CHANGES = "mid-conversation-tool-changes-2026-07-01"
+_MID_CONVERSATION_TOOL_CHANGES = "inline-tools-2026-09-15"
 _EFFORTS = {"low", "medium", "high", "xhigh", "max"}
 _BUDGETS = {"minimal": 1024, "low": 2048, "medium": 8192, "high": 16384}
 # Declared from the first request whenever native tool changes are used. Anthropic adds
@@ -107,6 +107,7 @@ class AnthropicProvider(RemoteProvider):
         if auth_mode not in {"auto", "api_key", "oauth"}:
             raise ConfigurationError("auth_mode must be auto, api_key or oauth")
         self.base_url = base_url.rstrip("/")
+        self._explicit_base_url = base_url != "https://api.anthropic.com"
         self.auth_mode = auth_mode
 
     def build_request(self, request: ModelRequest, oauth: bool = False) -> dict[str, Any]:
@@ -119,7 +120,12 @@ class AnthropicProvider(RemoteProvider):
         options = request.options
         model = self.model_info(request)
         compat = model.compat
-        managed = compat.get("supportsMidConvoEffort") is True
+        thinking_disabled = (
+            model.reasoning
+            and options.get("reasoning") == "off"
+            and model.thinking_level_map.get("off", "") is not None
+        )
+        managed = compat.get("supportsMidConvoEffort") is True and not thinking_disabled
         model_max_tokens = model.max_tokens
         adaptive = compat.get("forceAdaptiveThinking") is True
         level_map = model.thinking_level_map
@@ -142,6 +148,30 @@ class AnthropicProvider(RemoteProvider):
         def tool_name(name: str) -> str:
             return _CC.get(name.lower(), name) if oauth else name
 
+        def declarations(
+            tools: list[ToolDeclaration], cached: dict[str, Any] | None
+        ) -> list[dict[str, Any]]:
+            result = [
+                {
+                    "name": tool_name(t.name),
+                    "description": t.description,
+                    **(
+                        {"eager_input_streaming": True}
+                        if compat.get("supportsEagerToolInputStreaming", True)
+                        else {}
+                    ),
+                    "input_schema": {
+                        "type": "object",
+                        "properties": deepcopy(t.input_schema.get("properties", {})),
+                        "required": deepcopy(t.input_schema.get("required", [])),
+                    },
+                }
+                for t in tools
+            ]
+            if cached and result:
+                result[-1]["cache_control"] = deepcopy(cached)
+            return result
+
         source = with_request_tools(request.messages, request.tools)
 
         def fit(limit: int) -> int:
@@ -153,13 +183,12 @@ class AnthropicProvider(RemoteProvider):
         )
         initial = initial_system_message(transcript)
         initial_tools = initial.tools_added if initial else []
-        # Native changes name tools, so a redefined name cannot be expressed, and an
-        # all-deferred tool list is rejected, so an initial active tool must anchor them.
+        # Inline definitions keep the initial list fixed, including redefinitions.
+        # An initial active tool must anchor the deferred placeholder.
         native = (
             compat.get("supportsMidConvoSystemMessages") is True
             and compat.get("supportsMidConvoToolChanges") is True
             and bool(initial_tools)
-            and not has_tool_redefinitions(transcript)
         )
         transformed = transform_messages(
             transcript,
@@ -195,13 +224,14 @@ class AnthropicProvider(RemoteProvider):
                             "tool": {"type": "tool_reference", "name": tool_name(name)},
                         }
                         for name in message.tools_removed
+                        if name not in {t.name for t in message.tools_added}
                     ]
                     blocks += [
                         {
                             "type": "tool_addition",
-                            "tool": {"type": "tool_reference", "name": tool_name(t.name)},
+                            "tool": {"type": "tool_definition", "definition": definition},
                         }
-                        for t in message.tools_added
+                        for definition in declarations(message.tools_added, None)
                     ]
                 if blocks:
                     held.append({"role": "system", "content": blocks})
@@ -218,8 +248,6 @@ class AnthropicProvider(RemoteProvider):
                     if blocks:
                         messages.append({"role": "user", "content": blocks})
             elif isinstance(message, AssistantMessage):
-                messages += held
-                held.clear()
                 blocks = []
                 for b in message.content:
                     if isinstance(b, TextContent):
@@ -255,6 +283,8 @@ class AnthropicProvider(RemoteProvider):
                         )
                 if not blocks:
                     continue
+                messages += held
+                held.clear()
                 if (
                     managed
                     and message.api == self.api
@@ -271,20 +301,40 @@ class AnthropicProvider(RemoteProvider):
                         break
                     results.append(following)
                     index += 1
-                messages.append(
-                    {
-                        "role": "user",
-                        "content": [
+                result_blocks: list[dict[str, Any]] = []
+                attachments: list[dict[str, Any]] = []
+                for result in results:
+                    images = [b for b in result.content if isinstance(b, ImageContent)]
+                    content = result.content
+                    if result.is_error and images:
+                        content = []
+                        previous_image = False
+                        for block in result.content:
+                            if isinstance(block, ImageContent):
+                                if not previous_image:
+                                    content.append(
+                                        TextContent("(image attached after the tool results)")
+                                    )
+                                previous_image = True
+                            else:
+                                content.append(block)
+                                previous_image = False
+                        attachments.append(
                             {
-                                "type": "tool_result",
-                                "tool_use_id": r.call_id,
-                                "content": content_blocks(r.content),
-                                "is_error": r.is_error,
+                                "type": "text",
+                                "text": f"Images from the error result of tool call {result.call_id} ({result.name}):",
                             }
-                            for r in results
-                        ],
-                    }
-                )
+                        )
+                        attachments.extend(user_blocks(list(images)))
+                    result_blocks.append(
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": result.call_id,
+                            "content": content_blocks(content),
+                            "is_error": result.is_error,
+                        }
+                    )
+                messages.append({"role": "user", "content": result_blocks + attachments})
             elif isinstance(message, CustomMessage):
                 raise UnsupportedCapabilityError("Convert custom messages before provider boundary")
         messages += held
@@ -357,51 +407,21 @@ class AnthropicProvider(RemoteProvider):
 
         tool_cache = cache if compat.get("supportsCacheControlOnTools", True) else None
 
-        def declarations(
-            tools: list[ToolDeclaration], cached: dict[str, Any] | None
-        ) -> list[dict[str, Any]]:
-            result = [
-                {
-                    "name": tool_name(t.name),
-                    "description": t.description,
-                    **(
-                        {"eager_input_streaming": True}
-                        if compat.get("supportsEagerToolInputStreaming", True)
-                        else {}
-                    ),
-                    "input_schema": {
-                        "type": "object",
-                        "properties": deepcopy(t.input_schema.get("properties", {})),
-                        "required": deepcopy(t.input_schema.get("required", [])),
-                    },
-                }
-                for t in tools
-            ]
-            if cached and result:
-                result[-1]["cache_control"] = deepcopy(cached)
-            return result
-
         current = current_tools(transcript)
         if native:
-            # Initial tools stay active with the cache breakpoint; later ones are deferred
-            # and surfaced by tool_addition; removed ones stay declared. The list only grows.
-            names = {t.name for t in initial_tools}
+            # Later tools live only in inline definitions; the cached prefix stays fixed.
             body["tools"] = [
                 *declarations(initial_tools, tool_cache),
                 deepcopy(_DEFERRED_PLACEHOLDER),
-                *(
-                    {**t, "defer_loading": True}
-                    for t in declarations(
-                        [t for t in declared_tools(transcript) if t.name not in names], None
-                    )
-                ),
             ]
         elif current:
             body["tools"] = declarations(current, tool_cache)
 
         thinking_enabled = False
         display = options.get("thinking_display", "summarized")
-        if managed:
+        if thinking_disabled:
+            body["thinking"] = {"type": "disabled"}
+        elif managed:
             # Adaptive with block binding, so a prefix mismatch drops a thinking block
             # instead of failing every later request.
             thinking_enabled = reasoning is not None
@@ -465,7 +485,9 @@ class AnthropicProvider(RemoteProvider):
             v for k, v in options.get("headers", {}).items() if k.lower() == "anthropic-beta"
         ]
         if configured:
-            betas = list(dict.fromkeys(f.strip() for f in configured[-1].split(",") if f.strip()))
+            betas = list(
+                dict.fromkeys(f.strip() for f in (configured[-1] or "").split(",") if f.strip())
+            )
         else:
             betas = []
             if oauth:
@@ -487,6 +509,7 @@ class AnthropicProvider(RemoteProvider):
     async def stream(
         self, request: ModelRequest, cancel: CancelToken
     ) -> AsyncGenerator[ModelEvent, None]:
+        request_started = now()
         key = await self.credential(request, cancel)
         oauth = self.auth_mode == "oauth" or (
             self.auth_mode == "auto"
@@ -495,7 +518,7 @@ class AnthropicProvider(RemoteProvider):
         if request.options.get("transport", "sse") not in {"sse", "auto"}:
             raise UnsupportedCapabilityError("Anthropic Messages supports SSE transport")
         built, betas, effort = self._build(request, oauth)
-        headers = {
+        headers: dict[str, str | None] = {
             **{
                 k: v
                 for k, v in request.options.get("headers", {}).items()
@@ -517,6 +540,7 @@ class AnthropicProvider(RemoteProvider):
             )
         else:
             headers["x-api-key"] = key
+        headers = apply_identity(headers, self.name, self.base_url, request.options)
         body = await self.payload(request, built)
         blocks: dict[int, Any] = {}
         # Wire index -> content index; a leading server-side fallback block is skipped.
@@ -538,6 +562,7 @@ class AnthropicProvider(RemoteProvider):
             headers,
             cancel,
             on_response=request.on_response,
+            **self.transport_options(request),
         )
         announced = False
         try:
@@ -662,6 +687,7 @@ class AnthropicProvider(RemoteProvider):
                 self.name,
                 request.model,
                 normalize_usage(usage, self.name),
+                timestamp=request_started,
                 diagnostics=None if usage else [{"type": "usage_unavailable"}],
                 api="anthropic-messages",
                 provider_thinking_level=effort,

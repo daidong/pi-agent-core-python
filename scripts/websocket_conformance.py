@@ -16,6 +16,7 @@ from pi_python import CancelToken, ModelRequest, message_from_dict
 from pi_python.providers import HTTPTransport, OpenAICodexProvider
 from pi_python.transcript import current_tools
 from provider_conformance import catalog_for, from_pi
+from bootstrap_followup_reference import verify_sources
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "compat/websocket-fixtures"
@@ -73,6 +74,7 @@ def without_stream(run):
 
 
 def main():
+    verify_sources()
     results = []
     for path in sorted(FIXTURES.glob("*.json")):
         fixture = json.loads(path.read_text())
@@ -81,7 +83,7 @@ def main():
             [
                 "node",
                 "--import",
-                "./reference/register.mjs",
+                "./reference/register-followup.mjs",
                 "./reference/websocket-runner.ts",
                 str(path),
             ],
@@ -110,7 +112,7 @@ def main():
         )
         print(path.name, "passed" if passed else "FAILED", flush=True)
     report = {
-        "source_revision": "a13d35a742c6ef8462812a28fbe1d8c8b7431c32",
+        "source_revision": "4a080252f06caf63a525d7873c5d94d3c23887e0",
         "scope": "cached Codex WebSocket frames, connection use and stop reasons over several turns; scripted socket, not a live service; the `stream` field is excluded and reported",
         "results": results,
         "status": "passed" if results and all(r["passed"] for r in results) else "failed",

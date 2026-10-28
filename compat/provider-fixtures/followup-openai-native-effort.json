@@ -1,0 +1,187 @@
+{
+  "provider": "openai",
+  "entry": "simple",
+  "events": [
+    {
+      "type": "response.output_item.added",
+      "output_index": 0,
+      "item": {
+        "type": "message",
+        "id": "msg_x",
+        "role": "assistant",
+        "status": "completed",
+        "phase": "final_answer",
+        "content": []
+      }
+    },
+    {
+      "output_index": 0,
+      "type": "response.output_text.delta",
+      "delta": "你"
+    },
+    {
+      "output_index": 0,
+      "type": "response.output_text.delta",
+      "delta": "好"
+    },
+    {
+      "type": "response.output_item.done",
+      "output_index": 0,
+      "item": {
+        "type": "message",
+        "id": "msg_x",
+        "role": "assistant",
+        "status": "completed",
+        "phase": "final_answer",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "你好",
+            "annotations": []
+          }
+        ]
+      }
+    },
+    {
+      "type": "response.completed",
+      "response": {
+        "id": "resp_x",
+        "status": "completed",
+        "output": [
+          {
+            "type": "message",
+            "id": "msg_x",
+            "role": "assistant",
+            "status": "completed",
+            "phase": "final_answer",
+            "content": [
+              {
+                "type": "output_text",
+                "text": "你好",
+                "annotations": []
+              }
+            ]
+          }
+        ],
+        "usage": {
+          "input_tokens": 12,
+          "output_tokens": 8,
+          "input_tokens_details": {
+            "cached_tokens": 2
+          },
+          "output_tokens_details": {
+            "reasoning_tokens": 3
+          },
+          "total_tokens": 20
+        }
+      }
+    }
+  ],
+  "model": {
+    "id": "gpt-6.1-sol",
+    "name": "GPT-6.1 Sol",
+    "api": "openai-responses",
+    "provider": "openai",
+    "baseUrl": "https://api.openai.com/v1",
+    "reasoning": true,
+    "input": [
+      "text",
+      "image"
+    ],
+    "cost": {
+      "input": 2,
+      "output": 10,
+      "cacheRead": 0.1,
+      "cacheWrite": 2.5,
+      "tiers": [
+        {
+          "inputTokensAbove": 272000,
+          "input": 4,
+          "output": 15,
+          "cacheRead": 0.2,
+          "cacheWrite": 5
+        }
+      ]
+    },
+    "contextWindow": 272000,
+    "maxTokens": 128000,
+    "thinkingLevelMap": {
+      "off": null,
+      "minimal": null,
+      "low": "low",
+      "medium": "medium",
+      "high": "high",
+      "xhigh": "xhigh",
+      "max": "max"
+    },
+    "compat": {
+      "supportsStrictMode": true,
+      "supportsOpenAIGrammarTools": true,
+      "supportsAdditionalTools": true,
+      "supportsToolSearch": true,
+      "supportsMidConvoSystemMessages": true,
+      "supportsExplicitPromptCacheMode": true,
+      "supportsMidConvoEffort": true
+    },
+    "inputLimits": {
+      "maxRequestBytes": 536870912,
+      "images": {
+        "maxPerRequest": 1500,
+        "resize": {
+          "maxWidth": 2000,
+          "maxHeight": 2000,
+          "maxBytes": 4718592,
+          "jpegQuality": 80
+        }
+      }
+    },
+    "type": "chat"
+  },
+  "options": {
+    "reasoning": "high"
+  },
+  "api_key": "sk-fixture",
+  "context": {
+    "messages": [
+      {
+        "role": "user",
+        "content": "one",
+        "timestamp": 1
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "answer"
+          }
+        ],
+        "provider": "openai",
+        "api": "openai-responses",
+        "model": "gpt-6.1-sol",
+        "providerThinkingLevel": "low",
+        "stopReason": "stop",
+        "timestamp": 2,
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "totalTokens": 0,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          }
+        }
+      },
+      {
+        "role": "user",
+        "content": "two",
+        "timestamp": 3
+      }
+    ]
+  }
+}

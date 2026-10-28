@@ -1,7 +1,7 @@
 // Classify shared failed responses with the pinned upstream pi-ai functions.
 import { readFileSync } from 'node:fs';
-import { isContextOverflow, isRecoverableLength } from './pi/packages/ai/src/utils/overflow.ts';
-import { isRetryableAssistantError } from './pi/packages/ai/src/utils/retry.ts';
+import { isContextOverflow, isRecoverableLength } from './followup/overflow.ts';
+import { isRetryableAssistantError } from './followup/retry.ts';
 const cases = JSON.parse(readFileSync(process.argv[2], 'utf8'));
 const results = cases.map((c: any) => {
  const usage = { input: c.usage?.input ?? 0, output: c.usage?.output ?? 0, cacheRead: c.usage?.cache_read ?? 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } };

@@ -11,6 +11,7 @@ import pytest
 
 EXAMPLES = Path(__file__).resolve().parents[1] / "examples"
 CASES = {
+    "core_and_research.py": "Research result: 6\nCore tool result: 6",
     "capability_composition.py": "run=completed; domain_passed=False",
     "in_memory.py": "3 complete records",
     "quickstart.py": "status=completed",

@@ -12,7 +12,7 @@ from .errors import MessageValidationError, UnsupportedCapabilityError
 import base64
 
 JsonValue: TypeAlias = "None | bool | int | float | str | list[JsonValue] | dict[str, JsonValue]"
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 
 def now() -> float:
@@ -109,6 +109,7 @@ class AssistantMessage:
     raw_stop_reason: str | None = None
     end_turn: bool | None = None
     deferred: dict[str, Any] | None = None
+    duration_ms: int | None = None
     role: Literal["assistant"] = field(default="assistant", init=False)
 
     @classmethod
@@ -130,6 +131,7 @@ class ToolResultMessage:
     details: Any = None
     usage: dict[str, Any] | None = None
     nested_calls: dict[str, Any] | None = None
+    duration_ms: int | None = None
     role: Literal["tool_result"] = field(default="tool_result", init=False)
 
 
@@ -167,6 +169,7 @@ def message_to_dict(message: Message) -> dict[str, Any]:
         "details",
         "usage",
         "nested_calls",
+        "duration_ms",
     }
     # dict_factory visits dataclass fields, not arbitrary user dictionaries.
     data = asdict(
@@ -257,6 +260,9 @@ def message_from_dict(data: dict[str, Any]) -> Message:
     d = json.loads(json.dumps(data, allow_nan=False))
     role = d.pop("role", None)
     try:
+        duration = d.get("duration_ms")
+        if duration is not None and (type(duration) is not int or duration < 0):
+            raise MessageValidationError("duration_ms must be a non-negative integer")
         if "timestamp" in d and (type(d["timestamp"]) not in (float, int)):
             raise MessageValidationError("timestamp must be a number")
         if role == "user":
@@ -451,7 +457,7 @@ def decode_messages(value: str) -> list[Message]:
     try:
         data = json.loads(value)
         validate_json(data)
-        if type(data.get("schema_version")) is not int or data["schema_version"] != SCHEMA_VERSION:
+        if type(data.get("schema_version")) is not int or data["schema_version"] not in {3, 4}:
             raise MessageValidationError("Unsupported message schema version")
         if set(data) != {"schema_version", "messages"} or not isinstance(data["messages"], list):
             raise MessageValidationError("Invalid message envelope")

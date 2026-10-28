@@ -21,7 +21,15 @@ from pi_python import (
 
 def normalize(message):
     d = message_to_dict(message)
-    for key in ("timestamp", "usage", "provider", "model", "error", "thinking_level"):
+    for key in (
+        "timestamp",
+        "duration_ms",
+        "usage",
+        "provider",
+        "model",
+        "error",
+        "thinking_level",
+    ):
         d.pop(key, None)
     for key in ("sections", "tools_added", "tools_removed"):
         if not d.get(key):

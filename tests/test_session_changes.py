@@ -54,9 +54,8 @@ async def test_claude_agent_tool_and_effort_changes_use_native_blocks():
     assert [(t["name"], t.get("defer_loading")) for t in two["tools"]] == [
         ("alpha", None),
         ("__pi_deferred_placeholder__", True),
-        ("beta", True),
     ]
-    # The request-level tool list only grows, so the cached prefix survives the change.
+    # The top-level tool list stays fixed; changes carry complete inline declarations.
     assert two["tools"][:2] == one["tools"]
     roles = [(m["role"], m.get("output_config")) for m in two["messages"]]
     assert roles == [
@@ -69,9 +68,17 @@ async def test_claude_agent_tool_and_effort_changes_use_native_blocks():
     ]
     change = two["messages"][4]["content"]
     assert [b["type"] for b in change] == ["tool_addition"]
-    assert change[0]["tool"] == {"type": "tool_reference", "name": "beta"}
+    assert change[0]["tool"] == {
+        "type": "tool_definition",
+        "definition": {
+            "name": "beta",
+            "description": "beta tool",
+            "input_schema": {"type": "object", "properties": {}, "required": []},
+            "eager_input_streaming": True,
+        },
+    }
     beta = requests[1].headers["anthropic-beta"].split(",")
-    assert "mid-conversation-tool-changes-2026-07-01" in beta
+    assert "inline-tools-2026-09-15" in beta
     assert "mid-conversation-output-config-2026-07-01" in beta
     assert two["output_config"] == {"effort": "high"}
 
@@ -103,11 +110,21 @@ async def test_openai_agent_anchors_added_tools_and_updates_in_place():
         agent.update_config(AgentConfigUpdate(tools=[tool("a"), tool("b")]))
         await agent.prompt([SystemMessage("new guidance"), UserMessage("two")])
     body = json.loads(requests[1].content)
-    assert [t["name"] for t in body["tools"]] == ["a"]
+    assert "tools" not in body
+    assert body["input"][0]["tools"][0]["name"] == "a"
     kinds = [item.get("type", item.get("role")) for item in body["input"]]
-    assert kinds == ["developer", "user", "message", "additional_tools", "developer", "user"]
-    assert body["input"][3]["tools"][0]["name"] == "b"
-    assert body["input"][4]["content"] == "new guidance"
+    assert kinds == [
+        "additional_tools",
+        "developer",
+        "user",
+        "message",
+        "developer",
+        "additional_tools",
+        "developer",
+        "user",
+    ]
+    assert body["input"][5]["tools"][0]["name"] == "b"
+    assert body["input"][6]["content"] == "new guidance"
     assert body["max_output_tokens"] == 128000
 
 
@@ -179,18 +196,18 @@ def test_estimate_matches_pi_heuristic_and_clamps_output():
     assert short_hash("中文😀") == "1uqnrlm1d9i9jc"
     reply = AssistantMessage.text("x", usage={"total_tokens": 900}, timestamp=2)
     messages = [UserMessage("a" * 400, timestamp=1), reply, UserMessage("b" * 8, timestamp=3)]
-    assert estimate_context_tokens(messages) == 900 + 2
-    assert estimate_context_tokens([messages[0]]) == 100
-    assert clamp_max_tokens_to_context(10_000, messages, 128_000) == 10_000 - 902 - 4096
+    assert estimate_context_tokens(messages) == 900 + 3
+    assert estimate_context_tokens([messages[0]]) == 115
+    assert clamp_max_tokens_to_context(10_000, messages, 128_000) == 10_000 - 903 - 4096
     assert clamp_max_tokens_to_context(1_000, messages, 50) == 1
     assert clamp_max_tokens_to_context(0, messages, 50) == 50
 
 
 async def test_claude_output_limit_leaves_room_for_the_estimated_prompt():
     provider = AnthropicProvider(api_key="fixture")
-    # 3,583,616 characters estimate to 895,904 tokens of a 1,000,000-token window.
+    # 3,135,664 characters estimate to 895,904 tokens of a 1,000,000-token window.
     body = provider.build_request(
-        ModelRequest([UserMessage("x" * 3_583_616)], model="claude-opus-5-5")
+        ModelRequest([UserMessage("x" * 3_135_664)], model="claude-opus-5-5")
     )
     assert body["max_tokens"] == 1_000_000 - 895_904 - 4096
     overflow = provider.build_request(

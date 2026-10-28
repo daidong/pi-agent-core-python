@@ -273,7 +273,10 @@
   "tab\tsep\nnewline",
   "a \"\" b",
   "日本語 'c d'",
-  "--flag=\"x y\""
+  "--flag=\"x y\"",
+  "\"\" second",
+  "'' second",
+  "a \"\" c"
  ],
  "expand": [
   {

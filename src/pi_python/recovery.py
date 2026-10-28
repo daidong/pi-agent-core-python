@@ -21,6 +21,7 @@ _OVERFLOW = [
         r"request_too_large",  # Anthropic byte-size overflow (HTTP 413)
         r"input is too long for requested model",  # Amazon Bedrock
         r"exceeds the context window",  # OpenAI Completions and Responses
+        r"context window exceeded",  # LiteLLM pre-call check (d3398f826a)
         r"exceeds (?:the )?(?:model'?s )?maximum context length(?: of [\d,]+ tokens?|\s*\([\d,]+\))",
         r"input token count.*exceeds the maximum",  # Google Gemini
         r"maximum prompt length is \d+",  # xAI
@@ -41,6 +42,7 @@ _OVERFLOW = [
         r"context[_ ]length[_ ]exceeded",
         r"too many tokens",
         r"token limit exceeded",
+        r"^(?:[\w -]+ API error \(413\):|413(?:\s|:|$))",
     )
 ]
 _CEREBRAS_OVERFLOW = re.compile(r"^4(?:00|13)\s*(?:status code)?\s*\(no body\)", re.I)
@@ -67,6 +69,7 @@ _NOT_RETRYABLE = re.compile(
             "quota exceeded",
             "billing",
             "subscription_sharing_usage_limit_exceeded",
+            "subscription_sharing_workplace_individual_usage_limit_exceeded",
         )
     ),
     re.I,
@@ -75,27 +78,30 @@ _RETRYABLE = re.compile(
     "|".join(
         (
             "overloaded",
+            "server_busy",
+            "servers are currently busy",
             "currently experiencing high demand",
+            "model is at capacity",
             "rate.?limit",
             "too many requests",
-            "429",
-            "500",
-            "502",
-            "503",
-            "504",
-            "520",
-            "524",
-            "service.?unavailable",
+            "(?<![a-z0-9])(?:429|500|502|503|504|520|524)(?![a-z0-9])",
+            "service.?(?:is.?)?(?:temporarily.?)?unavailable",
             "server.?error",
             "internal.?error",
-            "provider.?returned.?error",
+            "provider.?returned.?(?:an.?)?error",
             "exceeded request buffer limit while retrying upstream",
+            "unable to forward upstream",
+            "upstream.?request.?failed",
+            "upstream_stream_read_error",
+            "stream was interrupted",
+            "http/?2 stream failed",
             "network.?error",
             "connection.?error",
             "connection.?refused",
             "connection.?lost",
             "other side closed",
             "fetch failed",
+            r"request to \S+ failed, reason:",
             "getaddrinfo",
             "ENOTFOUND",
             "EAI_AGAIN",
@@ -112,6 +118,8 @@ _RETRYABLE = re.compile(
             "stream ended before message_stop",
             "stream ended before a terminal response event",
             "http2 request did not get a response",
+            "stream disconnected before completion",
+            "pending stream has been canceled",
             "retry delay",
             "you can retry your request",
             "try your request again",
@@ -163,6 +171,9 @@ def is_context_overflow(message: AssistantMessage, context_window: int | None = 
     """
     error = message.error or ""
     if message.stop_reason == "error" and error:
+        status = _HTTP_STATUS.search(error)
+        if status and int(status.group(1)) == 413:
+            return True
         if not any(p.search(error) for p in _NOT_OVERFLOW):
             if any(p.search(error) for p in _OVERFLOW):
                 return True

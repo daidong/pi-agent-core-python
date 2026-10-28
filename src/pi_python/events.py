@@ -20,7 +20,7 @@ class Event:
     sequence: int
     call_id: str | None = None
     data: dict[str, Any] = field(default_factory=dict)
-    schema_version: int = 1
+    schema_version: int = 2
 
 
 EventListener = Callable[[Event], Awaitable[None] | None]
@@ -38,7 +38,7 @@ def decode_event(value: str) -> Event:
     try:
         d = json.loads(value)
         validate_json(d)
-        if type(d.get("schema_version")) is not int or d["schema_version"] != 1:
+        if type(d.get("schema_version")) is not int or d["schema_version"] not in {1, 2}:
             raise MessageValidationError("Unsupported event schema version")
         e = Event(**d)
         if (

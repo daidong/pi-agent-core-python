@@ -5,6 +5,7 @@
 ```bash
 uv sync --locked
 uv run python scripts/bootstrap_reference.py
+uv run python scripts/bootstrap_followup_reference.py
 node --import ./reference/register.mjs reference/runner.ts compat/fixtures/C01-text.json
 uv run python scripts/conformance.py
 uv run python scripts/verify.py
@@ -21,7 +22,7 @@ uv run python scripts/linux_verify.py
 
 共享输入位于 `compat/fixtures/`。输入包含脚本模型响应、工具结果、执行模式、钩子与事件触发的排队操作或取消。响应可以先流出文本再失败或等待取消；参照运行器在取消信号已触发时像真实 Provider 一样立即返回 aborted 回答，不记为一次请求。并发完成顺序用事件屏障安排，不依赖短暂 sleep。每个实际输出位于 `compat/results/<fixture>.upstream.json` 和 `.python.json`；`conformance.json` 记录逐项命令、退出码与比较结果。
 
-比较保留每次模型请求、模型标识、工具实际参数和次数、事件顺序、完整消息及运行状态。允许的转换是字段命名、去除时间与随机 ID、用户纯文本块与字符串之间的等价表示、明确识别的错误类别，以及流式回答开始时 `message_start` 的结束原因（上游此时为 `stop`，Python 为 `pending`）。流中的部分快照不比较，提交的消息逐项比较。错误映射保留调用 ID、工具名和输入相关错误文字；未识别的错误不会被泛化成同一文本。实现见 `compat/runner.py::map_errors`。
+比较保留每次模型请求、模型标识、工具实际参数和次数、事件顺序、完整消息及运行状态。允许的转换是字段命名、去除时间（含新增 duration_ms，另有行为测试）与随机 ID、用户纯文本块与字符串之间的等价表示、明确识别的错误类别，以及流式回答开始时 `message_start` 的结束原因（上游此时为 `stop`，Python 为 `pending`）。流中的部分快照不比较，提交的消息逐项比较。错误映射保留调用 ID、工具名和输入相关错误文字；未识别的错误不会被泛化成同一文本。实现见 `compat/runner.py::map_errors`。
 
 对照输入与结果分开维护。`scripts/make_fixtures.py` 只生成输入；预期输出必须来自 `runner.ts` 的真实运行。`pytest` 使用已保留的上游输出比较当前 Python 代码，Linux 安装验证因此不需要 Node。
 
@@ -57,3 +58,9 @@ uv run python scripts/provider_conformance.py
 ```bash
 uv run python scripts/plugin_conformance.py
 ```
+
+## 本轮选择性跟进（2026-10-28）
+
+核心基线仍为 v1.0.0，未宣称完整升级 core 到 v1.4.0。Provider、WebSocket 与插件差分通过 `register-followup.mjs` 使用 v1.4.0 / `4a080252f06caf63a525d7873c5d94d3c23887e0`；运行前校验 `followup/source-manifest.json`。`bootstrap_followup_reference.py` 校验固定源码归档 SHA-256、npm 发布包 SHA-512 和所用源文件摘要，再安装固定依赖及构建 telemetry；它不修改旧基线。`pi-followup/` 不入库。
+
+恢复分类器另用 `followup/retry.ts`（v1.4.0）及 `followup/overflow.ts`（固定 main 提交），原样源码及摘要见 `followup/manifest.json`。`scripts/recovery_conformance.py` 运行真实来源，写出共享 55 例的结果。模型目录来自 npm v1.4.0 的固定发布包，不能用浮动在线目录替换。来源、兼容性迁移及未跟进事项见 [跟进说明](../docs/UPSTREAM_FOLLOWUP.md)。

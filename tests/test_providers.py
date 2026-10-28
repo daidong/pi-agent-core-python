@@ -547,7 +547,7 @@ def test_cross_provider_tool_id_mapping_and_signature_drop():
     body = AnthropicProvider(catalog=TEST_CATALOG).build_request(
         ModelRequest([assistant, result], model="test-model")
     )
-    assert body["messages"][0]["content"][1]["id"] == "call_x_fc_x"
+    assert body["messages"][0]["content"][0]["id"] == "call_x_fc_x"
     assert body["messages"][1]["content"][0]["tool_use_id"] == "call_x_fc_x"
     assert "opaque-foreign" not in json.dumps(body)
 

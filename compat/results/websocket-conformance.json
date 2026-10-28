@@ -1,5 +1,5 @@
 {
-  "source_revision": "a13d35a742c6ef8462812a28fbe1d8c8b7431c32",
+  "source_revision": "4a080252f06caf63a525d7873c5d94d3c23887e0",
   "scope": "cached Codex WebSocket frames, connection use and stop reasons over several turns; scripted socket, not a live service; the `stream` field is excluded and reported",
   "results": [
     {

@@ -1,4 +1,4 @@
-"""Published 0.10.1 consumer shapes and opt-in application-batch boundaries."""
+"""Migrated timing consumers and opt-in application-batch boundaries."""
 
 from copy import copy, deepcopy
 from dataclasses import asdict, fields
@@ -18,6 +18,9 @@ OUTCOME_FIELDS = {
     "error",
     "_settled",
 }
+LEGACY_OUTCOME_FIELDS = OUTCOME_FIELDS.copy()
+OUTCOME_FIELDS.add("duration_ms")
+
 CONTEXT_FIELDS = {
     "run_id",
     "call_id",
@@ -35,8 +38,25 @@ CONTEXT_FIELDS = {
 EVENT_FIELDS = {
     "tool_execution_start": {"name", "arguments"},
     "tool_execution_update": {"update"},
-    "tool_execution_end": {"result", "execution_status"},
+    "tool_execution_end": {"result", "execution_status", "duration_ms"},
 }
+
+
+async def test_unmigrated_strict_subscriber_reports_timing_schema_failure():
+    async def execute(args, ctx):
+        return ToolResult.text("effect completed")
+
+    def legacy(event):
+        if event.type == "tool_execution_end":
+            assert set(event.data) == {"result", "execution_status"}
+
+    agent = Agent(provider=ScriptedProvider(responses()), tools=[Tool("check", "", {}, execute)])
+    agent.subscribe(legacy)
+    result = await agent.prompt("go")
+    assert result.status == "failed"
+    assert result.tool_outcomes[0].execution_status == "succeeded"
+    assert set(asdict(result.tool_outcomes[0])) == LEGACY_OUTCOME_FIELDS | {"duration_ms"}
+    assert agent.state.diagnostics[-1]["event"] == "tool_execution_end"
 
 
 def responses():
@@ -52,7 +72,7 @@ def reject_custom(messages):
     return messages
 
 
-async def test_legacy_consumers_keep_exact_fields_and_integer_turns_by_default():
+async def test_migrated_consumers_keep_exact_fields_and_integer_turns_by_default():
     seen_events = set()
     contexts = []
 
@@ -64,7 +84,7 @@ async def test_legacy_consumers_keep_exact_fields_and_integer_turns_by_default()
         return ToolResult.text("ok")
 
     def strict_subscriber(event):
-        # Old consumers need not accept null turns or additional event payload keys.
+        # Migrated consumers accept timing; model turns are still integers.
         assert event.turn_id + 1 > 0
         if event.type in EVENT_FIELDS:
             assert set(event.data) == EVENT_FIELDS[event.type]

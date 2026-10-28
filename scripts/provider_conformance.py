@@ -1,12 +1,12 @@
 """Differential tests against actual pinned pi-ai/agent parsers; no external service."""
 
 import asyncio
-import hashlib
 import json
 from pathlib import Path
 import subprocess
 import sys
 import httpx
+from bootstrap_followup_reference import verify_sources
 from pi_python import (
     CancelToken,
     ModelCatalog,
@@ -99,11 +99,7 @@ def catalog_for(provider, descriptor):
 
 
 async def main():
-    manifest = json.loads((ROOT / "reference/provider-source-manifest.json").read_text())
-    for item in manifest["source_files"]:
-        data = (ROOT / "reference/pi" / item["path"]).read_bytes()
-        if len(data) != item["bytes"] or hashlib.sha256(data).hexdigest() != item["sha256"]:
-            raise RuntimeError(f"Upstream source changed: {item['path']}")
+    verify_sources()
     results = []
     for path in sorted((ROOT / "compat/provider-fixtures").glob("*.json")):
         fixture = json.loads(path.read_text())
@@ -244,7 +240,7 @@ async def main():
             [
                 "node",
                 "--import",
-                "./reference/register.mjs",
+                "./reference/register-followup.mjs",
                 "./reference/provider-runner.ts",
                 str(path),
             ],
@@ -267,7 +263,7 @@ async def main():
         results.append(result)
         print(path.name, "passed" if result["passed"] else "FAILED", flush=True)
     report = {
-        "source_revision": "a13d35a742c6ef8462812a28fbe1d8c8b7431c32",
+        "source_revision": "4a080252f06caf63a525d7873c5d94d3c23887e0",
         "scope": "final content, signatures, stop reason, canonical event order/payload, complete request body and selected semantic headers; synthetic fixtures, not live service; runtime IDs and SDK fingerprint headers excluded; Chat Completions fixtures also compare token usage, response ID/model and raw finish reason",
         "results": results,
         "status": "passed" if all(r["passed"] for r in results) else "failed",

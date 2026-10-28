@@ -20,6 +20,7 @@ import re
 from urllib.parse import quote
 from ..tools import invoke
 from ..tasks import _cancel, _finish, _join
+from ..recovery import _NOT_RETRYABLE
 
 
 T = TypeVar("T")
@@ -48,7 +49,9 @@ class ProviderHTTPError(PiError):
         self.retry_after = retry_after
         self.request_id = request_id
         self.body = body
-        self.retryable = status in {429, 500, 502, 503, 504}
+        self.retryable = status in {429, 500, 502, 503, 504} and not bool(
+            _NOT_RETRYABLE.search(body or "")
+        )
         self.category = (
             "authentication"
             if status in {401, 403}
@@ -62,7 +65,7 @@ class ProviderHTTPError(PiError):
         super().__init__(f"{message} (HTTP {status}; {self.category}){detail}")
 
 
-async def error_body(response: Any, headers: Mapping[str, str]) -> str | None:
+async def error_body(response: Any, headers: Mapping[str, str | None]) -> str | None:
     """Read a failed response's body (bounded), redact request credentials, cap its length."""
     data = b""
     try:
@@ -75,7 +78,7 @@ async def error_body(response: Any, headers: Mapping[str, str]) -> str | None:
     return _safe_error_text(data.decode("utf-8", "replace").strip(), headers) or None
 
 
-def _safe_error_text(text: str, headers: Mapping[str, str]) -> str:
+def _safe_error_text(text: str, headers: Mapping[str, str | None]) -> str:
     """One redaction and size policy for HTTP and in-stream provider failures."""
     for name, value in headers.items():
         if _CREDENTIAL_HEADER.search(name):
@@ -91,7 +94,9 @@ def _safe_error_text(text: str, headers: Mapping[str, str]) -> str:
     return text
 
 
-def stream_error(event: Mapping[str, Any], headers: Mapping[str, str]) -> ProviderProtocolError:
+def stream_error(
+    event: Mapping[str, Any], headers: Mapping[str, str | None]
+) -> ProviderProtocolError:
     """Keep recovery-relevant fields from each provider's error envelope."""
     envelope = event.get("response") if event.get("type") == "response.failed" else event
     error = envelope.get("error", envelope) if isinstance(envelope, Mapping) else None
@@ -107,7 +112,7 @@ def stream_error(event: Mapping[str, Any], headers: Mapping[str, str]) -> Provid
     return ProviderProtocolError("Provider stream error: " + _safe_error_text(detail, headers))
 
 
-def retry_delay(headers: Mapping[str, str]) -> float | None:
+def retry_delay(headers: Mapping[str, str | None]) -> float | None:
     value = headers.get("retry-after")
     if value is None:
         return None
@@ -361,18 +366,54 @@ class HTTPTransport:
                 raise ProviderHTTPError(response.status_code)
             return response.json()
 
+    def _request_settings(
+        self, options: Mapping[str, Any] | None
+    ) -> tuple[float | None, int, float]:
+        import math
+
+        options = options or {}
+        for key, value in options.items():
+            if key not in {"timeout_ms", "max_retries", "max_retry_delay_ms"}:
+                raise ValueError(f"Unknown transport option: {key}")
+            if type(value) not in {int, float} or not math.isfinite(value) or value < 0:
+                raise ValueError(f"{key} must be a finite nonnegative number")
+        retries = options.get("max_retries", self.max_retries)
+        if type(retries) is not int:
+            raise ValueError("max_retries must be an integer")
+        timeout = options.get("timeout_ms", self.timeout * 1000) / 1000
+        return (
+            timeout or None,
+            retries,
+            options.get("max_retry_delay_ms", self.max_retry_delay * 1000) / 1000,
+        )
+
     async def stream(
         self,
         url: str,
         body: dict[str, Any],
-        headers: dict[str, str],
+        headers: Mapping[str, str | None],
         cancel: CancelToken,
         *,
         on_response: Callable | None = None,
+        request_options: Mapping[str, Any] | None = None,
     ) -> AsyncGenerator[dict[str, Any], None]:
+        timeout, retries, max_delay = self._request_settings(request_options)
         async with self._client() as client:
-            for attempt in range(self.max_retries + 1):
-                request = client.build_request("POST", url, headers=headers, json=body)
+            for attempt in range(retries + 1):
+                request = client.build_request(
+                    "POST",
+                    url,
+                    headers={k: v for k, v in headers.items() if v is not None},
+                    json=body,
+                    **(
+                        {"timeout": timeout}
+                        if request_options and "timeout_ms" in request_options
+                        else {}
+                    ),
+                )
+                for name, value in headers.items():
+                    if value is None:
+                        request.headers.pop(name, None)
                 # A network exception may follow server acceptance. Never replay it.
                 self._stats["http_attempts"] += 1
                 response = await _acquire(
@@ -395,7 +436,7 @@ class HTTPTransport:
                     await _finish(response.aclose())
                     raise
                 await _finish(response.aclose())
-                if not error.retryable or attempt == self.max_retries:
+                if not error.retryable or attempt == retries:
                     raise error
                 delay = (
                     error.retry_after
@@ -403,7 +444,9 @@ class HTTPTransport:
                     else self.retry_base * 2**attempt
                 )
                 # Do not retry sooner than a server's requested delay.
-                if delay > self.max_retry_delay:
+                if delay > max_delay and not (
+                    request_options and request_options.get("max_retry_delay_ms") == 0
+                ):
                     raise error
                 self._stats["http_retries"] += 1
                 await cancellable(asyncio.sleep(delay), cancel)
@@ -422,16 +465,19 @@ class HTTPTransport:
         self,
         url: str,
         body: dict[str, Any],
-        headers: dict[str, str],
+        headers: Mapping[str, str | None],
         cancel: CancelToken,
         *,
         mode: str = "sse",
         session_id: str | None = None,
         on_response: Callable | None = None,
         link: WebSocketLink | None = None,
+        request_options: Mapping[str, Any] | None = None,
     ) -> AsyncGenerator[dict[str, Any], None]:
         if mode == "sse":
-            events = self.stream(url, body, headers, cancel, on_response=on_response)
+            events = self.stream(
+                url, body, headers, cancel, on_response=on_response, request_options=request_options
+            )
         else:
             events = self.websocket(
                 url,
@@ -442,6 +488,7 @@ class HTTPTransport:
                 session_id=session_id if mode in {"websocket-cached", "auto"} else None,
                 fallback=mode == "auto",
                 link=link,
+                request_options=request_options,
             )
         try:
             async for event in events:
@@ -464,14 +511,17 @@ class HTTPTransport:
         self,
         url: str,
         body: dict[str, Any],
-        headers: dict[str, str],
+        headers: Mapping[str, str | None],
         cancel: CancelToken,
         *,
         on_response: Callable | None = None,
         session_id: str | None = None,
         fallback: bool = False,
         link: WebSocketLink | None = None,
+        request_options: Mapping[str, Any] | None = None,
     ) -> AsyncGenerator[dict[str, Any], None]:
+        timeout, _, _ = self._request_settings(request_options)
+        timed = request_options is not None and "timeout_ms" in request_options
         from websockets.asyncio.client import connect
         from websockets.exceptions import InvalidHandshake
         from websockets.version import version as websockets_version
@@ -481,6 +531,9 @@ class HTTPTransport:
         no_proxy: dict[str, Any] = (
             {"proxy": None} if int(websockets_version.split(".")[0]) >= 15 else {}
         )
+
+        if any(k.lower() == "user-agent" and v is None for k, v in headers.items()):
+            no_proxy["user_agent_header"] = None
 
         endpoint = url.replace("https://", "wss://", 1).replace("http://", "ws://", 1)
         # Include all headers to prevent reuse across accounts or incompatible options.
@@ -510,10 +563,10 @@ class HTTPTransport:
                                 connect(
                                     endpoint,
                                     additional_headers={
-                                        **headers,
+                                        **{k: v for k, v in headers.items() if v is not None},
                                         "OpenAI-Beta": "responses_websockets=2026-02-06",
                                     },
-                                    open_timeout=30,
+                                    open_timeout=timeout if timed else 30,
                                     max_size=16 * 1024 * 1024,
                                     **no_proxy,
                                 ),
@@ -531,7 +584,12 @@ class HTTPTransport:
                             self._stats["websocket_fallbacks"] += 1
                             # No response.create has been sent, so SSE fallback is safe.
                             events = self.stream(
-                                url, body, headers, cancel, on_response=on_response
+                                url,
+                                body,
+                                headers,
+                                cancel,
+                                on_response=on_response,
+                                request_options=request_options,
                             )
                             try:
                                 async for event in events:
@@ -566,7 +624,10 @@ class HTTPTransport:
                     output = False
                     retry = None
                     while True:
-                        raw = await cancellable(entry.socket.recv(), cancel)
+                        receive = entry.socket.recv()
+                        raw = await cancellable(
+                            asyncio.wait_for(receive, timeout) if timed else receive, cancel
+                        )
                         event = json.loads(raw)
                         if not isinstance(event, dict):
                             raise ProviderProtocolError("WebSocket event must be an object")

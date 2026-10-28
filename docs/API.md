@@ -2,11 +2,15 @@
 
 **English** | [中文](zh/API.md)
 
+## Core and research entry points
+
+This page documents the research convenience API and its existing migration contracts. `pi_python.core` provides Pi-shaped hooks, event dictionaries, state names and low-level continuation rules over the same engine. See [core API and migration](CORE_AND_RESEARCH.md) before moving an existing event consumer or hook. Shared provider settings now support model endpoints/headers/sampling defaults and per-request timeout/retry options; strict model-record serializers and custom authentication headers need the migration review described there.
+
 Import the public types from `pi_python`. The minimum Python version is 3.11, and only the `asyncio` backend is used. Read [the one-page concepts](CONCEPTS.md) first. `Agent` makes model requests through a Provider; it never reads keys implicitly and never closes a shared Provider that the caller passed in. Real model connections are covered in [model connectors](PROVIDERS.md).
 
 ## Agent and run results
 
-`Agent(provider=..., model="mock" or ModelInfo(...), options={}, system_prompt="", tools=[], messages=[], hooks=Hooks(), limits=RunLimits(), execution_mode="parallel", steering_mode="one_at_a_time", follow_up_mode="one_at_a_time", include_tool_origin=False)`. If there is neither a `provider` nor a default stream set with `set_default_stream_fn`, `prompt` raises `ConfigurationError` immediately.
+`Agent(provider=..., model="mock" or ModelInfo(...), options={}, system_prompt="", tools=[], messages=[], hooks=Hooks(), limits=RunLimits(), execution_mode="parallel", steering_mode="one_at_a_time", follow_up_mode="one_at_a_time", include_tool_origin=False, identity=None)`. If there is neither a `provider` nor a default stream set with `set_default_stream_fn`, `prompt` raises `ConfigurationError` immediately.
 
 | Method | Behavior |
 |---|---|
@@ -47,7 +51,7 @@ await agent.prompt("Interpret the application check results.")
 
 Each batch is an independent run. It shares argument preparation, schema validation, tool hooks, execution order/concurrency, output checks, tool-call budgets, deadlines and cancellation ownership with model-selected calls. The entire batch is refused if it exceeds `max_tool_calls`. It does not invoke model preparation/conversion hooks or `finish_turn`, consume either input queue, or follow a tool's `terminate` flag into a model loop. Tools and configuration stay fixed during the batch; explicit configuration updates made during it wait until the next run (or a later idle `update_config`), in submission order. Task-wide budgets across several runs belong to the application.
 
-Tool-event payloads keep their previous field sets by default. Set `Agent(include_tool_origin=True)` to add `origin` (`"application"` or `"model"`) and `source` (the caller's diagnostic string, or None) to tool events, for either entry point. This option is captured at run start. `ToolContext` and `ToolOutcome` expose provenance as read-only properties, not dataclass fields: `dataclasses.asdict()` keeps the previous shape and does not include provenance. Read `.origin` / `.source` explicitly or use the batch history record when storing it. Model-selected calls always have `source=None`. A source label is not an authenticated identity.
+Executed tools now emit `duration_ms` by default (see the timing migration below). Set `Agent(include_tool_origin=True)` to add `origin` (`"application"` or `"model"`) and `source` (the caller's diagnostic string, or None) to tool events, for either entry point. This option is captured at run start. `ToolContext` and `ToolOutcome` expose provenance as read-only properties, not dataclass fields: `dataclasses.asdict()` does not include provenance; `ToolOutcome` now includes the optional `duration_ms` field. Read `.origin` / `.source` explicitly or use the batch history record when storing it. Model-selected calls always have `source=None`. A source label is not an authenticated identity.
 
 Existing model runs retain integer `turn_id` values and do not create `application_tool_batch` messages. Application events have `turn_id=None`, because no model turn occurred. Code that computes with turn IDs or stores them in integer-only columns must handle this before adopting `execute_tools` or reading its event logs. An exception from a critical subscriber can fail the run; None itself is valid in the new event codec. Critical end subscribers finish before the Agent becomes idle, subject to the existing cancellation and delivery-failure rules.
 
@@ -181,13 +185,13 @@ When a tool cannot confirm whether an external commit succeeded, it can raise `T
 
 Python cannot forcibly stop an uncooperative coroutine or the thread running a plain function. If a tool still has not finished by the cleanup deadline after cancellation or a timeout, its result is the error `not_stopped`, the run stops at once, and no more model requests are sent. Until the tool actually finishes, the instance stays busy: `cleanup_complete=False`, and `prompt`, `wait_for_idle` and `aclose` raise `CleanupTimeoutError`. As soon as the tool finishes, the instance becomes usable again. Applications that need to force termination should manage subprocesses themselves. A timeout or cancellation result does not mean the external operation was rolled back.
 
-Events are `agent_start/end`, `turn_start/end`, `message_start/update/end`, `tool_execution_start/update/end`, and `config_update` for explicit configuration changes. The envelope carries `schema_version=1`, the run ID, the turn ID, a monotonic sequence number and an optional call ID. Each subscriber receives its own copy. Subscribers are awaited in order; if one fails, execution stops, and `state.diagnostics` records the failing subscriber and those not yet called. The failing subscriber is not called again recursively.
+Events are `agent_start/end`, `turn_start/end`, `message_start/update/end`, `tool_execution_start/update/end`, and `config_update` for explicit configuration changes. The envelope carries `schema_version=2`, the run ID, the turn ID, a monotonic sequence number and an optional call ID. Each subscriber receives its own copy. Subscribers are awaited in order; if one fails, execution stops, and `state.diagnostics` records the failing subscriber and those not yet called. The failing subscriber is not called again recursively.
 
 A subscriber callback must not wait for this instance to become idle, or it will end up waiting on itself. A display layer can use a bounded `EventQueue(maxsize=128, drop_text_updates=True)`: only message deltas may be dropped, the count is kept in `dropped_updates`, and final tool events always apply backpressure. On the normal path, `prompt` returning means the critical subscribers have handled the end events.
 
 ## Recovering from failures
 
-When the model errors or is cancelled, the answer stays in history with `stop_reason="error"` or `"aborted"`, and its `error` field holds the original error text. HTTP failures also carry the response body returned by the server (at most 4000 characters, with the key used for this request replaced by `[redacted]`). The functions below are ported from upstream pi-ai. They read that answer to tell why it failed, and on 44 shared samples their verdicts match upstream:
+When the model errors or is cancelled, the answer stays in history with `stop_reason="error"` or `"aborted"`, and its `error` field holds the original error text. HTTP failures also carry the response body returned by the server (at most 4000 characters, with the key used for this request replaced by `[redacted]`). The functions below are ported from upstream pi-ai. They read that answer to tell why it failed, and on 55 shared samples their verdicts match upstream:
 
 | Function | Purpose |
 |---|---|
@@ -255,7 +259,7 @@ protocol constraints, cancellation, and the runnable offline example.
 
 The public message types are `SystemMessage`, `UserMessage`, `AssistantMessage`, `ToolResultMessage` and `CustomMessage`; the content blocks are `TextContent`, `ImageContent`, `ThinkingContent` and `ToolCall`. User messages and tool results can carry images; assistant messages can carry signed text, reasoning and tool calls. A `SystemMessage`'s text appends instructions, and `sections` replaces sections by name (None deletes one); tool declarations are replayed through `tools_added` / `tools_removed`.
 
-`encode_messages` / `decode_messages` and `encode_event` / `decode_event` are pure string conversions; they do not read or write files. The message schema version is 3 and the event envelope version is 1; any other version is rejected. NaN, Infinity, functions and file handles are not accepted, and dangling calls, duplicate results and unknown versions are rejected. Importing history only validates data; it never runs the model or tools. External adapters can use `current_tools`, `current_system_message` and `current_system_prompt` to replay state.
+`encode_messages` / `decode_messages` and `encode_event` / `decode_event` are pure string conversions; they do not read or write files. Writers emit message schema 4 and event schema 2. Readers also accept message schema 3 and event schema 1; other versions are rejected. Old readers must migrate before consuming the new output. NaN, Infinity, functions and file handles are not accepted, and dangling calls, duplicate results and unknown versions are rejected. Importing history only validates data; it never runs the model or tools. External adapters can use `current_tools`, `current_system_message` and `current_system_prompt` to replay state.
 
 ## Standalone loop and convenience APIs
 
@@ -263,7 +267,7 @@ The public message types are `SystemMessage`, `UserMessage`, `AssistantMessage`,
 
 The configuration includes `provider` or `stream_fn`, `model`, `options`, `hooks`, `limits`, `tool_execution`, and `get_steering_messages` / `get_follow_up_messages`. The queue callbacks are called at the same boundaries as upstream and can return message lists synchronously or asynchronously.
 
-The event stream uses a bounded queue. If you only wait for the result, `result()` consumes the events; if you use `async for`, consume to the end before reading the result. To give up midway, call `await stream.aclose()`. Do not just wait for the producer to finish while you have paused consuming, or backpressure will block it.
+Iteration alone applies backpressure after 128 queued events. Calling `result()` releases that limit for the rest of this stream, so it also works before iteration or after reading only some events. It does not consume events: unread events remain available in order, including after the result completes. This follows upstream result/replay behavior, while retaining Python's backpressure for iteration-only consumers. Waiting for a result without consuming can buffer the entire remaining event history in memory. Cancelling a result waiter does not cancel the producer; call `await stream.aclose()` to abandon the stream. Do not wait on the internal producer task directly.
 
 `set_default_stream_fn(provider_or_function)` sets an explicit process-wide default stream; pass None to clear it. `Agent` can then omit the provider, or use `stream_fn=`. `reset()` clears the conversation and queues but keeps the replayed system prompt and tool declarations; it is refused during a run. An instance whose tool reported an unknown outcome still has to be rebuilt after reconciliation; reset does not clear that guard.
 
@@ -272,6 +276,12 @@ The event stream uses a bounded queue. If you only wait for the result, `result(
 An Agent can also be constructed with `thinking_level`, `thinking_budgets`, `transport`, `session_id`, `get_api_key`, `on_payload`, `on_response` and `on_provider_stream_event`. The last four can also go in Hooks; explicit constructor arguments take precedence. Their protocols, and the Provider parameters, are described in [the connector guide](PROVIDERS.md).
 
 `auto_session_id=True` supplies an Agent-owned cache-only ID to Providers that opt in (the built-in Codex Provider). `agent.cache_session_id` reads that managed fallback; restore it with `Agent(cache_session_id=saved_id, ...)`. Explicit `session_id` takes precedence. `reset()` rotates the managed fallback, and `auto_session_id=False` disables it. Automatic/restored cache IDs never enable connection reuse. See [cache sessions, persistence and Provider opt-in](PROVIDERS.md#automatic-codex-cache-sessions).
+
+## Default timing and migration
+
+`AssistantMessage.duration_ms` measures the model stream unless the message already has a duration or its timestamp predates that stream. Forwarded historical responses are not retimed; a newly generated deferred response can have a duration, which does not mean its background job has completed. Built-in provider assistant timestamps mark request start (Unix seconds in Python). `ToolOutcome.duration_ms`, `ToolResultMessage.duration_ms` and `tool_execution_end.data["duration_ms"]` measure only tool execution, excluding preparation and before/after hooks. Completed failed/cancelled executions are measured; calls that never start or remain unsettled have no duration. Durations are nonnegative integer milliseconds from a monotonic clock.
+
+Message/event encoders omit absent durations; `dataclasses.asdict()` includes `duration_ms=None`. Application tool-batch history stores completed durations locally; default model conversion omits them. Strict field allowlists and history stores must accept these fields and schemas 4/2. This default change is independent of `include_tool_origin`. New readers accept old schemas 3/1; old readers cannot read new output. `require_features(["default-duration-ms-v1"])` checks this build contract.
 
 ## Fields of messages, tool results and events
 
@@ -287,11 +297,11 @@ OpenAI may add encrypted_content back in the final response. If the visible reas
 
 `render_system_update(message)` returns the text sent when a later system message is delivered in place: after the body, each section is written as `Updated system prompt section "name":` followed by the new content, or `Removed system prompt section "name".`. When a system message consists of several text blocks, the blocks are joined with a single newline, the same as upstream's `contentText`. How each Provider sends mid-session changes to tools, instructions and reasoning effort is described in [the connector guide](PROVIDERS.md#mid-session-changes).
 
-`estimate_context_tokens(messages)` ports upstream's character-based estimate: the latest valid usage record plus an estimate of the messages after it, at about 1 token per 4 UTF-16 characters, with each image counted as 4800 characters. It is not a tokenizer. `clamp_max_tokens_to_context(context_window, messages, max_tokens)` uses it to reserve 4096 safety tokens, with a result of at least 1; Providers use it to shorten the output limit of known models.
+`estimate_context_tokens(messages)` ports upstream's character-based estimate: the latest valid usage record plus an estimate of the messages after it, at about 1 token per 3.5 UTF-16 characters, with each image counted as 4800 characters. It is not a tokenizer. `clamp_max_tokens_to_context(context_window, messages, max_tokens)` uses it to reserve 4096 safety tokens, with a result of at least 1; Providers use it to shorten the output limit of known models.
 
-`AssistantMessage.provider_thinking_level` matches upstream: it records this answer's effort only for Claude models that use effort markers, so later requests can rebuild the markers in history. Read `thinking_level` when you need the requested level.
+`AssistantMessage.provider_thinking_level` matches upstream: it records this answer's native effort for Claude effort markers and supported OpenAI API configuration updates, so later requests can rebuild the markers in history. Read `thinking_level` when you need the requested level.
 
-When replaying history, Providers skip `error` / `aborted` answers following upstream's rules; reasoning from a different model is converted to plain text and its signature is dropped; a system message that sits between a tool call and its result is moved after the result. The session history itself is unchanged.
+When replaying history, Providers skip `error` / `aborted` answers following upstream's rules; reasoning from a different model, including its signature, is omitted from the request; a system message that sits between a tool call and its result is moved after the result. The session history itself is unchanged.
 
 Host sampling profiles, usage observation, retry policy, and build feature markers are documented in [MCP interactions](MCP_INTERACTION.md#real-providers-profiles-accounting-and-retries).
 

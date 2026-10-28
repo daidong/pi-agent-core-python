@@ -1,6 +1,6 @@
-"""Context-size estimate ported from Pi a13d35a utils/estimate.ts (MIT); see NOTICE.
+"""Context-size estimate ported from Pi v1.4.0 utils/estimate.ts (MIT); see NOTICE.
 
-A character heuristic, not a tokenizer: four UTF-16 code units per token and a fixed
+A character heuristic, not a tokenizer: 3.5 UTF-16 code units per token and a fixed
 charge per image. It sizes output limits and compaction decisions; the service still
 enforces the real context limit.
 """
@@ -21,7 +21,7 @@ from .messages import (
 )
 from .transcript import system_message_text
 
-_CHARS_PER_TOKEN = 4
+_CHARS_PER_TOKEN = 3.5  # Pi v1.1.0: a more conservative input estimate.
 _IMAGE_CHARS = 4800
 _SAFETY_TOKENS = 4096
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator
 from ..cancellation import CancelToken
 from ..provider import ModelRequest
-from ..messages import Message, ToolDeclaration
+from ..messages import Message, ToolDeclaration, now
 from ..models import ModelInfo
 from typing import Any
 import base64
@@ -30,7 +30,7 @@ from ..transcript import (
     initial_system_message,
     render_system_update,
     resolve_transcript,
-    resolve_transcript_tools,
+    _resolve_tool_changes,
     system_message_text,
     with_request_tools,
 )
@@ -38,7 +38,13 @@ from ..tools import invoke
 from ..stream import event_contract
 from .common import RemoteProvider, normalize_usage, transform_messages
 from .transport import WebSocketLink, stream_error
-from .._version import __version__
+from ..identity import apply_identity
+
+
+def _tool_support(compat: dict[str, Any]) -> str:
+    if compat.get("supportsMidConvoSystemMessages") and compat.get("supportsAdditionalTools"):
+        return "changes"
+    return "additions" if compat.get("supportsToolSearch") else "none"
 
 
 def input_content(content: str | list[TextContent | ImageContent]) -> list[dict[str, Any]]:
@@ -130,9 +136,10 @@ def _tool_output(
 ) -> str | list[dict[str, Any]]:
     text = "\n".join(b.text for b in content if isinstance(b, TextContent))
     images = [b for b in content if isinstance(b, ImageContent)]
+    has_text = bool(text.strip())
     if not images or not images_allowed:
-        return text or ("(see attached image)" if images else "(no tool output)")
-    output: list[dict[str, Any]] = [{"type": "input_text", "text": text}] if text else []
+        return text if has_text else ("(see attached image)" if images else "(no tool output)")
+    output: list[dict[str, Any]] = [{"type": "input_text", "text": text}] if has_text else []
     return output + [
         {
             "type": "input_image",
@@ -150,6 +157,7 @@ class OpenAIProvider(RemoteProvider):
     def __init__(self, *, base_url: str = "https://api.openai.com/v1", **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.base_url = base_url.rstrip("/")
+        self._explicit_base_url = base_url != "https://api.openai.com/v1"
 
     def _tools(
         self, tools: list[ToolDeclaration], compat: dict[str, Any], strict: bool | None
@@ -175,6 +183,7 @@ class OpenAIProvider(RemoteProvider):
         *,
         include_system: bool,
         strict: bool | None,
+        configuration_effort: str | None = None,
     ) -> tuple[list[dict[str, Any]], list[Message]]:
         """Pi convertResponsesMessages for this provider's model."""
         mid = compat.get("supportsMidConvoSystemMessages") is True
@@ -192,9 +201,11 @@ class OpenAIProvider(RemoteProvider):
             return f"{_id_part(call)}|{item}"
 
         transformed = transform_messages(transcript, self.name, self.api, request.model, normalize)
-        additional = compat.get("supportsAdditionalTools") is True
-        search = compat.get("supportsToolSearch") is True
-        _, anchors = resolve_transcript_tools(transcript, additional or search)
+        support = _tool_support(compat)
+        _, folded = _resolve_tool_changes(transcript, support)
+        system_index = 0
+        declared_additional = False
+        unavailable: dict[str, None] = {}
         role = (
             "developer"
             if model.reasoning and compat.get("supportsDeveloperRole") is not False
@@ -206,9 +217,22 @@ class OpenAIProvider(RemoteProvider):
         for source, message in enumerate(transformed):
             leading = source == 0 and isinstance(message, SystemMessage)
             if isinstance(message, SystemMessage):
-                if not leading and anchors and message.tools_added:
-                    tools = message.tools_added
-                    if additional:
+                anchors = system_index >= folded
+                system_index += 1
+                tools = message.tools_added
+                for tool in tools:
+                    unavailable.pop(tool.name, None)
+                if anchors and tools:
+                    if support == "changes":
+                        if declared_additional:
+                            notice = (
+                                "This is an incremental tools update. Previously declared tools remain available unless explicitly marked unavailable. "
+                                "A tool declared again here is available again, and its latest definition replaces the earlier one."
+                            )
+                            if unavailable:
+                                notice += "\nStill unavailable: " + ", ".join(unavailable) + "."
+                            items.append({"role": role, "content": notice})
+                        declared_additional = True
                         items.append(
                             {
                                 "type": "additional_tools",
@@ -216,7 +240,7 @@ class OpenAIProvider(RemoteProvider):
                                 "tools": self._tools(tools, compat, strict),
                             }
                         )
-                    elif search:
+                    elif support == "additions":
                         # Client-executed tool search loads late tools where they appear.
                         names = [t.name for t in tools]
                         call = "pi_tool_load_" + short_hash(f"system:{position}:{','.join(names)}")
@@ -245,6 +269,17 @@ class OpenAIProvider(RemoteProvider):
                     text = (
                         system_message_text(message) if leading else render_system_update(message)
                     )
+                    if anchors:
+                        removed = [
+                            n for n in message.tools_removed if n not in {t.name for t in tools}
+                        ]
+                        if removed:
+                            notice = (
+                                "The following tools are no longer available. Do not call them:\n"
+                                + "\n".join("- " + n for n in removed)
+                            )
+                            text = "\n\n".join(p for p in (text, notice) if p)
+                            unavailable.update(dict.fromkeys(removed))
                     if text:
                         items.append({"role": role, "content": text})
             elif isinstance(message, UserMessage):
@@ -303,6 +338,13 @@ class OpenAIProvider(RemoteProvider):
                         output.append(item)
                 if not output:
                     continue
+                if configuration_effort is not None and same and message.provider_thinking_level:
+                    items.append(
+                        {
+                            "type": "configuration_update",
+                            "reasoning": {"effort": message.provider_thinking_level},
+                        }
+                    )
                 items += output
             elif isinstance(message, ToolResultMessage):
                 items.append(
@@ -316,6 +358,10 @@ class OpenAIProvider(RemoteProvider):
                 raise UnsupportedCapabilityError("Convert custom messages before provider boundary")
             if not leading:
                 position += 1
+        if configuration_effort is not None:
+            items.append(
+                {"type": "configuration_update", "reasoning": {"effort": configuration_effort}}
+            )
         return items, transcript
 
     def _cache_key(self, request: ModelRequest) -> str | None:
@@ -326,6 +372,21 @@ class OpenAIProvider(RemoteProvider):
             key = request.cache_session_id
         return key[:64] if isinstance(key, str) else key
 
+    def _configuration_effort(
+        self, request: ModelRequest, model: ModelInfo, chatgpt: bool
+    ) -> str | None:
+        level = request.options.get("reasoning")
+        if (
+            self.name == "openai-codex"
+            or chatgpt
+            or not model.compat.get("supportsMidConvoEffort")
+            or not level
+            or level == "off"
+        ):
+            return None
+        level = model.clamp_thinking_level(level)
+        return model.thinking_level_map.get(level) or level
+
     def build_request(self, request: ModelRequest, chatgpt_sign_in: bool = False) -> dict[str, Any]:
         model = self.model_info(request)
         compat = model.compat
@@ -333,12 +394,17 @@ class OpenAIProvider(RemoteProvider):
         source = with_request_tools(request.messages, request.tools)
         codex = self.name == "openai-codex"
         strict = None if codex else False
+        configuration_effort = self._configuration_effort(request, model, chatgpt_sign_in)
         items, transcript = self._input(
-            request, model, source, compat, include_system=not codex, strict=strict
+            request,
+            model,
+            source,
+            compat,
+            include_system=not codex,
+            strict=strict,
+            configuration_effort=configuration_effort,
         )
-        additional = compat.get("supportsAdditionalTools") is True
-        search = compat.get("supportsToolSearch") is True
-        tools, _ = resolve_transcript_tools(transcript, additional or search)
+        tools, _ = _resolve_tool_changes(transcript, _tool_support(compat))
         retention = options.get("cache_retention", "short")
         if retention not in {"none", "short", "long"}:
             raise ConfigurationError("Invalid cache_retention")
@@ -403,6 +469,8 @@ class OpenAIProvider(RemoteProvider):
                     body["include"] = ["reasoning.encrypted_content"]
                 elif level_map.get("off", "") is not None:
                     body["reasoning"] = {"effort": level_map.get("off") or "none"}
+        if configuration_effort is not None:
+            body.setdefault("reasoning", {})["effort"] = "medium"
         if tools:
             body["tools"] = self._tools(tools, compat, strict)
         for key_name in (
@@ -423,8 +491,9 @@ class OpenAIProvider(RemoteProvider):
     async def stream(
         self, request: ModelRequest, cancel: CancelToken
     ) -> AsyncGenerator[ModelEvent, None]:
+        request_started = now()
         key = await self.credential(request, cancel)
-        headers = {
+        headers: dict[str, str | None] = {
             **request.options.get("headers", {}),
             "authorization": f"Bearer {key}",
             "content-type": "application/json",
@@ -438,7 +507,6 @@ class OpenAIProvider(RemoteProvider):
                 {
                     "chatgpt-account-id": account_id(key),
                     "originator": "pi",
-                    "user-agent": f"pi-python/{__version__}",
                     "OpenAI-Beta": "responses=experimental",
                 }
             )
@@ -465,6 +533,7 @@ class OpenAIProvider(RemoteProvider):
             and self.base_url == "https://api.openai.com/v1"
             and not key.startswith("sk-")
         )
+        headers = apply_identity(headers, self.name, self.base_url, request.options)
         body = await self.payload(request, self.build_request(request, chatgpt))
         if transport == "websocket-cached" and not request.options.get("session_id"):
             raise ConfigurationError("websocket-cached requires session_id")
@@ -482,6 +551,9 @@ class OpenAIProvider(RemoteProvider):
             if self.name == "openai-codex" and cached and transport in {"websocket-cached", "auto"}
             else None
         )
+        transport_options = self.transport_options(request)
+        if link is not None:
+            transport_options["link"] = link
         events = self.transport.responses(
             self.base_url + "/responses",
             body,
@@ -490,7 +562,7 @@ class OpenAIProvider(RemoteProvider):
             mode=transport,
             session_id=cached,
             on_response=request.on_response,
-            **({"link": link} if link is not None else {}),
+            **transport_options,
         )
         slots: dict[int, Any] = {}
         final_response = None
@@ -628,9 +700,13 @@ class OpenAIProvider(RemoteProvider):
             self.name,
             request.model,
             normalize_usage(final_response.get("usage", {}), self.name),
+            timestamp=request_started,
             api=self.api,
             diagnostics=None if final_response.get("usage") else [{"type": "usage_unavailable"}],
             thinking_level=request.options.get("reasoning"),
+            provider_thinking_level=self._configuration_effort(
+                request, self.model_info(request), chatgpt
+            ),
             response_id=final_response.get("id"),
             response_model=final_response.get("model")
             if final_response.get("model") != request.model

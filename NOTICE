@@ -6,3 +6,8 @@ The complete upstream source is fetched only for development under reference/pi.
 Provider request conversion (Claude Messages, OpenAI and Codex Responses), the cached
 WebSocket continuation, transcript replay helpers and the context estimate/shortHash in
 src/pi_python/estimate.py are adapted from packages/ai of the same commit.
+
+Selected provider, identity, timing, template and estimate behavior follows Pi v1.4.0:
+https://github.com/earendil-works/pi/tree/4a080252f06caf63a525d7873c5d94d3c23887e0
+Selected later fixes and exact source hashes are documented in docs/UPSTREAM_FOLLOWUP.md
+and reference/followup/. The original core-loop reference remains unchanged.

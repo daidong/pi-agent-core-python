@@ -7,6 +7,8 @@ offline tool call below, then replace its model provider. For a reusable extensi
 follow [Plugin development](PLUGIN_DEVELOPMENT.md). Repository maintenance commands
 are at the end; they are not required in a consuming application.
 
+The examples use the research convenience API. For upstream-oriented framework integration, use `pi_python.core`; see [core and research contracts](CORE_AND_RESEARCH.md). Both are included in this package. Keep the research entry point when you need RunResult, synchronous calls, automatic cache affinity, or existing plugins.
+
 ## 1. Establish the environment
 
 The distribution is `pi-python-core`; the import is `pi_python`. Python 3.11 or later

@@ -4,6 +4,8 @@
 
 本文用于指导 coding agent **使用本库构建应用**。先运行下面的离线工具调用，再替换模型接入。如果需要可复用的扩展，继续阅读[插件开发流程](PLUGIN_DEVELOPMENT.md)。修改本库自身时使用的检查命令放在最后，接入应用不需要运行整套仓库检查。
 
+本文示例使用研究便利入口。需要跟随上游合同的框架集成使用 `pi_python.core`，见[核心合同与研究入口](CORE_AND_RESEARCH.md)。两种入口都在本包内；需要 RunResult、同步调用、自动缓存标识或现有插件时，继续使用研究入口即可。
+
 ## 1. 确认环境
 
 安装名是 `pi-python-core`，导入名是 `pi_python`。需要 Python 3.11 或更高版本，异步运行时使用 asyncio。公开 API 从 `pi_python`、`pi_python.providers`、`pi_python.plugins` 或 `pi_python.mcp` 导入，不要依赖以下划线开头的内部模块。

@@ -45,6 +45,7 @@ jobs:
           /tmp/installed/bin/python -c 'import importlib.util as u; assert u.find_spec("httpx") and u.find_spec("websockets"); assert u.find_spec("jwt") is None'
           /tmp/installed/bin/python "$GITHUB_WORKSPACE/examples/in_memory.py"
           /tmp/installed/bin/python "$GITHUB_WORKSPACE/examples/capability_composition.py"
+          /tmp/installed/bin/python "$GITHUB_WORKSPACE/examples/core_and_research.py"
           /tmp/installed/bin/python -c 'from pi_python.mcp import MCP_FEATURES; assert {"sampling-host-state-v1", "sampling-profiles-v1", "sampling-metering-v1", "sampling-retry-v1"} <= MCP_FEATURES'
       # Exercise the deployed wheel outside the checkout, without an editable install.
       - run: |
@@ -107,8 +108,12 @@ jobs:
           node-version: '24.4.1'
       - run: uv sync --locked --extra providers
       - run: uv run python scripts/bootstrap_reference.py
+      - run: uv run python scripts/bootstrap_followup_reference.py
       - run: npm test --prefix reference/pi/packages/agent -- test/agent-loop.test.ts test/agent.test.ts
       - run: npm test --prefix reference/pi/packages/ai -- test/transcript-tool-changes.test.ts test/validation.test.ts
       - run: uv run python scripts/conformance.py
+      - run: uv run python scripts/interface_audit.py
       - run: uv run python scripts/provider_conformance.py
+      - run: uv run python scripts/websocket_conformance.py
+      - run: uv run python scripts/recovery_conformance.py
       - run: uv run python scripts/plugin_conformance.py

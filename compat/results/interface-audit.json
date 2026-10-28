@@ -1,0 +1,145 @@
+{
+  "upstream_commit": "4a080252f06caf63a525d7873c5d94d3c23887e0",
+  "scope": "7 个定向探针；core 入口须全部一致，研究入口的有意差异单独记录；不是完整接口兼容性证明",
+  "findings": [
+    {
+      "case": "old_message",
+      "python": {
+        "timed": false
+      },
+      "core": {
+        "timed": false
+      },
+      "upstream": {
+        "timed": false
+      },
+      "core_matches": true
+    },
+    {
+      "case": "new_deferred",
+      "python": {
+        "timed": true
+      },
+      "core": {
+        "timed": true
+      },
+      "upstream": {
+        "timed": true
+      },
+      "core_matches": true
+    },
+    {
+      "case": "pre_cancelled",
+      "python": {
+        "events": [],
+        "roles": []
+      },
+      "core": {
+        "events": [
+          "agent_start",
+          "turn_start",
+          "message_start",
+          "message_end",
+          "message_start",
+          "message_end",
+          "turn_end",
+          "agent_end"
+        ],
+        "roles": [
+          "user",
+          "assistant"
+        ]
+      },
+      "upstream": {
+        "events": [
+          "agent_start",
+          "turn_start",
+          "message_start",
+          "message_end",
+          "message_start",
+          "message_end",
+          "turn_end",
+          "agent_end"
+        ],
+        "roles": [
+          "user",
+          "assistant"
+        ]
+      },
+      "core_matches": true
+    },
+    {
+      "case": "continue_failed_assistant",
+      "python": {
+        "accepted": true
+      },
+      "core": {
+        "accepted": false
+      },
+      "upstream": {
+        "accepted": false
+      },
+      "core_matches": true
+    },
+    {
+      "case": "finish_object",
+      "python": {
+        "accepted": false
+      },
+      "core": {
+        "accepted": true
+      },
+      "upstream": {
+        "accepted": true
+      },
+      "core_matches": true
+    },
+    {
+      "case": "agent_end",
+      "python": {
+        "keys": [
+          "call_id",
+          "data",
+          "run_id",
+          "schema_version",
+          "sequence",
+          "turn_id",
+          "type"
+        ],
+        "data_keys": [
+          "status",
+          "stop_reason"
+        ]
+      },
+      "core": {
+        "keys": [
+          "messages",
+          "type"
+        ]
+      },
+      "upstream": {
+        "keys": [
+          "messages",
+          "type"
+        ]
+      },
+      "core_matches": true
+    },
+    {
+      "case": "partial_stream_result",
+      "python": {
+        "completed": true,
+        "remaining_events": 199
+      },
+      "core": {
+        "completed": true,
+        "remaining_events": 199
+      },
+      "upstream": {
+        "completed": true,
+        "remaining_events": 199
+      },
+      "core_matches": true
+    }
+  ]
+}

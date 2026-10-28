@@ -5,6 +5,7 @@ import datetime
 import enum
 import inspect
 import json
+import time
 from contextvars import copy_context
 from copy import copy, deepcopy
 from decimal import Decimal
@@ -494,6 +495,7 @@ class ToolOutcome(_ToolOrigin):
     raw_result: ToolResult | None = None
     result: ToolResult | None = None
     error: str | None = None
+    duration_ms: int | None = None
     _settled: bool = field(default=False, repr=False)
 
 
@@ -570,9 +572,14 @@ async def run_tool_call(
     outcome.execution_status = "running"
     try:
         assert outcome.prepared_arguments is not None
-        value = await call_tool_function(
-            tool.execute, deepcopy(outcome.prepared_arguments), context
-        )
+        started = time.monotonic()
+        try:
+            value = await call_tool_function(
+                tool.execute, deepcopy(outcome.prepared_arguments), context
+            )
+        finally:
+            if not outcome._settled:
+                outcome.duration_ms = int((time.monotonic() - started) * 1000 + 0.5)
         if outcome._settled:
             return outcome
         # Execution succeeded even if conversion, serializability or output validation fails.

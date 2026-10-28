@@ -2,12 +2,15 @@
 
 [English](README.md) | **中文**
 
-一个可嵌入的 Python agent 核心，移植自 [Pi](https://github.com/earendil-works/pi)（固定参照 `v1.0.0`）。它负责一件事：把对话发给模型，执行模型要求的工具，把结果交回模型，直到得到回答。工具就是普通的 Python 函数；模型可以是 Claude、GPT、DeepSeek，也可以是本机或集群上的开源模型。
+一个可嵌入的 Python agent 核心，移植自 [Pi](https://github.com/earendil-works/pi)（核心循环基线 `v1.0.0`，选择性跟进至 `v1.4.0` 的模型接入与插件行为）。它负责一件事：把对话发给模型，执行模型要求的工具，把结果交回模型，直到得到回答。工具就是普通的 Python 函数；模型可以是 Claude、GPT、DeepSeek，也可以是本机或集群上的开源模型。
 
-PyPI 上的 `pi-agent-core` 是另一个独立项目，移植的是 2026 年初 pi-mono 中的旧版本。本库对照 Pi v1.0.0 的行为，与上游的实际运行结果逐组比较；并自带 Claude、OpenAI、DeepSeek 和本地模型的接入，不需要安装任何模型 SDK。
+PyPI 上的 `pi-agent-core` 是另一个独立项目，移植的是 2026 年初 pi-mono 中的旧版本。本库的核心循环对照 Pi v1.0.0，模型接入与插件规则选择性对照 v1.4.0，与上游的实际运行结果逐组比较；并自带 Claude、OpenAI、DeepSeek 和本地模型的接入，不需要安装任何模型 SDK。
 
 **使用 coding agent 开发？** 先读 [library 接入指南](docs/zh/CODING_AGENTS.md)。
+日常研究继续使用 `pi_python.Agent` 和 `@tool`。同一个包内新增 `pi_python.core`，用于跟随官方的钩子、事件及低层合同；两者共用引擎。见[入口选择与迁移](docs/zh/CORE_AND_RESEARCH.md)。
 需要扩展能力时，按 [插件开发流程与完整示例](docs/zh/PLUGIN_DEVELOPMENT.md) 实现、打包和验证。
+
+**升级到 0.12.0 前**，请阅读[发布与迁移说明](docs/releases/0.12.0.md)：默认耗时字段、历史 schema 和共用 Provider 配置有变化。现有研究应用可以继续使用原来的 `Agent` 入口。精确上游参照见[本轮跟进说明](docs/UPSTREAM_FOLLOWUP.md)。
 
 ## 安装
 
@@ -75,7 +78,7 @@ agent = Agent(provider=llm, model=llm.model("qwen3:8b", context_window=40960), t
 
 ## 与 Pi 的关系
 
-执行循环、事件顺序、钩子、队列、出错与取消的处理都与 Pi 一致，并用差分验证：同一组输入分别交给固定版本的上游代码和本库运行，逐项比较模型请求、工具调用、事件和最终记录。目前核心循环 25 组、模型接入 50 组、WebSocket 多轮 2 组、出错判断 44 条样例全部一致。插件里技能、提示模板和文件头元数据的规则，也用同样的方法和 Pi 的 coding-agent 代码对照。
+通过差分验证覆盖执行循环、事件顺序、钩子、队列、出错与取消的处理：同一组输入分别交给固定版本的上游代码和本库运行，逐项比较模型请求、工具调用、事件和最终记录。目前核心循环 25 组、模型接入 58 组、WebSocket 多轮 2 组、出错判断 55 条样例全部一致。插件里技能、提示模板和文件头元数据的规则，也用同样的方法和 Pi 的 coding-agent 代码对照。
 
 有几处是有意的差异，例如工具参数严格校验、不自动转换类型，返回给调用者的状态是副本；另一些是为 Python 用户加的，例如 `@tool`、同步调用、失败后直接 `continue_run()`。逐项记录见[验收映射](compat/COVERAGE.md)。Pi 放在应用层的功能（终端界面、会话文件格式、上下文压缩）不在本库核心里；压缩可以用钩子实现，示例里有完整做法。Agent 还为 Codex 自动提供缓存专用会话标识，补齐上游 coding-agent 层承担的职责；见[缓存会话与关闭方式](docs/zh/PROVIDERS.md#codex-自动缓存会话)。插件也是从应用层取来的功能：一个可选模块，读取 Pi 的 package 格式，再据此构造普通的 Agent。本项目使用自己的版本号，并非 Pi 官方发行版。
 

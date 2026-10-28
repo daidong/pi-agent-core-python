@@ -19,6 +19,7 @@ from urllib.parse import parse_qs, urlencode, urlsplit
 from ..cancellation import CancelToken
 from ..errors import ConfigurationError, ProviderProtocolError
 from ..tools import invoke
+from ..tasks import _finish
 from .transport import HTTPTransport, ProviderHTTPError, _acquire, cancellable
 from .openai import account_id
 
@@ -527,14 +528,23 @@ class RefreshingCredentials:
         await _acquire(self._lock.acquire(), cancel, lambda acquired: self._lock.release())
         try:
             cancel.raise_if_cancelled()
-            if self._dirty:
-                await invoke(self.persist, self.credential)
-                self._dirty = False
-            if self.credential.expires_at <= time.time() + self.margin:
-                self.credential = await self.client.refresh(self.credential, cancel)
-                self._dirty = True
-                await invoke(self.persist, self.credential)
-                self._dirty = False
+            # Once rotation starts, cancellation must not discard the only valid
+            # refresh token. Keep ownership (including persistence) until done.
+            await _finish(self._refresh_and_persist())
+            cancel.raise_if_cancelled()
             return self.credential
         finally:
             self._lock.release()
+
+    async def _refresh_and_persist(self) -> None:
+        if self._dirty:
+            await invoke(self.persist, self.credential)
+            self._dirty = False
+        if self.credential.expires_at <= time.time() + self.margin:
+            # Pi bounds the network refresh independently of the caller's signal.
+            # Persistence remains application-owned and must itself terminate.
+            async with asyncio.timeout(15):
+                self.credential = await self.client.refresh(self.credential, CancelToken())
+            self._dirty = True
+            await invoke(self.persist, self.credential)
+            self._dirty = False

@@ -1,5 +1,5 @@
 {
-  "source_revision": "a13d35a742c6ef8462812a28fbe1d8c8b7431c32",
+  "source_revision": "4a080252f06caf63a525d7873c5d94d3c23887e0",
   "scope": "final content, signatures, stop reason, canonical event order/payload, complete request body and selected semantic headers; synthetic fixtures, not live service; runtime IDs and SDK fingerprint headers excluded; Chat Completions fixtures also compare token usage, response ID/model and raw finish reason",
   "results": [
     {
@@ -4492,7 +4492,7 @@
               },
               {
                 "role": "assistant",
-                "content": "consideringok",
+                "content": "ok",
                 "tool_calls": [
                   {
                     "id": "call_9_fc_abc___",
@@ -4671,7 +4671,7 @@
               },
               {
                 "role": "assistant",
-                "content": "consideringok",
+                "content": "ok",
                 "tool_calls": [
                   {
                     "id": "call_9_fc_abc___",
@@ -5299,6 +5299,1730 @@
           "response_id": "chatcmpl-1",
           "response_model": null,
           "raw_stop_reason": "tool_calls"
+        }
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "followup-anthropic-crossmodel-thinking.json",
+      "python": {
+        "content": [
+          {
+            "text": "你好",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/v1/messages?beta=true",
+          "body": {
+            "model": "test-model",
+            "stream": true,
+            "max_tokens": 4096,
+            "messages": [
+              {
+                "role": "user",
+                "content": "one"
+              },
+              {
+                "role": "assistant",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "visible answer"
+                  }
+                ]
+              },
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "two",
+                    "cache_control": {
+                      "type": "ephemeral"
+                    }
+                  }
+                ]
+              }
+            ],
+            "thinking": {
+              "type": "disabled"
+            }
+          },
+          "headers": {
+            "anthropic-version": "2023-06-01",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "content-type": "application/json",
+            "x-api-key": "fixture"
+          }
+        }
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "text",
+            "text": "你好"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/v1/messages?beta=true",
+          "body": {
+            "model": "test-model",
+            "messages": [
+              {
+                "role": "user",
+                "content": "one"
+              },
+              {
+                "role": "assistant",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "visible answer"
+                  }
+                ]
+              },
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "two",
+                    "cache_control": {
+                      "type": "ephemeral"
+                    }
+                  }
+                ]
+              }
+            ],
+            "max_tokens": 4096,
+            "stream": true,
+            "thinking": {
+              "type": "disabled"
+            }
+          },
+          "headers": {
+            "x-api-key": "fixture",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true"
+          }
+        }
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "followup-anthropic-error-images.json",
+      "python": {
+        "content": [
+          {
+            "text": "你好",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/v1/messages?beta=true",
+          "body": {
+            "model": "test-model",
+            "stream": true,
+            "max_tokens": 4096,
+            "messages": [
+              {
+                "role": "user",
+                "content": "go"
+              },
+              {
+                "role": "assistant",
+                "content": [
+                  {
+                    "type": "tool_use",
+                    "id": "a",
+                    "name": "first",
+                    "input": {}
+                  },
+                  {
+                    "type": "tool_use",
+                    "id": "b",
+                    "name": "second",
+                    "input": {}
+                  }
+                ]
+              },
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "tool_result",
+                    "tool_use_id": "a",
+                    "content": "(image attached after the tool results)",
+                    "is_error": true
+                  },
+                  {
+                    "type": "tool_result",
+                    "tool_use_id": "b",
+                    "content": "ok",
+                    "is_error": false
+                  },
+                  {
+                    "type": "text",
+                    "text": "Images from the error result of tool call a (first):"
+                  },
+                  {
+                    "type": "image",
+                    "source": {
+                      "type": "base64",
+                      "media_type": "image/png",
+                      "data": "AAAA"
+                    },
+                    "cache_control": {
+                      "type": "ephemeral"
+                    }
+                  }
+                ]
+              }
+            ],
+            "thinking": {
+              "type": "disabled"
+            }
+          },
+          "headers": {
+            "anthropic-version": "2023-06-01",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "content-type": "application/json",
+            "x-api-key": "fixture"
+          }
+        }
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "text",
+            "text": "你好"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/v1/messages?beta=true",
+          "body": {
+            "model": "test-model",
+            "messages": [
+              {
+                "role": "user",
+                "content": "go"
+              },
+              {
+                "role": "assistant",
+                "content": [
+                  {
+                    "type": "tool_use",
+                    "id": "a",
+                    "name": "first",
+                    "input": {}
+                  },
+                  {
+                    "type": "tool_use",
+                    "id": "b",
+                    "name": "second",
+                    "input": {}
+                  }
+                ]
+              },
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "tool_result",
+                    "tool_use_id": "a",
+                    "content": "(image attached after the tool results)",
+                    "is_error": true
+                  },
+                  {
+                    "type": "tool_result",
+                    "tool_use_id": "b",
+                    "content": "ok",
+                    "is_error": false
+                  },
+                  {
+                    "type": "text",
+                    "text": "Images from the error result of tool call a (first):"
+                  },
+                  {
+                    "type": "image",
+                    "source": {
+                      "type": "base64",
+                      "media_type": "image/png",
+                      "data": "AAAA"
+                    },
+                    "cache_control": {
+                      "type": "ephemeral"
+                    }
+                  }
+                ]
+              }
+            ],
+            "max_tokens": 4096,
+            "stream": true,
+            "thinking": {
+              "type": "disabled"
+            }
+          },
+          "headers": {
+            "x-api-key": "fixture",
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true"
+          }
+        }
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "followup-anthropic-remove-redefine.json",
+      "python": {
+        "content": [
+          {
+            "text": "你好",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/v1/messages?beta=true",
+          "body": {
+            "model": "claude-opus-4-8",
+            "stream": true,
+            "max_tokens": 128000,
+            "messages": [
+              {
+                "role": "user",
+                "content": "one"
+              },
+              {
+                "role": "assistant",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "answer"
+                  }
+                ]
+              },
+              {
+                "role": "user",
+                "content": "two"
+              },
+              {
+                "role": "system",
+                "content": [
+                  {
+                    "type": "tool_addition",
+                    "tool": {
+                      "type": "tool_definition",
+                      "definition": {
+                        "name": "a",
+                        "description": "replaced",
+                        "eager_input_streaming": true,
+                        "input_schema": {
+                          "type": "object",
+                          "properties": {},
+                          "required": []
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            ],
+            "tools": [
+              {
+                "name": "a",
+                "description": "a",
+                "eager_input_streaming": true,
+                "input_schema": {
+                  "type": "object",
+                  "properties": {},
+                  "required": []
+                }
+              },
+              {
+                "name": "__pi_deferred_placeholder__",
+                "description": "Reserved placeholder. Never available. Never call this.",
+                "input_schema": {
+                  "type": "object",
+                  "properties": {},
+                  "required": []
+                },
+                "defer_loading": true
+              }
+            ],
+            "thinking": {
+              "type": "adaptive",
+              "display": "summarized"
+            },
+            "output_config": {
+              "effort": "high"
+            }
+          },
+          "headers": {
+            "anthropic-beta": "inline-tools-2026-09-15",
+            "anthropic-version": "2023-06-01",
+            "anthropic-dangerous-direct-browser-access": "true",
+            "content-type": "application/json",
+            "x-api-key": "fixture"
+          }
+        }
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "text",
+            "text": "你好"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/v1/messages?beta=true",
+          "body": {
+            "model": "claude-opus-4-8",
+            "messages": [
+              {
+                "role": "user",
+                "content": "one"
+              },
+              {
+                "role": "assistant",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "answer"
+                  }
+                ]
+              },
+              {
+                "role": "user",
+                "content": "two"
+              },
+              {
+                "role": "system",
+                "content": [
+                  {
+                    "type": "tool_addition",
+                    "tool": {
+                      "type": "tool_definition",
+                      "definition": {
+                        "name": "a",
+                        "description": "replaced",
+                        "eager_input_streaming": true,
+                        "input_schema": {
+                          "type": "object",
+                          "properties": {},
+                          "required": []
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            ],
+            "max_tokens": 128000,
+            "stream": true,
+            "tools": [
+              {
+                "name": "a",
+                "description": "a",
+                "eager_input_streaming": true,
+                "input_schema": {
+                  "type": "object",
+                  "properties": {},
+                  "required": []
+                }
+              },
+              {
+                "name": "__pi_deferred_placeholder__",
+                "description": "Reserved placeholder. Never available. Never call this.",
+                "input_schema": {
+                  "type": "object",
+                  "properties": {},
+                  "required": []
+                },
+                "defer_loading": true
+              }
+            ],
+            "thinking": {
+              "type": "adaptive",
+              "display": "summarized"
+            },
+            "output_config": {
+              "effort": "high"
+            }
+          },
+          "headers": {
+            "x-api-key": "fixture",
+            "anthropic-version": "2023-06-01",
+            "anthropic-beta": "inline-tools-2026-09-15",
+            "content-type": "application/json",
+            "anthropic-dangerous-direct-browser-access": "true"
+          }
+        }
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "followup-blank-tool-output.json",
+      "python": {
+        "content": [
+          {
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你"
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/responses",
+          "body": {
+            "model": "test-model",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "go"
+                  }
+                ]
+              },
+              {
+                "type": "function_call",
+                "call_id": "c",
+                "name": "test",
+                "arguments": "{}"
+              },
+              {
+                "type": "function_call_output",
+                "call_id": "c",
+                "output": "(no tool output)"
+              }
+            ],
+            "stream": true,
+            "store": false,
+            "max_output_tokens": 4096,
+            "reasoning": {
+              "effort": "none"
+            }
+          },
+          "headers": {
+            "authorization": "Bearer fixture",
+            "content-type": "application/json"
+          }
+        }
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "text",
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你"
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/responses",
+          "body": {
+            "model": "test-model",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "go"
+                  }
+                ]
+              },
+              {
+                "type": "function_call",
+                "call_id": "c",
+                "name": "test",
+                "arguments": "{}"
+              },
+              {
+                "type": "function_call_output",
+                "call_id": "c",
+                "output": "(no tool output)"
+              }
+            ],
+            "stream": true,
+            "store": false,
+            "max_output_tokens": 4096,
+            "reasoning": {
+              "effort": "none"
+            }
+          },
+          "headers": {
+            "authorization": "Bearer fixture",
+            "content-type": "application/json"
+          }
+        }
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "followup-completions-mixed-delta.json",
+      "python": {
+        "content": [
+          {
+            "thinking": "Let me think.",
+            "thinking_signature": "reasoning_content",
+            "redacted": false,
+            "type": "thinking"
+          },
+          {
+            "text": "Start: Answer: 4",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "thinking_start",
+            "index": 0
+          },
+          {
+            "type": "thinking_delta",
+            "index": 0,
+            "delta": "Let me"
+          },
+          {
+            "type": "text_start",
+            "index": 1
+          },
+          {
+            "type": "text_delta",
+            "index": 1,
+            "delta": "Start: "
+          },
+          {
+            "type": "thinking_delta",
+            "index": 0,
+            "delta": " think."
+          },
+          {
+            "type": "text_delta",
+            "index": 1,
+            "delta": "Answer: 4"
+          },
+          {
+            "type": "thinking_end",
+            "index": 0,
+            "content": "Let me think."
+          },
+          {
+            "type": "text_end",
+            "index": 1,
+            "content": "Start: Answer: 4"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "http://127.0.0.1:8080/v1/chat/completions",
+          "body": {
+            "model": "gpt-oss-20b",
+            "messages": [
+              {
+                "role": "system",
+                "content": "Think first."
+              },
+              {
+                "role": "user",
+                "content": "2+2?"
+              },
+              {
+                "role": "assistant",
+                "content": "4",
+                "reasoning_content": "plan"
+              },
+              {
+                "role": "user",
+                "content": "and 3+1?"
+              }
+            ],
+            "stream": true,
+            "stream_options": {
+              "include_usage": true
+            },
+            "store": false,
+            "max_completion_tokens": 16384,
+            "chat_template_kwargs": {
+              "enable_thinking": true,
+              "reasoning_effort": "medium",
+              "budget": 8192,
+              "keep": "yes"
+            },
+            "thinking_budget_tokens": 8192
+          },
+          "headers": {
+            "content-type": "application/json",
+            "authorization": "Bearer fixture"
+          }
+        },
+        "meta": {
+          "usage": {
+            "input": 40,
+            "output": 9,
+            "cache_read": 0,
+            "cache_write": 0,
+            "reasoning": 5,
+            "total_tokens": 49
+          },
+          "response_id": "chatcmpl-1",
+          "response_model": null,
+          "raw_stop_reason": "stop"
+        }
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "thinking",
+            "thinking": "Let me think.",
+            "thinking_signature": "reasoning_content",
+            "redacted": false
+          },
+          {
+            "type": "text",
+            "text": "Start: Answer: 4"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "thinking_start",
+            "index": 0
+          },
+          {
+            "type": "thinking_delta",
+            "index": 0,
+            "delta": "Let me"
+          },
+          {
+            "type": "text_start",
+            "index": 1
+          },
+          {
+            "type": "text_delta",
+            "index": 1,
+            "delta": "Start: "
+          },
+          {
+            "type": "thinking_delta",
+            "index": 0,
+            "delta": " think."
+          },
+          {
+            "type": "text_delta",
+            "index": 1,
+            "delta": "Answer: 4"
+          },
+          {
+            "type": "thinking_end",
+            "index": 0,
+            "content": "Let me think."
+          },
+          {
+            "type": "text_end",
+            "index": 1,
+            "content": "Start: Answer: 4"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "http://127.0.0.1:8080/v1/chat/completions",
+          "body": {
+            "model": "gpt-oss-20b",
+            "messages": [
+              {
+                "role": "system",
+                "content": "Think first."
+              },
+              {
+                "role": "user",
+                "content": "2+2?"
+              },
+              {
+                "role": "assistant",
+                "content": "4",
+                "reasoning_content": "plan"
+              },
+              {
+                "role": "user",
+                "content": "and 3+1?"
+              }
+            ],
+            "stream": true,
+            "stream_options": {
+              "include_usage": true
+            },
+            "store": false,
+            "max_completion_tokens": 16384,
+            "chat_template_kwargs": {
+              "enable_thinking": true,
+              "reasoning_effort": "medium",
+              "budget": 8192,
+              "keep": "yes"
+            },
+            "thinking_budget_tokens": 8192
+          },
+          "headers": {
+            "authorization": "Bearer fixture",
+            "content-type": "application/json"
+          }
+        },
+        "meta": {
+          "usage": {
+            "input": 40,
+            "output": 9,
+            "cache_read": 0,
+            "cache_write": 0,
+            "reasoning": 5,
+            "total_tokens": 49
+          },
+          "response_id": "chatcmpl-1",
+          "response_model": null,
+          "raw_stop_reason": "stop"
+        }
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "followup-openai-crossmodel-thinking.json",
+      "python": {
+        "content": [
+          {
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你"
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/responses",
+          "body": {
+            "model": "test-model",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "one"
+                  }
+                ]
+              },
+              {
+                "type": "message",
+                "role": "assistant",
+                "content": [
+                  {
+                    "type": "output_text",
+                    "text": "visible answer",
+                    "annotations": []
+                  }
+                ],
+                "status": "completed",
+                "id": "msg_pi_1"
+              },
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "two"
+                  }
+                ]
+              }
+            ],
+            "stream": true,
+            "store": false,
+            "max_output_tokens": 4096,
+            "reasoning": {
+              "effort": "none"
+            }
+          },
+          "headers": {
+            "authorization": "Bearer fixture",
+            "content-type": "application/json"
+          }
+        }
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "text",
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你"
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/responses",
+          "body": {
+            "model": "test-model",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "one"
+                  }
+                ]
+              },
+              {
+                "type": "message",
+                "role": "assistant",
+                "content": [
+                  {
+                    "type": "output_text",
+                    "text": "visible answer",
+                    "annotations": []
+                  }
+                ],
+                "status": "completed",
+                "id": "msg_pi_1"
+              },
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "two"
+                  }
+                ]
+              }
+            ],
+            "stream": true,
+            "store": false,
+            "max_output_tokens": 4096,
+            "reasoning": {
+              "effort": "none"
+            }
+          },
+          "headers": {
+            "authorization": "Bearer fixture",
+            "content-type": "application/json"
+          }
+        }
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "followup-openai-native-effort.json",
+      "python": {
+        "content": [
+          {
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}",
+            "type": "text"
+          }
+        ],
+        "provider_thinking_level": "high",
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你"
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/responses",
+          "body": {
+            "model": "gpt-6.1-sol",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "one"
+                  }
+                ]
+              },
+              {
+                "type": "configuration_update",
+                "reasoning": {
+                  "effort": "low"
+                }
+              },
+              {
+                "type": "message",
+                "role": "assistant",
+                "content": [
+                  {
+                    "type": "output_text",
+                    "text": "answer",
+                    "annotations": []
+                  }
+                ],
+                "status": "completed",
+                "id": "msg_pi_1"
+              },
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "two"
+                  }
+                ]
+              },
+              {
+                "type": "configuration_update",
+                "reasoning": {
+                  "effort": "high"
+                }
+              }
+            ],
+            "stream": true,
+            "store": false,
+            "max_output_tokens": 128000,
+            "reasoning": {
+              "effort": "medium",
+              "summary": "auto"
+            },
+            "include": [
+              "reasoning.encrypted_content"
+            ]
+          },
+          "headers": {
+            "authorization": "Bearer sk-fixture",
+            "content-type": "application/json"
+          }
+        }
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "text",
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}"
+          }
+        ],
+        "provider_thinking_level": "high",
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你"
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/responses",
+          "body": {
+            "model": "gpt-6.1-sol",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "one"
+                  }
+                ]
+              },
+              {
+                "type": "configuration_update",
+                "reasoning": {
+                  "effort": "low"
+                }
+              },
+              {
+                "type": "message",
+                "role": "assistant",
+                "content": [
+                  {
+                    "type": "output_text",
+                    "text": "answer",
+                    "annotations": []
+                  }
+                ],
+                "status": "completed",
+                "id": "msg_pi_1"
+              },
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "two"
+                  }
+                ]
+              },
+              {
+                "type": "configuration_update",
+                "reasoning": {
+                  "effort": "high"
+                }
+              }
+            ],
+            "stream": true,
+            "store": false,
+            "max_output_tokens": 128000,
+            "reasoning": {
+              "effort": "medium",
+              "summary": "auto"
+            },
+            "include": [
+              "reasoning.encrypted_content"
+            ]
+          },
+          "headers": {
+            "authorization": "Bearer sk-fixture",
+            "content-type": "application/json"
+          }
+        }
+      },
+      "passed": true,
+      "upstream_exit_code": 0
+    },
+    {
+      "fixture": "followup-openai-removal-readd.json",
+      "python": {
+        "content": [
+          {
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}",
+            "type": "text"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你"
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/responses",
+          "body": {
+            "model": "gpt-5.5",
+            "input": [
+              {
+                "type": "additional_tools",
+                "role": "developer",
+                "tools": [
+                  {
+                    "type": "function",
+                    "name": "z",
+                    "description": "z",
+                    "parameters": {
+                      "type": "object",
+                      "properties": {}
+                    },
+                    "strict": false
+                  },
+                  {
+                    "type": "function",
+                    "name": "a",
+                    "description": "a",
+                    "parameters": {
+                      "type": "object",
+                      "properties": {}
+                    },
+                    "strict": false
+                  }
+                ]
+              },
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "one"
+                  }
+                ]
+              },
+              {
+                "role": "developer",
+                "content": "The following tools are no longer available. Do not call them:\n- z\n- a"
+              },
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "two"
+                  }
+                ]
+              },
+              {
+                "role": "developer",
+                "content": "This is an incremental tools update. Previously declared tools remain available unless explicitly marked unavailable. A tool declared again here is available again, and its latest definition replaces the earlier one.\nStill unavailable: z, a."
+              },
+              {
+                "type": "additional_tools",
+                "role": "developer",
+                "tools": [
+                  {
+                    "type": "function",
+                    "name": "b",
+                    "description": "b",
+                    "parameters": {
+                      "type": "object",
+                      "properties": {}
+                    },
+                    "strict": false
+                  }
+                ]
+              },
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "three"
+                  }
+                ]
+              },
+              {
+                "role": "developer",
+                "content": "This is an incremental tools update. Previously declared tools remain available unless explicitly marked unavailable. A tool declared again here is available again, and its latest definition replaces the earlier one.\nStill unavailable: a."
+              },
+              {
+                "type": "additional_tools",
+                "role": "developer",
+                "tools": [
+                  {
+                    "type": "function",
+                    "name": "z",
+                    "description": "z",
+                    "parameters": {
+                      "type": "object",
+                      "properties": {}
+                    },
+                    "strict": false
+                  }
+                ]
+              },
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "four"
+                  }
+                ]
+              }
+            ],
+            "stream": true,
+            "store": false,
+            "max_output_tokens": 128000,
+            "reasoning": {
+              "effort": "none"
+            }
+          },
+          "headers": {
+            "authorization": "Bearer fixture",
+            "content-type": "application/json"
+          }
+        }
+      },
+      "upstream": {
+        "content": [
+          {
+            "type": "text",
+            "text": "你好",
+            "text_signature": "{\"v\":1,\"id\":\"msg_x\",\"phase\":\"final_answer\"}"
+          }
+        ],
+        "stop_reason": "stop",
+        "events": [
+          {
+            "type": "start"
+          },
+          {
+            "type": "text_start",
+            "index": 0
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "你"
+          },
+          {
+            "type": "text_delta",
+            "index": 0,
+            "delta": "好"
+          },
+          {
+            "type": "text_end",
+            "index": 0,
+            "content": "你好"
+          },
+          {
+            "type": "done",
+            "reason": "stop"
+          }
+        ],
+        "request": {
+          "url": "https://fixture.test/responses",
+          "body": {
+            "model": "gpt-5.5",
+            "input": [
+              {
+                "type": "additional_tools",
+                "role": "developer",
+                "tools": [
+                  {
+                    "type": "function",
+                    "name": "z",
+                    "description": "z",
+                    "parameters": {
+                      "type": "object",
+                      "properties": {}
+                    },
+                    "strict": false
+                  },
+                  {
+                    "type": "function",
+                    "name": "a",
+                    "description": "a",
+                    "parameters": {
+                      "type": "object",
+                      "properties": {}
+                    },
+                    "strict": false
+                  }
+                ]
+              },
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "one"
+                  }
+                ]
+              },
+              {
+                "role": "developer",
+                "content": "The following tools are no longer available. Do not call them:\n- z\n- a"
+              },
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "two"
+                  }
+                ]
+              },
+              {
+                "role": "developer",
+                "content": "This is an incremental tools update. Previously declared tools remain available unless explicitly marked unavailable. A tool declared again here is available again, and its latest definition replaces the earlier one.\nStill unavailable: z, a."
+              },
+              {
+                "type": "additional_tools",
+                "role": "developer",
+                "tools": [
+                  {
+                    "type": "function",
+                    "name": "b",
+                    "description": "b",
+                    "parameters": {
+                      "type": "object",
+                      "properties": {}
+                    },
+                    "strict": false
+                  }
+                ]
+              },
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "three"
+                  }
+                ]
+              },
+              {
+                "role": "developer",
+                "content": "This is an incremental tools update. Previously declared tools remain available unless explicitly marked unavailable. A tool declared again here is available again, and its latest definition replaces the earlier one.\nStill unavailable: a."
+              },
+              {
+                "type": "additional_tools",
+                "role": "developer",
+                "tools": [
+                  {
+                    "type": "function",
+                    "name": "z",
+                    "description": "z",
+                    "parameters": {
+                      "type": "object",
+                      "properties": {}
+                    },
+                    "strict": false
+                  }
+                ]
+              },
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "four"
+                  }
+                ]
+              }
+            ],
+            "stream": true,
+            "store": false,
+            "max_output_tokens": 128000,
+            "reasoning": {
+              "effort": "none"
+            }
+          },
+          "headers": {
+            "authorization": "Bearer fixture",
+            "content-type": "application/json"
+          }
         }
       },
       "passed": true,
@@ -7441,8 +9165,17 @@
                   {
                     "type": "tool_addition",
                     "tool": {
-                      "type": "tool_reference",
-                      "name": "late_tool"
+                      "type": "tool_definition",
+                      "definition": {
+                        "name": "late_tool",
+                        "description": "late_tool tool",
+                        "eager_input_streaming": true,
+                        "input_schema": {
+                          "type": "object",
+                          "properties": {},
+                          "required": []
+                        }
+                      }
                     },
                     "cache_control": {
                       "type": "ephemeral"
@@ -7490,17 +9223,6 @@
                   "required": []
                 },
                 "defer_loading": true
-              },
-              {
-                "name": "late_tool",
-                "description": "late_tool tool",
-                "eager_input_streaming": true,
-                "input_schema": {
-                  "type": "object",
-                  "properties": {},
-                  "required": []
-                },
-                "defer_loading": true
               }
             ],
             "thinking": {
@@ -7515,7 +9237,7 @@
             }
           },
           "headers": {
-            "anthropic-beta": "mid-conversation-output-config-2026-07-01,thinking-binding-controls-2026-08-01,mid-conversation-tool-changes-2026-07-01",
+            "anthropic-beta": "mid-conversation-output-config-2026-07-01,thinking-binding-controls-2026-08-01,inline-tools-2026-09-15",
             "anthropic-version": "2023-06-01",
             "anthropic-dangerous-direct-browser-access": "true",
             "content-type": "application/json",
@@ -7623,8 +9345,17 @@
                   {
                     "type": "tool_addition",
                     "tool": {
-                      "type": "tool_reference",
-                      "name": "late_tool"
+                      "type": "tool_definition",
+                      "definition": {
+                        "name": "late_tool",
+                        "description": "late_tool tool",
+                        "eager_input_streaming": true,
+                        "input_schema": {
+                          "type": "object",
+                          "properties": {},
+                          "required": []
+                        }
+                      }
                     },
                     "cache_control": {
                       "type": "ephemeral"
@@ -7674,17 +9405,6 @@
                   "required": []
                 },
                 "defer_loading": true
-              },
-              {
-                "name": "late_tool",
-                "description": "late_tool tool",
-                "eager_input_streaming": true,
-                "input_schema": {
-                  "type": "object",
-                  "properties": {},
-                  "required": []
-                },
-                "defer_loading": true
               }
             ],
             "thinking": {
@@ -7701,7 +9421,7 @@
           "headers": {
             "x-api-key": "fixture",
             "anthropic-version": "2023-06-01",
-            "anthropic-beta": "mid-conversation-output-config-2026-07-01,thinking-binding-controls-2026-08-01,mid-conversation-tool-changes-2026-07-01",
+            "anthropic-beta": "mid-conversation-output-config-2026-07-01,thinking-binding-controls-2026-08-01,inline-tools-2026-09-15",
             "content-type": "application/json",
             "anthropic-dangerous-direct-browser-access": "true"
           }
@@ -7794,8 +9514,17 @@
                   {
                     "type": "tool_addition",
                     "tool": {
-                      "type": "tool_reference",
-                      "name": "Grep"
+                      "type": "tool_definition",
+                      "definition": {
+                        "name": "Grep",
+                        "description": "grep tool",
+                        "eager_input_streaming": true,
+                        "input_schema": {
+                          "type": "object",
+                          "properties": {},
+                          "required": []
+                        }
+                      }
                     },
                     "cache_control": {
                       "type": "ephemeral"
@@ -7860,17 +9589,6 @@
                   "required": []
                 },
                 "defer_loading": true
-              },
-              {
-                "name": "Grep",
-                "description": "grep tool",
-                "eager_input_streaming": true,
-                "input_schema": {
-                  "type": "object",
-                  "properties": {},
-                  "required": []
-                },
-                "defer_loading": true
               }
             ],
             "thinking": {
@@ -7885,7 +9603,7 @@
             }
           },
           "headers": {
-            "anthropic-beta": "claude-code-20250219,oauth-2025-04-20,mid-conversation-output-config-2026-07-01,thinking-binding-controls-2026-08-01,mid-conversation-tool-changes-2026-07-01",
+            "anthropic-beta": "claude-code-20250219,oauth-2025-04-20,mid-conversation-output-config-2026-07-01,thinking-binding-controls-2026-08-01,inline-tools-2026-09-15",
             "anthropic-version": "2023-06-01",
             "anthropic-dangerous-direct-browser-access": "true",
             "content-type": "application/json",
@@ -7974,8 +9692,17 @@
                   {
                     "type": "tool_addition",
                     "tool": {
-                      "type": "tool_reference",
-                      "name": "Grep"
+                      "type": "tool_definition",
+                      "definition": {
+                        "name": "Grep",
+                        "description": "grep tool",
+                        "eager_input_streaming": true,
+                        "input_schema": {
+                          "type": "object",
+                          "properties": {},
+                          "required": []
+                        }
+                      }
                     },
                     "cache_control": {
                       "type": "ephemeral"
@@ -8042,17 +9769,6 @@
                   "required": []
                 },
                 "defer_loading": true
-              },
-              {
-                "name": "Grep",
-                "description": "grep tool",
-                "eager_input_streaming": true,
-                "input_schema": {
-                  "type": "object",
-                  "properties": {},
-                  "required": []
-                },
-                "defer_loading": true
               }
             ],
             "thinking": {
@@ -8069,7 +9785,7 @@
           "headers": {
             "authorization": "Bearer sk-ant-oat-fixture",
             "anthropic-version": "2023-06-01",
-            "anthropic-beta": "claude-code-20250219,oauth-2025-04-20,mid-conversation-output-config-2026-07-01,thinking-binding-controls-2026-08-01,mid-conversation-tool-changes-2026-07-01",
+            "anthropic-beta": "claude-code-20250219,oauth-2025-04-20,mid-conversation-output-config-2026-07-01,thinking-binding-controls-2026-08-01,inline-tools-2026-09-15",
             "content-type": "application/json",
             "x-app": "cli",
             "anthropic-dangerous-direct-browser-access": "true"
@@ -8133,6 +9849,22 @@
                   {
                     "type": "text",
                     "text": "updated guidance"
+                  },
+                  {
+                    "type": "tool_addition",
+                    "tool": {
+                      "type": "tool_definition",
+                      "definition": {
+                        "name": "base_tool",
+                        "description": "changed",
+                        "eager_input_streaming": true,
+                        "input_schema": {
+                          "type": "object",
+                          "properties": {},
+                          "required": []
+                        }
+                      }
+                    }
                   }
                 ]
               }
@@ -8146,13 +9878,23 @@
             "tools": [
               {
                 "name": "base_tool",
-                "description": "changed",
+                "description": "base_tool tool",
                 "eager_input_streaming": true,
                 "input_schema": {
                   "type": "object",
                   "properties": {},
                   "required": []
                 }
+              },
+              {
+                "name": "__pi_deferred_placeholder__",
+                "description": "Reserved placeholder. Never available. Never call this.",
+                "input_schema": {
+                  "type": "object",
+                  "properties": {},
+                  "required": []
+                },
+                "defer_loading": true
               }
             ],
             "thinking": {
@@ -8164,6 +9906,7 @@
             }
           },
           "headers": {
+            "anthropic-beta": "inline-tools-2026-09-15",
             "anthropic-version": "2023-06-01",
             "anthropic-dangerous-direct-browser-access": "true",
             "content-type": "application/json",
@@ -8221,6 +9964,22 @@
                   {
                     "type": "text",
                     "text": "updated guidance"
+                  },
+                  {
+                    "type": "tool_addition",
+                    "tool": {
+                      "type": "tool_definition",
+                      "definition": {
+                        "name": "base_tool",
+                        "description": "changed",
+                        "eager_input_streaming": true,
+                        "input_schema": {
+                          "type": "object",
+                          "properties": {},
+                          "required": []
+                        }
+                      }
+                    }
                   }
                 ]
               }
@@ -8236,13 +9995,23 @@
             "tools": [
               {
                 "name": "base_tool",
-                "description": "changed",
+                "description": "base_tool tool",
                 "eager_input_streaming": true,
                 "input_schema": {
                   "type": "object",
                   "properties": {},
                   "required": []
                 }
+              },
+              {
+                "name": "__pi_deferred_placeholder__",
+                "description": "Reserved placeholder. Never available. Never call this.",
+                "input_schema": {
+                  "type": "object",
+                  "properties": {},
+                  "required": []
+                },
+                "defer_loading": true
               }
             ],
             "thinking": {
@@ -8256,6 +10025,7 @@
           "headers": {
             "x-api-key": "fixture",
             "anthropic-version": "2023-06-01",
+            "anthropic-beta": "inline-tools-2026-09-15",
             "content-type": "application/json",
             "anthropic-dangerous-direct-browser-access": "true"
           }
@@ -8791,25 +10561,12 @@
                 "content": [
                   {
                     "type": "output_text",
-                    "text": "reason",
-                    "annotations": []
-                  }
-                ],
-                "status": "completed",
-                "id": "msg_pi_1"
-              },
-              {
-                "type": "message",
-                "role": "assistant",
-                "content": [
-                  {
-                    "type": "output_text",
                     "text": "hello",
                     "annotations": []
                   }
                 ],
                 "status": "completed",
-                "id": "msg_pi_1_1"
+                "id": "msg_pi_1"
               },
               {
                 "type": "function_call",
@@ -8967,25 +10724,12 @@
                 "content": [
                   {
                     "type": "output_text",
-                    "text": "reason",
-                    "annotations": []
-                  }
-                ],
-                "status": "completed",
-                "id": "msg_pi_1"
-              },
-              {
-                "type": "message",
-                "role": "assistant",
-                "content": [
-                  {
-                    "type": "output_text",
                     "text": "hello",
                     "annotations": []
                   }
                 ],
                 "status": "completed",
-                "id": "msg_pi_1_1"
+                "id": "msg_pi_1"
               },
               {
                 "type": "function_call",
@@ -9128,6 +10872,23 @@
             "model": "gpt-5.5",
             "input": [
               {
+                "type": "additional_tools",
+                "role": "developer",
+                "tools": [
+                  {
+                    "type": "function",
+                    "name": "base_tool",
+                    "description": "base_tool tool",
+                    "parameters": {
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": false
+                    },
+                    "strict": false
+                  }
+                ]
+              },
+              {
                 "role": "developer",
                 "content": "base prompt"
               },
@@ -9146,25 +10907,12 @@
                 "content": [
                   {
                     "type": "output_text",
-                    "text": "old",
-                    "annotations": []
-                  }
-                ],
-                "status": "completed",
-                "id": "msg_pi_1"
-              },
-              {
-                "type": "message",
-                "role": "assistant",
-                "content": [
-                  {
-                    "type": "output_text",
                     "text": "older",
                     "annotations": []
                   }
                 ],
                 "status": "completed",
-                "id": "msg_pi_1_1"
+                "id": "msg_pi_1"
               },
               {
                 "type": "function_call",
@@ -9215,6 +10963,10 @@
                 "output": "done"
               },
               {
+                "role": "developer",
+                "content": "This is an incremental tools update. Previously declared tools remain available unless explicitly marked unavailable. A tool declared again here is available again, and its latest definition replaces the earlier one."
+              },
+              {
                 "type": "additional_tools",
                 "role": "developer",
                 "tools": [
@@ -9255,19 +11007,6 @@
             },
             "include": [
               "reasoning.encrypted_content"
-            ],
-            "tools": [
-              {
-                "type": "function",
-                "name": "base_tool",
-                "description": "base_tool tool",
-                "parameters": {
-                  "type": "object",
-                  "properties": {},
-                  "additionalProperties": false
-                },
-                "strict": false
-              }
             ]
           },
           "headers": {
@@ -9320,6 +11059,23 @@
             "model": "gpt-5.5",
             "input": [
               {
+                "type": "additional_tools",
+                "role": "developer",
+                "tools": [
+                  {
+                    "type": "function",
+                    "name": "base_tool",
+                    "description": "base_tool tool",
+                    "parameters": {
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": false
+                    },
+                    "strict": false
+                  }
+                ]
+              },
+              {
                 "role": "developer",
                 "content": "base prompt"
               },
@@ -9338,25 +11094,12 @@
                 "content": [
                   {
                     "type": "output_text",
-                    "text": "old",
-                    "annotations": []
-                  }
-                ],
-                "status": "completed",
-                "id": "msg_pi_1"
-              },
-              {
-                "type": "message",
-                "role": "assistant",
-                "content": [
-                  {
-                    "type": "output_text",
                     "text": "older",
                     "annotations": []
                   }
                 ],
                 "status": "completed",
-                "id": "msg_pi_1_1"
+                "id": "msg_pi_1"
               },
               {
                 "type": "function_call",
@@ -9407,6 +11150,10 @@
                 "output": "done"
               },
               {
+                "role": "developer",
+                "content": "This is an incremental tools update. Previously declared tools remain available unless explicitly marked unavailable. A tool declared again here is available again, and its latest definition replaces the earlier one."
+              },
+              {
                 "type": "additional_tools",
                 "role": "developer",
                 "tools": [
@@ -9441,19 +11188,6 @@
             "prompt_cache_key": "session-1",
             "store": false,
             "max_output_tokens": 128000,
-            "tools": [
-              {
-                "type": "function",
-                "name": "base_tool",
-                "description": "base_tool tool",
-                "parameters": {
-                  "type": "object",
-                  "properties": {},
-                  "additionalProperties": false
-                },
-                "strict": false
-              }
-            ],
             "reasoning": {
               "effort": "high",
               "summary": "auto"
@@ -9992,6 +11726,23 @@
             "model": "gpt-5.5",
             "input": [
               {
+                "type": "additional_tools",
+                "role": "developer",
+                "tools": [
+                  {
+                    "type": "function",
+                    "name": "base_tool",
+                    "description": "base_tool tool",
+                    "parameters": {
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": false
+                    },
+                    "strict": false
+                  }
+                ]
+              },
+              {
                 "role": "developer",
                 "content": "base prompt\n\n<rules>\nold rules\n</rules>\n\n<docs>\nread docs\n</docs>"
               },
@@ -10006,7 +11757,28 @@
               },
               {
                 "role": "developer",
-                "content": "updated guidance\n\nUpdated system prompt section \"rules\":\n\n<rules>\nnew rules\n</rules>\n\nRemoved system prompt section \"docs\"."
+                "content": "This is an incremental tools update. Previously declared tools remain available unless explicitly marked unavailable. A tool declared again here is available again, and its latest definition replaces the earlier one."
+              },
+              {
+                "type": "additional_tools",
+                "role": "developer",
+                "tools": [
+                  {
+                    "type": "function",
+                    "name": "late_tool",
+                    "description": "late_tool tool",
+                    "parameters": {
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": false
+                    },
+                    "strict": false
+                  }
+                ]
+              },
+              {
+                "role": "developer",
+                "content": "updated guidance\n\nUpdated system prompt section \"rules\":\n\n<rules>\nnew rules\n</rules>\n\nRemoved system prompt section \"docs\".\n\nThe following tools are no longer available. Do not call them:\n- base_tool"
               },
               {
                 "role": "user",
@@ -10023,20 +11795,7 @@
             "max_output_tokens": 128000,
             "reasoning": {
               "effort": "none"
-            },
-            "tools": [
-              {
-                "type": "function",
-                "name": "late_tool",
-                "description": "late_tool tool",
-                "parameters": {
-                  "type": "object",
-                  "properties": {},
-                  "additionalProperties": false
-                },
-                "strict": false
-              }
-            ]
+            }
           },
           "headers": {
             "authorization": "Bearer fixture",
@@ -10087,6 +11846,23 @@
             "model": "gpt-5.5",
             "input": [
               {
+                "type": "additional_tools",
+                "role": "developer",
+                "tools": [
+                  {
+                    "type": "function",
+                    "name": "base_tool",
+                    "description": "base_tool tool",
+                    "parameters": {
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": false
+                    },
+                    "strict": false
+                  }
+                ]
+              },
+              {
                 "role": "developer",
                 "content": "base prompt\n\n<rules>\nold rules\n</rules>\n\n<docs>\nread docs\n</docs>"
               },
@@ -10101,7 +11877,28 @@
               },
               {
                 "role": "developer",
-                "content": "updated guidance\n\nUpdated system prompt section \"rules\":\n\n<rules>\nnew rules\n</rules>\n\nRemoved system prompt section \"docs\"."
+                "content": "This is an incremental tools update. Previously declared tools remain available unless explicitly marked unavailable. A tool declared again here is available again, and its latest definition replaces the earlier one."
+              },
+              {
+                "type": "additional_tools",
+                "role": "developer",
+                "tools": [
+                  {
+                    "type": "function",
+                    "name": "late_tool",
+                    "description": "late_tool tool",
+                    "parameters": {
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": false
+                    },
+                    "strict": false
+                  }
+                ]
+              },
+              {
+                "role": "developer",
+                "content": "updated guidance\n\nUpdated system prompt section \"rules\":\n\n<rules>\nnew rules\n</rules>\n\nRemoved system prompt section \"docs\".\n\nThe following tools are no longer available. Do not call them:\n- base_tool"
               },
               {
                 "role": "user",
@@ -10116,19 +11913,6 @@
             "stream": true,
             "store": false,
             "max_output_tokens": 128000,
-            "tools": [
-              {
-                "type": "function",
-                "name": "late_tool",
-                "description": "late_tool tool",
-                "parameters": {
-                  "type": "object",
-                  "properties": {},
-                  "additionalProperties": false
-                },
-                "strict": false
-              }
-            ],
             "reasoning": {
               "effort": "none"
             }

@@ -174,7 +174,12 @@ def test_signature_requires_same_api_and_native_effort_is_mapped():
         [message, UserMessage("go")], model="claude-sonnet-4-6", options={"reasoning": "minimal"}
     )
     body = AnthropicProvider(api_key="fixture").build_request(request)
-    assert body["messages"][0]["content"][0] == {"type": "text", "text": "reason"}
+    assert body["messages"] == [
+        {
+            "role": "user",
+            "content": [{"type": "text", "text": "go", "cache_control": {"type": "ephemeral"}}],
+        }
+    ]
     # Pi requests summarized thinking; Opus 4.7+ would otherwise omit thinking text.
     assert body["thinking"] == {"type": "adaptive", "display": "summarized"}
     assert body["output_config"]["effort"] == "low"

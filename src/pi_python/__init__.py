@@ -1,6 +1,7 @@
 """Embeddable asyncio agent core with optional model providers."""
 
 from .models import ModelInfo, ModelCatalog
+from .identity import ClientIdentity, ClientAttribution, format_user_agent, get_identity_headers
 from ._version import __version__ as __version__
 from .agent import Agent, AgentStateView, RunResult
 from .cancellation import CancelToken
@@ -81,6 +82,10 @@ from .transcript import (
 from .estimate import clamp_max_tokens_to_context, estimate_context_tokens
 
 __all__ = [
+    "ClientIdentity",
+    "ClientAttribution",
+    "format_user_agent",
+    "get_identity_headers",
     "ModelInfo",
     "ModelCatalog",
     "Agent",

@@ -7,6 +7,7 @@ from .cancellation import CancelToken
 from .provider import ModelRequest
 import asyncio
 import json
+import time
 from copy import deepcopy
 from functools import wraps
 from .errors import ProviderProtocolError
@@ -93,6 +94,12 @@ _BLOCK_ENDS = {"text_end", "thinking_end", "toolcall_end"}
 _DELTAS = {"text_delta": TextContent, "thinking_delta": ThinkingContent, "toolcall_delta": ToolCall}
 
 
+def _time_message(message: AssistantMessage, started_at: float, started: float) -> None:
+    # A forwarded response may have started elsewhere. Do not measure its replay.
+    if message.duration_ms is None and message.timestamp >= started_at:
+        message.duration_ms = max(0, int((time.monotonic() - started) * 1000 + 0.5))
+
+
 async def checked_events(
     source: AsyncIterator[ModelEvent], partial: AssistantMessage
 ) -> AsyncGenerator[ModelEvent, None]:
@@ -104,6 +111,7 @@ async def checked_events(
     cleanly. Exceptions propagate; `error` events from a checked source pass through.
     """
     opened: set[int] = set()
+    started_at, started = time.time(), time.monotonic()
     closed: set[int] = set()
     arguments: dict[int, str] = {}
     announced = False
@@ -125,6 +133,8 @@ async def checked_events(
             yield event
             continue
         if kind == "error":
+            if isinstance(event.message, AssistantMessage):
+                _time_message(event.message, started_at, started)
             yield event
             return
         if kind == "done":
@@ -201,6 +211,8 @@ async def checked_events(
         yield event
     if terminal is None:
         raise ProviderProtocolError("Missing terminal message")
+    if terminal.message is not None:
+        _time_message(terminal.message, started_at, started)
     yield terminal
 
 
@@ -211,6 +223,7 @@ def event_contract(function: Callable[..., AsyncGenerator[ModelEvent, None]]) ->
     async def wrapped(
         self: Any, request: ModelRequest, cancel: CancelToken
     ) -> AsyncGenerator[ModelEvent, None]:
+        started_at, started = time.time(), time.monotonic()
         partial = AssistantMessage(
             [],
             stop_reason="pending",
@@ -219,7 +232,21 @@ def event_contract(function: Callable[..., AsyncGenerator[ModelEvent, None]]) ->
             api=getattr(self, "api", None),
         )
         snapshot = partial
-        iterator = function(self, request, cancel)
+        if hasattr(self, "prepare_stream_request"):
+            # Resolve inside error handling below so configuration failures still
+            # obey the provider error-event contract.
+            async def prepared_source() -> AsyncGenerator[ModelEvent, None]:
+                provider, prepared = self.prepare_stream_request(request)
+                source = function(provider, prepared, cancel)
+                try:
+                    async for item in source:
+                        yield item
+                finally:
+                    await source.aclose()
+
+            iterator = prepared_source()
+        else:
+            iterator = function(self, request, cancel)
         events = checked_events(iterator, partial)
         try:
             async for event in events:
@@ -228,10 +255,12 @@ def event_contract(function: Callable[..., AsyncGenerator[ModelEvent, None]]) ->
                 yield event
         except asyncio.CancelledError:
             failed = deepcopy(snapshot)
+            _time_message(failed, started_at, started)
             failed.stop_reason, failed.error = "aborted", "Request cancelled"
             yield ModelEvent("error", message=failed, reason="aborted")
         except Exception as exc:
             failed = deepcopy(snapshot)
+            _time_message(failed, started_at, started)
             failed.stop_reason, failed.error = "error", f"{type(exc).__name__}: {exc}"
             if hasattr(exc, "status") and hasattr(exc, "category"):
                 failed.diagnostics = [

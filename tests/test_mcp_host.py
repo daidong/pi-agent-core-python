@@ -396,12 +396,15 @@ def extended_params(conversation="one", profile="default", history=None, **kwarg
     return params
 
 
-async def test_scoped_state_rejects_foreign_modified_or_expired_history():
+@pytest.mark.parametrize("duration", [None, 0, 42])
+async def test_scoped_state_rejects_foreign_modified_or_expired_history(duration):
     signed = AssistantMessage(
         [ThinkingContent("private", "opaque"), TextContent("hello", "signature")],
         provider="real",
         model="host",
         response_id="vendor-id",
+        timestamp=1,
+        duration_ms=duration,
     )
     provider = ScriptedProvider([signed, AssistantMessage.text("ok")])
     handler = SamplingHandler(provider, model="host")
@@ -672,12 +675,15 @@ async def test_retry_observer_once_for_each_response_and_unknown_usage():
     assert "secret" not in repr(observations)
 
 
-async def test_signed_tool_call_state_is_restored():
+@pytest.mark.parametrize("duration", [None, 0, 42])
+async def test_signed_tool_call_state_is_restored(duration):
     original = AssistantMessage(
         [ToolCall("call", "echo", {"value": "hi"}, "vendor-tool-signature")],
         "tool_use",
         provider="real",
         model="host",
+        timestamp=1,
+        duration_ms=duration,
     )
     provider = ScriptedProvider([original, AssistantMessage.text("done")])
     handler = SamplingHandler(provider, model="host")

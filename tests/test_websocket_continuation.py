@@ -96,7 +96,7 @@ def agent(server, transport, **options):
     provider = OpenAICodexProvider(api_key=TOKEN, base_url=server.url, transport=transport)
     return Agent(
         provider=provider,
-        model="gpt-5.5",
+        model="gpt-6.1-sol",
         system_prompt="Use the tool.",
         tools=[Tool("add", "Add", SCHEMA, add)],
         transport=options.pop("transport_mode", "websocket-cached"),
@@ -143,11 +143,11 @@ async def test_auto_cache_id_never_enables_connection_reuse_or_continuation(mode
 
     async with Server(script) as server, HTTPTransport() as transport:
         provider = OpenAICodexProvider(api_key=TOKEN, base_url=server.url, transport=transport)
-        previous = Agent(provider=provider, model="gpt-5.5")
+        previous = Agent(provider=provider, model="gpt-6.1-sol")
         cache_id = previous.cache_session_id if restored else None
         bot = Agent(
             provider=provider,
-            model="gpt-5.5",
+            model="gpt-6.1-sol",
             transport=mode,
             cache_session_id=cache_id,
             tools=[Tool("add", "Add", SCHEMA, add)],
@@ -170,7 +170,7 @@ async def test_auto_cache_id_never_enables_connection_reuse_or_continuation(mode
 async def test_websocket_cached_still_requires_an_explicit_session_id():
     async with Server(lambda n, request: text_turn(str(n))) as server, HTTPTransport() as transport:
         provider = OpenAICodexProvider(api_key=TOKEN, base_url=server.url, transport=transport)
-        bot = Agent(provider=provider, model="gpt-5.5", transport="websocket-cached")
+        bot = Agent(provider=provider, model="gpt-6.1-sol", transport="websocket-cached")
         result = await bot.prompt("hello")
     assert result.status == "failed"
     assert "websocket-cached requires session_id" in " ".join(result.errors)
@@ -197,7 +197,8 @@ async def test_changed_options_or_missing_response_state_resend_full_context():
     assert connections == [1, 1, 1, 2, 2]
     assert bodies[2]["previous_response_id"] == "resp_2"
     assert "previous_response_id" not in bodies[3]
-    assert bodies[3]["input"][0]["content"][0]["text"] == "add 2 and 3"
+    assert bodies[3]["input"][0]["type"] == "additional_tools"
+    assert bodies[3]["input"][1]["content"][0]["text"] == "add 2 and 3"
     # A different reasoning setting changes the body, so the context is sent in full.
     assert "previous_response_id" not in bodies[4] and bodies[4]["reasoning"]["effort"] == "high"
     assert transport.stats["websocket_retries"] == 1

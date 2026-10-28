@@ -324,6 +324,7 @@ def parse_command_args(text: str) -> list[str]:
     """Split arguments like a shell: whitespace separates, quotes group."""
     args: list[str] = []
     current, quote = "", ""
+    has_token = False
     for char in text:
         if quote:
             if char == quote:
@@ -332,13 +333,16 @@ def parse_command_args(text: str) -> list[str]:
                 current += char
         elif char in "\"'":
             quote = char
+            has_token = True
         elif char.isspace():
-            if current:
+            if has_token:
                 args.append(current)
                 current = ""
+                has_token = False
         else:
             current += char
-    if current:
+            has_token = True
+    if has_token:
         args.append(current)
     return args
 

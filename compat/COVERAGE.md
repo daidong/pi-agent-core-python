@@ -2,6 +2,10 @@
 
 首期测试证明的是本文列出的文本和工具行为，不是完整 Pi 或模型智能。C01–C29 是设计中的用例组，不是 29 个单独测试。具体测试总数与命令见 [验证记录](results/verification.json)，逐 fixture 结果见 [差分记录](results/conformance.json)。
 
+2026-10-28 补充：[公开接口审查](../docs/UPSTREAM_INTERFACES.md) 已发现事件载荷、钩子、请求配置和低层入口的差异。现有 core 差分会归一化并省略部分字段，不能用其通过证明接口完全一致。七项新增定向探针记录在 [interface-audit.json](results/interface-audit.json)，这是差异报告，不是验收通过报告。
+
+后续获批实施了 `pi_python.core` 合同入口，共用原有引擎；研究入口继续提供便利能力和迁移适配。接口探针现在要求 core 观测与固定上游一致，单独记录研究入口差异；完整字段和请求行为另有 `tests/test_core_contracts.py` 回归。选择性对齐不等于消除了下文所有有意差异。新增入口、共享配置优先级及迁移要求见 [双入口指南](../docs/zh/CORE_AND_RESEARCH.md)。
+
 | 用例组 | Python 行为证据 | 上游证据 / 分类 |
 |---|---|---|
 | C01 文本与增量 | test_C01_stream_and_end | C01-text，mapped；增量一致性另作 D7 合同 |
@@ -42,6 +46,8 @@
 | C29 普通 Python 能力组合 | 同一工具的两种调用方式；名称冲突拒绝；状态与配置隔离；否决不可覆盖；运行完成不掩盖领域验证失败 | intentional_difference，D9；`examples/capability_composition.py` 无网络示例 |
 
 兼容性修订：按用户要求，工具事件的 `origin/source` 改为显式 `Agent(include_tool_origin=True)` 才输出，默认不新增键；两种调用入口都遵守此选项。工具上下文和执行结果通过只读属性提供来源，不改变原有 dataclass 字段及 `asdict` 输出。应用批次历史仍保存来源。`tests/test_application_compatibility.py` 对照 v0.10.1 的字段集合，检查旧解析器、整数轮次及自定义消息转换器；新接口接入时可能的订阅失败和消息被过滤也有明确断言。这是对设计草案中“所有工具事件都携带来源”的兼容性调整，不是将缺失来源默认为已记录。
+
+上述“默认不新增键”和 `asdict` 保持不变只描述当时的来源字段调整。2026-10-28 未发布跟进已按用户批准默认增加耗时字段，写出消息 schema 4 / 事件 schema 2，不能继续把此段解释为完整结构不变的保证；参见 [迁移说明](../docs/UPSTREAM_FOLLOWUP.md)。
 
 本次沿用现行版本的默认无预算上限、已知取消与显式未知结果的区分，以及可选扩展能力，不把它们按早期草案回退。跨 run 预算、领域效果、科研判断内化和新的包加载器不在本次实现范围内。上述旧验证文件记录的是各自运行时的版本，不自动成为 D9 的验证证据。
 

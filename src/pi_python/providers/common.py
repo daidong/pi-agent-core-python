@@ -6,7 +6,8 @@ from ..messages import Message
 from ..models import ModelCatalog
 
 import time
-from copy import deepcopy
+from copy import copy, deepcopy
+import inspect
 from ..errors import ConfigurationError
 from ..models import ModelInfo
 from ..provider import ModelRequest
@@ -36,7 +37,7 @@ def transform_messages(
 ) -> list[Message]:
     """Pi transformMessages: replay-safe history for one target model.
 
-    Cross-model thinking becomes text and opaque signatures are dropped. Failed or
+    Cross-model thinking is omitted (Pi v1.3.0). Failed or
     aborted assistant turns are not replayed. A system message between a tool call
     and its results moves after them. Python history validation already rejects
     dangling calls; the synthetic result only covers hand-built requests.
@@ -51,13 +52,15 @@ def transform_messages(
             content: list[TextContent | ThinkingContent | ToolCall] = []
             for block in message.content:
                 if isinstance(block, ThinkingContent):
+                    if not same:
+                        continue
                     if block.redacted:
                         if same:
                             content.append(block)
                     elif same and block.thinking_signature:
                         content.append(block)
                     elif block.thinking.strip():
-                        content.append(block if same else TextContent(block.thinking))
+                        content.append(block)
                 elif isinstance(block, TextContent):
                     content.append(block if same else TextContent(block.text))
                 elif isinstance(block, ToolCall):
@@ -110,6 +113,7 @@ def transform_messages(
 
 class RemoteProvider:
     name = "remote"
+    base_url: str
 
     def __init__(
         self,
@@ -125,6 +129,48 @@ class RemoteProvider:
         self.credentials = credentials
         self.transport = transport or HTTPTransport()
         self.catalog = catalog if catalog is not None else ModelCatalog.bundled()
+
+    def prepare_stream_request(self, request: ModelRequest) -> tuple[RemoteProvider, ModelRequest]:
+        """Resolve model settings on a request-local provider, never mutate a shared one."""
+        if self.name == "proxy":
+            return self, request  # The proxy owns model resolution and request policy.
+        model = self.model_info(request)
+        provider = copy(self)
+        if model.base_url and (
+            request.model_info is not None or not getattr(self, "_explicit_base_url", True)
+        ):
+            if not model.base_url.startswith(("http://", "https://")):
+                raise ConfigurationError("Model base_url must be an http(s) URL")
+            provider.base_url = model.base_url.rstrip("/")
+        prepared = copy(request)
+        prepared.options = deepcopy(request.options)
+        prepared.model_info = model
+        headers = {k.lower(): v for k, v in model.headers.items()}
+        headers.update({k.lower(): v for k, v in request.options.get("headers", {}).items()})
+        if headers:
+            prepared.options["headers"] = headers
+        sampling = {
+            **model.sampling_params,
+            **model.sampling_params_by_thinking_level.get(
+                model.clamp_thinking_level(request.options.get("reasoning", "off")), {}
+            ),
+            **request.options.get("sampling_params", {}),
+        }
+        if sampling:
+            prepared.options["sampling_params"] = deepcopy(sampling)
+        for name in ("on_payload", "on_response", "on_provider_stream_event"):
+            callback = getattr(request, name)
+            if callback is not None:
+                setattr(prepared, name, model_callback(callback, model))
+        return provider, prepared
+
+    def transport_options(self, request: ModelRequest) -> dict[str, Any]:
+        options = {
+            key: request.options[key]
+            for key in ("timeout_ms", "max_retries", "max_retry_delay_ms")
+            if key in request.options
+        }
+        return {"request_options": options} if options else {}
 
     def model_info(self, request: ModelRequest) -> ModelInfo:
         """The request's model record, or the catalog's; an unknown model is an error."""
@@ -175,6 +221,30 @@ class RemoteProvider:
         if not isinstance(payload, dict):
             raise ConfigurationError("on_payload must return a dict or None")
         return payload
+
+
+def model_callback(callback: Callable, model: ModelInfo) -> Callable:
+    """Canonical (value, model), with a signature-based bridge for old one-arg callbacks.
+
+    Never retry a callback after TypeError: it may already have performed effects.
+    """
+    with_model = True
+    try:
+        signature = inspect.signature(callback)
+    except (TypeError, ValueError):
+        pass
+    else:
+        try:
+            signature.bind(None, model)
+        except TypeError:
+            signature.bind(None)
+            with_model = False
+
+    async def adapted(value: Any) -> Any:
+        args = (value, deepcopy(model)) if with_model else (value,)
+        return await invoke(callback, *args)
+
+    return adapted
 
 
 def normalize_usage(raw: dict[str, Any], provider: str) -> dict[str, int]:

@@ -1,0 +1,20 @@
+{
+  "scope": "recovery classifiers only; core baseline remains v1.0.0",
+  "license": "MIT; see ../../LICENSE and ../../NOTICE",
+  "files": [
+    {
+      "file": "retry.ts",
+      "upstream_path": "packages/ai/src/utils/retry.ts",
+      "commit": "4a080252f06caf63a525d7873c5d94d3c23887e0",
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/4a080252f06caf63a525d7873c5d94d3c23887e0/packages/ai/src/utils/retry.ts",
+      "sha256": "4c17e881e6e3d335c12f3325dee004d4fb26bf9f08e501661ff78c5b9bc31a1f"
+    },
+    {
+      "file": "overflow.ts",
+      "upstream_path": "packages/ai/src/utils/overflow.ts",
+      "commit": "d3398f826ae2654b52a7988830d533a354754c13",
+      "url": "https://raw.githubusercontent.com/earendil-works/pi/d3398f826ae2654b52a7988830d533a354754c13/packages/ai/src/utils/overflow.ts",
+      "sha256": "c0ff08ba392e99b628226e62db1ca74aef5c459c0d1dab1fc2c60d6c48e0299a"
+    }
+  ]
+}

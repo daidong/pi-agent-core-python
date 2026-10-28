@@ -12,7 +12,7 @@ def test_multimodal_codec_roundtrip_and_rejects_invalid_image():
         ),
     ]
     assert decode_messages(encode_messages(messages)) == messages
-    assert json.loads(encode_messages(messages))["schema_version"] == 3
+    assert json.loads(encode_messages(messages))["schema_version"] == 4
     with pytest.raises(MessageValidationError):
         message_to_dict(UserMessage([ImageContent("!!", "image/png")]))
 

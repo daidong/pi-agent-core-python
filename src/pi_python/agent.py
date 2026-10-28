@@ -5,10 +5,12 @@ Execution behavior is adapted from Pi; see NOTICE.
 """
 
 from __future__ import annotations
+from .identity import ClientIdentity, validate_identity
 import asyncio
 from copy import copy, deepcopy
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
+from collections.abc import Sequence
 from uuid import uuid4
 
 from .cancellation import CancelToken
@@ -42,6 +44,9 @@ from .sync import run_sync
 from .tools import Tool, ToolInvocation
 from .transcript import current_system_message
 
+if TYPE_CHECKING:
+    from .core import Hooks as CoreHooks, Tool as CoreTool
+
 
 @dataclass(frozen=True)
 class AgentStateView:
@@ -69,15 +74,16 @@ class Agent:
         thinking_budgets: dict[str, int] | None = None,
         transport: str | None = None,
         session_id: str | None = None,
+        identity: ClientIdentity | None = None,
         auto_session_id: bool = True,
         cache_session_id: str | None = None,
         get_api_key: Callable | None = None,
         on_payload: Callable | None = None,
         on_response: Callable | None = None,
         on_provider_stream_event: Callable | None = None,
-        tools: list[Tool] | None = None,
+        tools: Sequence[Tool | CoreTool] | None = None,
         messages: list[Message] | None = None,
-        hooks: Hooks | None = None,
+        hooks: Hooks | CoreHooks | None = None,
         limits: RunLimits | None = None,
         execution_mode: str = "parallel",
         steering_mode: str = "one_at_a_time",
@@ -89,6 +95,9 @@ class Agent:
         if type(include_tool_origin) is not bool:
             raise ConfigurationError("include_tool_origin must be a boolean")
         self.include_tool_origin = include_tool_origin
+        self._core_contract = False
+        self._initial_cancel: CancelToken | None = None
+        self.identity = identity
         if type(auto_session_id) is not bool:
             raise ConfigurationError("auto_session_id must be a boolean")
         if cache_session_id is not None:
@@ -110,7 +119,13 @@ class Agent:
         self.provider = provider or (
             FunctionProvider(stream_fn) if stream_fn else DefaultProvider()
         )
-        self.hooks = copy(hooks) if hooks else Hooks()
+        self.hooks: Hooks
+        if isinstance(hooks, Hooks):
+            self.hooks = copy(hooks)
+        elif hooks is not None:
+            self.hooks = hooks.to_runtime()
+        else:
+            self.hooks = Hooks()
         for name, callback in (
             ("get_api_key", get_api_key),
             ("on_payload", on_payload),
@@ -132,7 +147,8 @@ class Agent:
         self.execution_mode = execution_mode
         self._get_steering_messages: Callable | None = None
         self._get_follow_up_messages: Callable | None = None
-        self._defaults = AgentConfigUpdate(tools or [], model, options or {})
+        runtime_tools: list[Tool] = [getattr(t, "to_runtime", lambda t=t: t)() for t in tools or []]
+        self._defaults = AgentConfigUpdate(runtime_tools, model, options or {})
         self._validate_update(self._defaults)
         self._defaults = deepcopy(self._defaults)
         self._messages = deepcopy(messages or [])
@@ -143,7 +159,7 @@ class Agent:
             self._messages.insert(
                 0,
                 SystemMessage(
-                    system_prompt, tools_added=[t.declaration() for t in tools or []], timestamp=0
+                    system_prompt, tools_added=[t.declaration() for t in runtime_tools], timestamp=0
                 ),
             )
         validate_history(self._messages)
@@ -164,6 +180,15 @@ class Agent:
         # marks actual completion of the run and all operations it owns.
         self._settled = asyncio.Event()
         self._settled.set()
+
+    @property
+    def identity(self) -> ClientIdentity | None:
+        return deepcopy(self._identity)
+
+    @identity.setter
+    def identity(self, value: ClientIdentity | None) -> None:
+        validate_identity(value)
+        self._identity = deepcopy(value)
 
     @property
     def cache_session_id(self) -> str | None:

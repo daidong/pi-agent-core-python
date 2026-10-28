@@ -4,14 +4,16 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+from bootstrap_followup_reference import verify_sources
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+verify_sources()
 command = [
     "node",
     "--import",
-    "./reference/register.mjs",
+    "./reference/register-followup.mjs",
     "reference/plugin-runner.ts",
     "compat/plugin-cases.json",
 ]

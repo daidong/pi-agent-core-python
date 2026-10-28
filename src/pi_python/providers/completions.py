@@ -16,7 +16,6 @@ from collections.abc import AsyncGenerator
 from copy import deepcopy
 from typing import Any
 
-from .._version import __version__
 from ..cancellation import CancelToken
 from ..errors import ConfigurationError, ProviderProtocolError, UnsupportedCapabilityError
 from ..estimate import clamp_max_tokens_to_context, short_hash
@@ -32,6 +31,7 @@ from ..messages import (
     ToolDeclaration,
     ToolResultMessage,
     UserMessage,
+    now,
 )
 from ..models import LEVELS, ModelCatalog, ModelInfo
 from ..provider import ModelEvent, ModelRequest
@@ -40,11 +40,12 @@ from ..tools import invoke
 from ..transcript import (
     render_system_update,
     resolve_transcript,
-    resolve_transcript_tools,
+    _resolve_tool_changes,
     system_message_text,
     with_request_tools,
 )
 from .common import RemoteProvider, transform_messages
+from ..identity import apply_identity
 from .transport import stream_error
 
 API = "openai-completions"
@@ -512,7 +513,7 @@ class OpenAICompletionsProvider(RemoteProvider):
         ]
 
     def _messages(
-        self, model: ModelInfo, transcript: list[Message], compat: dict[str, Any], anchors: bool
+        self, model: ModelInfo, transcript: list[Message], compat: dict[str, Any], folded: int
     ) -> list[dict[str, Any]]:
         """Pi convertMessages for a resolved transcript."""
 
@@ -536,12 +537,14 @@ class OpenAICompletionsProvider(RemoteProvider):
         params: list[dict[str, Any]] = []
         last_role: str | None = None
         i = 0
+        system_index = 0
         while i < len(transformed):
             message = transformed[i]
             if bridge and last_role == "toolResult" and isinstance(message, UserMessage):
                 params.append({"role": "assistant", "content": _BRIDGE})
             if isinstance(message, SystemMessage):
-                added = message.tools_added if i > 0 and anchors else []
+                added = message.tools_added if system_index >= folded else []
+                system_index += 1
                 if added:
                     # Kimi-style tool addition anchored at its system message.
                     params.append({"role": "system", "tools": self._tools(added, compat)})
@@ -580,7 +583,11 @@ class OpenAICompletionsProvider(RemoteProvider):
                         break
                     text = "\n".join(b.text for b in result.content if isinstance(b, TextContent))
                     has_images = any(isinstance(b, ImageContent) for b in result.content)
-                    body = text or ("(see attached image)" if has_images else "(no tool output)")
+                    body = (
+                        text
+                        if not _blank(text)
+                        else ("(see attached image)" if has_images else "(no tool output)")
+                    )
                     entry: dict[str, Any] = {
                         "role": "tool",
                         "content": _sanitize(body),
@@ -702,12 +709,14 @@ class OpenAICompletionsProvider(RemoteProvider):
             effort = None
         source = with_request_tools(request.messages, request.tools)
         transcript = resolve_transcript(source, compat["supportsMidConvoSystemMessages"] is True)
-        tools, anchors = resolve_transcript_tools(
+        tools, folded = _resolve_tool_changes(
             transcript,
-            compat["supportsMidConvoSystemMessages"] is True
-            and compat["supportsMidConvoToolAdditions"] is True,
+            "additions"
+            if compat["supportsMidConvoSystemMessages"] is True
+            and compat["supportsMidConvoToolAdditions"] is True
+            else "none",
         )
-        messages = self._messages(model, transcript, compat, anchors)
+        messages = self._messages(model, transcript, compat, folded)
         long_cache = retention == "long" and compat["supportsLongCacheRetention"]
         body: dict[str, Any] = {"model": model.id, "messages": messages, "stream": True}
         session = options.get("session_id")
@@ -870,10 +879,9 @@ class OpenAICompletionsProvider(RemoteProvider):
 
     def _headers(
         self, request: ModelRequest, key: str | None, compat: dict[str, Any]
-    ) -> dict[str, str]:
+    ) -> dict[str, str | None]:
         options = request.options
         headers: dict[str, str] = {
-            "user-agent": f"pi-python/{__version__}",
             "content-type": "application/json",
             "accept": "text/event-stream",
         }
@@ -897,12 +905,13 @@ class OpenAICompletionsProvider(RemoteProvider):
             headers.pop(name.lower(), None)
             if value is not None:
                 headers[name.lower()] = value
-        return headers
+        return apply_identity(headers, self.name, self.base_url, options)
 
     @event_contract
     async def stream(
         self, request: ModelRequest, cancel: CancelToken
     ) -> AsyncGenerator[ModelEvent, None]:
+        request_started = now()
         if request.options.get("transport", "sse") not in {"sse", "auto"}:
             raise UnsupportedCapabilityError("Chat Completions supports SSE transport")
         key = await self._key(request, cancel)
@@ -916,6 +925,7 @@ class OpenAICompletionsProvider(RemoteProvider):
             headers,
             cancel,
             on_response=request.on_response,
+            **self.transport_options(request),
         )
         content: list[TextContent | ThinkingContent | ToolCall] = []
         # Pi streams one text and one reasoning block per response, in first-seen order.
@@ -983,16 +993,6 @@ class OpenAICompletionsProvider(RemoteProvider):
                 delta = choice.get("delta")
                 if not isinstance(delta, dict):
                     continue
-                piece = delta.get("content")
-                if piece is not None and not isinstance(piece, str):
-                    raise UnsupportedCapabilityError("Chat Completions delta content must be text")
-                if piece:
-                    if text is None:
-                        text, text_at = TextContent(""), len(content)
-                        content.append(text)
-                        yield ModelEvent.boundary("start", text_at, TextContent(""))
-                    text.text += piece
-                    yield ModelEvent.text(piece, text_at)
                 # llama.cpp uses reasoning_content, others reasoning; the first wins.
                 field = next(
                     (f for f in _REASONING_FIELDS if isinstance(delta.get(f), str) and delta[f]),
@@ -1010,6 +1010,16 @@ class OpenAICompletionsProvider(RemoteProvider):
                         yield ModelEvent.boundary("start", thinking_at, ThinkingContent(""))
                     thinking.thinking += delta[field]
                     yield ModelEvent.thinking(delta[field], thinking_at)
+                piece = delta.get("content")
+                if piece is not None and not isinstance(piece, str):
+                    raise UnsupportedCapabilityError("Chat Completions delta content must be text")
+                if piece:
+                    if text is None:
+                        text, text_at = TextContent(""), len(content)
+                        content.append(text)
+                        yield ModelEvent.boundary("start", text_at, TextContent(""))
+                    text.text += piece
+                    yield ModelEvent.text(piece, text_at)
                 calls = delta.get("tool_calls")
                 if _truthy(calls):
                     if not isinstance(calls, list):
@@ -1106,6 +1116,7 @@ class OpenAICompletionsProvider(RemoteProvider):
                 self.name,
                 request.model,
                 usage,
+                timestamp=request_started,
                 api=API,
                 diagnostics=None if usage_available else [{"type": "usage_unavailable"}],
                 thinking_level=request.options.get("reasoning"),

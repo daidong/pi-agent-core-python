@@ -125,6 +125,24 @@ def resolve_transcript_tools(
     return tools, anchors
 
 
+def _resolve_tool_changes(
+    messages: list[Message], support: str
+) -> tuple[list[ToolDeclaration], int]:
+    """Pi v1.4 tool folding; keep the public boolean helper's old contract."""
+    systems = [m for m in messages if isinstance(m, SystemMessage)]
+    if support == "none":
+        return current_tools(list(systems)), len(systems)
+    if support == "changes":
+        return [], 0
+    seen: set[str] = set()
+    folded = 1 if initial_system_message(messages) else 0
+    for index, message in enumerate(systems):
+        if message.tools_removed or any(t.name in seen for t in message.tools_added):
+            folded = index + 1
+        seen.update(t.name for t in message.tools_added)
+    return current_tools(list(systems[:folded])), folded
+
+
 def with_request_tools(messages: list[Message], tools: list[ToolDeclaration]) -> list[Message]:
     """Pi's normalizeContext: fold request-level tools into the leading system message.
 

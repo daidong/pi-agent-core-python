@@ -125,13 +125,16 @@ async def test_identical_full_provider_requests_with_new_and_old_peer(incrementa
     assert not session.state.requests and not session.state.responses
 
 
-async def test_tools_signatures_branch_changed_schema_and_removed_static_fields():
+@pytest.mark.parametrize("duration", [None, 0, 42])
+async def test_tools_signatures_branch_changed_schema_and_removed_static_fields(duration):
     signed = AssistantMessage(
         [
             ThinkingContent("private", "opaque"),
             ToolCall("id", "lookup", {"q": "value"}, thought_signature="secret"),
         ],
         stop_reason="tool_use",
+        timestamp=1,
+        duration_ms=duration,
     )
     host = Recorder([signed])
     session = Session(SamplingHandler(host, model="host"))
@@ -153,9 +156,7 @@ async def test_tools_signatures_branch_changed_schema_and_removed_static_fields(
         req.tools = []
         await complete(proxy, req)
     assert host.requests[1].messages[2] == signed
-    assert (
-        host.requests[2].messages[2] == signed
-    )  # Provider mutation did not affect retained state.
+    assert host.requests[2].messages[2] == signed  # Mutation did not affect retained state.
     assert host.requests[2].tools[0].description == "changed schema description"
     assert len(host.requests[3].messages) == 1 and not host.requests[3].tools
     assert req.messages[0].content == "new branch without tools"

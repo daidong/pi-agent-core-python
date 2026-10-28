@@ -30,7 +30,7 @@ def test_overflow_edge_cases():
         failed("Throttling error: Too many tokens, please wait before trying again.")
     )
     assert is_context_overflow(failed("413 status code (no body)", provider="cerebras"))
-    assert not is_context_overflow(failed("413 status code (no body)", provider="openai"))
+    assert is_context_overflow(failed("413 status code (no body)", provider="openai"))
     silent = AssistantMessage.text("ok", usage={"input": 900, "cache_read": 200})
     assert is_context_overflow(silent, context_window=1000) and not is_context_overflow(silent)
     truncated = AssistantMessage.text("", stop_reason="length", usage={"input": 995, "output": 0})

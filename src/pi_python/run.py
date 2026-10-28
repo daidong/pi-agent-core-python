@@ -70,6 +70,8 @@ class Run:
     ):
         self.agent = agent
         self.token = CancelToken()
+        if agent._initial_cancel is not None and agent._initial_cancel.cancelled:
+            self.token.cancel(agent._initial_cancel.reason or "requested")
         self.id = str(uuid4())
         self.turn = 0
         self.application_batch = application_calls is not None
@@ -85,6 +87,9 @@ class Run:
             deepcopy(defaults.options or {}),
             deepcopy(defaults.tools or []),
         )
+        self.identity = agent.identity
+        self.response_started: float | None = None
+        self.response_started_at: float | None = None
         self.start = len(agent._messages)
         self.skip_initial_steering = skip_initial_steering
         self.partial: Any = None
@@ -222,6 +227,10 @@ class Run:
                 await asyncio.gather(cancel_wait, return_exceptions=True)
 
     async def emit(self, kind: str, call_id: str | None = None, **data: Any) -> None:
+        if self.agent._core_contract:
+            from .core import event_payload
+
+            data = event_payload(self, kind, call_id, data)
         if self.include_tool_origin and kind.startswith("tool_execution_"):
             data.update(origin=self.origin, source=self.source)
         await self.agent._events.emit(
@@ -349,6 +358,7 @@ class Run:
             details=deepcopy(result.details),
             usage=deepcopy(result.usage),
             nested_calls=deepcopy(result.nested_calls),
+            duration_ms=outcome.duration_ms,
         )
         # Persist even when delivery fails; then stop further external execution.
         await self.append(message)
@@ -362,6 +372,7 @@ class Run:
             outcome.call.id,
             result=asdict(outcome.result) if outcome.result else None,
             execution_status=outcome.execution_status,
+            **({"duration_ms": outcome.duration_ms} if outcome.duration_ms is not None else {}),
         )
 
     async def append_application_batch(self) -> None:
@@ -378,6 +389,11 @@ class Run:
                     "origin": outcome.origin,
                     "source": outcome.source,
                     "execution_status": outcome.execution_status,
+                    **(
+                        {"duration_ms": outcome.duration_ms}
+                        if outcome.duration_ms is not None
+                        else {}
+                    ),
                     "is_error": result.is_error,
                     "error_code": result.error_code,
                     "content": [asdict(block) for block in result.content],

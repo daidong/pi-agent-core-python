@@ -1,5 +1,5 @@
 name: release
-# Pushing a tag such as v0.10.0 validates, builds and publishes that version to PyPI.
+# Pushing a version tag validates, builds and publishes that version to PyPI.
 # PyPI trusts this workflow file (trusted publishing), so no token is stored here.
 on:
   push:
@@ -27,7 +27,9 @@ jobs:
         run: |
           uv venv -p 3.11 /tmp/installed
           uv pip install -p /tmp/installed/bin/python dist/pi_python_core-*-py3-none-any.whl
-          cd /tmp && /tmp/installed/bin/python "$GITHUB_WORKSPACE/examples/in_memory.py"
+          cd /tmp
+          /tmp/installed/bin/python "$GITHUB_WORKSPACE/examples/in_memory.py"
+          /tmp/installed/bin/python "$GITHUB_WORKSPACE/examples/core_and_research.py"
       - uses: actions/upload-artifact@v4
         with:
           name: dist

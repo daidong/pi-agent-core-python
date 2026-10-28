@@ -15,6 +15,7 @@ COMMANDS = [
     ["uv", "run", "pytest", "-q"],
     ["uv", "run", "python", "examples/in_memory.py"],
     ["uv", "run", "python", "examples/capability_composition.py"],
+    ["uv", "run", "python", "examples/core_and_research.py"],
     [
         "npm",
         "test",
@@ -36,6 +37,7 @@ COMMANDS = [
         "test/openai-codex-stream.test.ts",
     ],
     ["uv", "run", "python", "scripts/conformance.py"],
+    ["uv", "run", "python", "scripts/interface_audit.py"],
     ["uv", "run", "python", "scripts/provider_conformance.py"],
     ["uv", "run", "python", "scripts/websocket_conformance.py"],
     ["uv", "run", "python", "scripts/recovery_conformance.py"],

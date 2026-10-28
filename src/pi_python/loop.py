@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 from typing import Any
-from .stream import checked_events
+from .stream import checked_events, _time_message
 import asyncio
+import time
 from contextlib import nullcontext
 from copy import deepcopy
 from typing import TYPE_CHECKING
@@ -69,6 +70,10 @@ def failure_message(
             model=model.id if isinstance(model, ModelInfo) else model,
             api=getattr(run.provider, "api", None),
         )
+    if run.response_started is not None and run.response_started_at is not None:
+        if partial is None:
+            message.timestamp = run.response_started_at
+        _time_message(message, run.response_started_at, run.response_started)
     message.stop_reason, message.error = stop_reason, error
     message.thinking_level = run.context.options.get("reasoning", "off")
     return without_tool_calls(message)
@@ -78,6 +83,8 @@ async def stream_response(run: Run) -> tuple[AssistantMessage, bool]:
     context = run.context
     assert context is not None
     run.partial, run.started = None, False
+    run.response_started = None
+    run.response_started_at = None
     messages = deepcopy(context.messages)
     if run.hooks.transform_context:
         messages = await run.hook("transform_context", messages, run.token)
@@ -105,6 +112,11 @@ async def stream_response(run: Run) -> tuple[AssistantMessage, bool]:
         deepcopy(context.options),
         model_info=deepcopy(model) if isinstance(model, ModelInfo) else None,
     )
+    if run.identity is not None:
+        request.options["identity"] = {
+            **deepcopy(run.identity),
+            **(request.options.get("identity") or {}),
+        }
     if (
         getattr(run.provider, "supports_agent_cache_session", False) is True
         and not request.options.get("session_id")
@@ -123,6 +135,7 @@ async def stream_response(run: Run) -> tuple[AssistantMessage, bool]:
     if run.token.cancelled:
         # A Pi stream function given an aborted signal answers at once; no request is sent.
         return failure_message(run, "aborted", abort_error(run)), False
+    run.response_started_at, run.response_started = time.time(), time.monotonic()
     source = run.provider.stream(request, run.token)
     stream_method = getattr(run.provider, "stream", None)
     # Remote providers already check their own events; check every other source here.
@@ -166,6 +179,28 @@ async def stream_response(run: Run) -> tuple[AssistantMessage, bool]:
                 run.started = True
                 await run.emit("message_start", message=run.partial)
             if event.type != "start":
+                core_event: dict[str, Any] = {}
+                if run.agent._core_contract:
+                    from dataclasses import asdict
+
+                    core_event = {
+                        "assistant_message_event": {
+                            "type": event.type,
+                            "content_index": event.index,
+                            "partial": message_to_dict(event.partial),
+                            **({"delta": event.delta} if event.type.endswith("_delta") else {}),
+                            **(
+                                {"content": event.content}
+                                if event.type.endswith("_end") and event.content is not None
+                                else {}
+                            ),
+                            **(
+                                {"tool_call": asdict(event.block)}
+                                if event.type == "toolcall_end" and event.block
+                                else {}
+                            ),
+                        }
+                    }
                 await run.emit(
                     "message_update",
                     delta_type=event.type,
@@ -174,6 +209,7 @@ async def stream_response(run: Run) -> tuple[AssistantMessage, bool]:
                     content=event.content,
                     tool_call_id=event.call_id,
                     partial=run.partial,
+                    **core_event,
                 )
     finally:
         try:
@@ -387,6 +423,7 @@ async def run_loop(run: Run, initial: list[Message]) -> tuple[str, str]:
             message = failure_message(run, "error", failed_reason, run.partial)
             started = run.started
         run.partial = None
+        run.response_started = None
         outcomes = [
             ToolOutcome(deepcopy(c), original_arguments=deepcopy(c.arguments))
             for c in message.tool_calls
@@ -446,6 +483,7 @@ async def run_loop(run: Run, initial: list[Message]) -> tuple[str, str]:
                 details=deepcopy(o.result.details),
                 usage=deepcopy(o.result.usage),
                 nested_calls=deepcopy(o.result.nested_calls),
+                duration_ms=o.duration_ms,
             )
             for o in outcomes
             if o.result

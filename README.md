@@ -2,12 +2,15 @@
 
 **English** | [中文](README.zh-CN.md)
 
-An embeddable Python agent core, ported from [Pi](https://github.com/earendil-works/pi) (pinned to `v1.0.0`). It does one job: send the conversation to a model, run the tools the model asks for, hand the results back, and repeat until the model answers. Tools are plain Python functions; the model can be Claude, GPT, DeepSeek, or an open model running on your own machine or cluster.
+An embeddable Python agent core, ported from [Pi](https://github.com/earendil-works/pi) (core baseline `v1.0.0`, selected provider/plugin updates through `v1.4.0`). It does one job: send the conversation to a model, run the tools the model asks for, hand the results back, and repeat until the model answers. Tools are plain Python functions; the model can be Claude, GPT, DeepSeek, or an open model running on your own machine or cluster.
 
-`pi-agent-core` on PyPI is a separate project that ports an older version from pi-mono (early 2026). This library follows the behavior of Pi v1.0.0, compared case by case with the upstream code's actual output, and ships its own connectors for Claude, OpenAI, DeepSeek and local models, with no model SDK required.
+`pi-agent-core` on PyPI is a separate project that ports an older version from pi-mono (early 2026). This library compares its core loop with Pi v1.0.0 and selected provider/plugin behavior with v1.4.0, compared case by case with the upstream code's actual output, and ships its own connectors for Claude, OpenAI, DeepSeek and local models, with no model SDK required.
 
 **Using a coding agent?** Start with the [library integration guide](docs/CODING_AGENTS.md).
+For research applications, keep using `pi_python.Agent` and `@tool`. The same package now provides `pi_python.core` for Pi-shaped hooks, events and low-level contracts; both share one engine. See [choosing an entry point and migrating](docs/CORE_AND_RESEARCH.md).
 To build an extension, follow the [plugin development workflow and complete example](docs/PLUGIN_DEVELOPMENT.md).
+
+**Upgrading to 0.12.0?** Read the [release and migration notes](docs/releases/0.12.0.md): default timing fields, history schema versions and shared provider settings change. Existing research applications can keep the root `Agent` API. Exact upstream sources are listed in the [followup notes](docs/UPSTREAM_FOLLOWUP.md).
 
 ## Install
 
@@ -75,7 +78,7 @@ Apart from `provider_chat`, which needs real credentials, every example runs off
 
 ## Relationship to Pi
 
-The run loop, event order, hooks, queues, and the handling of errors and cancellation all match Pi, and this is checked differentially: the same inputs go to the pinned upstream code and to this library, and the model requests, tool calls, events and final transcript are compared item by item. All cases currently agree: 25 for the core loop, 50 for model connectors, 2 for multi-turn WebSocket, and 44 error-classification samples. The plugin rules for skills, prompt templates and frontmatter are compared the same way against Pi's coding-agent code.
+The covered run-loop, event-order, hook, queue, error and cancellation cases are checked differentially: the same inputs go to the pinned upstream code and to this library, and the model requests, tool calls, events and final transcript are compared item by item. All cases currently agree: 25 for the core loop, 58 for model connectors, 2 for multi-turn WebSocket, and 55 error-classification samples. The plugin rules for skills, prompt templates and frontmatter are compared the same way against Pi's coding-agent code.
 
 A few differences are deliberate, such as strict tool-argument validation without type coercion, and returning copies of state to callers. Others are additions for Python users, such as `@tool`, blocking calls, and calling `continue_run()` directly after a failure. Each one is recorded in the [coverage map](compat/COVERAGE.md) (Chinese). Features Pi keeps in its application layer (terminal UI, session file format, context compaction) are not in this core; compaction can be built with hooks, and an example shows the full approach. The Agent also supplies cache-only session IDs for Codex, a responsibility upstream assigns to its coding-agent layer; see [cache sessions and the opt-out](docs/PROVIDERS.md#automatic-codex-cache-sessions). Plugins are another piece taken from that layer: an optional module that reads Pi's package format and builds an ordinary Agent from it. This project uses its own version numbers and is not an official Pi release.
 

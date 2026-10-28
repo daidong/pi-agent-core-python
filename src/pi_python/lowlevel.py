@@ -45,6 +45,7 @@ async def _run(
     cancel: CancelToken | None,
     continuing: bool,
 ) -> list[Message]:
+    core_contract = getattr(config, "_core_contract", False)
     agent = Agent(
         provider=config.provider,
         stream_fn=config.stream_fn,
@@ -56,7 +57,10 @@ async def _run(
         hooks=config.hooks,
         limits=config.limits,
         execution_mode=config.tool_execution,
+        auto_session_id=not core_contract,
     )
+    agent._core_contract = core_contract
+    agent._initial_cancel = cancel if core_contract else None
     agent._get_steering_messages = config.get_steering_messages
     agent._get_follow_up_messages = config.get_follow_up_messages
     if emit is not None:
@@ -68,7 +72,7 @@ async def _run(
 
     watcher = asyncio.create_task(watch(cancel)) if cancel else None
     try:
-        if cancel and cancel.cancelled:
+        if cancel and cancel.cancelled and not core_contract:
             return []
         result = await (agent.continue_run() if continuing else agent.prompt(prompts or []))
         if continuing:
@@ -100,31 +104,43 @@ async def run_agent_loop_continue(
 
 
 class AgentEventStream:
-    """Consume via async for, or await result() to drain events and obtain messages.
+    """Consume via async for, or await result() and then read the retained events.
 
-    The bounded queue applies backpressure. Close an abandoned stream explicitly.
+    Iteration alone applies backpressure at maxsize (<= 0 means unlimited).
+    Calling result() releases that limit for the rest of the stream so completion
+    cannot depend on consuming events. Unread events remain buffered in order;
+    memory can therefore grow until they are consumed. Close abandoned streams.
     """
 
     def __init__(
         self, runner: Callable[[Callable], Awaitable[list[Message]]], *, maxsize: int = 128
     ) -> None:
-        self.queue: asyncio.Queue = asyncio.Queue(maxsize)
-        self._iterating = False
+        self.queue: asyncio.Queue = asyncio.Queue()
+        self._maxsize = maxsize
+        self._result_requested = False
+        self._space_available = asyncio.Event()
         self._ended = False
 
         async def emit(event: Event) -> None:
-            await self.queue.put(deepcopy(event))
+            snapshot = deepcopy(event)
+            while (
+                self._maxsize > 0
+                and self.queue.qsize() >= self._maxsize
+                and not self._result_requested
+            ):
+                self._space_available.clear()
+                await self._space_available.wait()
+            self.queue.put_nowait(snapshot)
 
         async def drive() -> list[Message]:
             try:
                 return await runner(emit)
             finally:
-                await self.queue.put(None)
+                self.queue.put_nowait(None)
 
         self.task = asyncio.create_task(drive())
 
     def __aiter__(self) -> AgentEventStream:
-        self._iterating = True
         return self
 
     async def __anext__(self) -> Event:
@@ -135,6 +151,7 @@ class AgentEventStream:
             await self.task
             raise StopAsyncIteration
         event = await self.queue.get()
+        self._space_available.set()
         if event is None:
             self._ended = True
             await self.task
@@ -142,11 +159,8 @@ class AgentEventStream:
         return event
 
     async def result(self) -> list[Message]:
-        if self.task.done():
-            return await self.task
-        if not self._iterating:
-            async for _ in self:
-                pass
+        self._result_requested = True
+        self._space_available.set()
         return await asyncio.shield(self.task)
 
     async def aclose(self) -> None:

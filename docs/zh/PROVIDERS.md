@@ -2,7 +2,7 @@
 
 [English](../PROVIDERS.md) | **中文**
 
-这次扩展将真实模型接入放在 `pi_python.providers`，执行循环继续使用同一个 `Agent`。Claude 使用 Messages API，GPT 使用 Responses API，本地模型和其他 OpenAI 兼容服务使用 Chat Completions；订阅登录分别实现 Claude OAuth、ChatGPT 直接授权和 Codex 授权。实现依据是固定 Pi `v1.0.0` 的 `pi-agent-core` 与 `pi-ai` 源码，不代表完整移植 `pi-mono` 应用。
+这次扩展将真实模型接入放在 `pi_python.providers`，执行循环继续使用同一个 `Agent`。Claude 使用 Messages API，GPT 使用 Responses API，本地模型和其他 OpenAI 兼容服务使用 Chat Completions；订阅登录分别实现 Claude OAuth、ChatGPT 直接授权和 Codex 授权。核心循环保留 Pi `v1.0.0` 基线；模型协议差分使用单独固定的 `v1.4.0` 源码，不代表完整移植 `pi-mono` 应用。
 
 ## 安装和 API key
 
@@ -96,7 +96,7 @@ result = await agent.prompt("描述图片", images=[ImageContent(image_base64, "
 
 Claude 的推理方式由模型记录决定：`compat["forceAdaptiveThinking"]` 为真的模型使用 effort（自适应推理），其他推理模型使用 token 预算；输出上限和等级映射也来自同一条记录。要改变它们，传一个修改过的 `ModelInfo`，Provider 本身没有覆盖选项。与上游一致，开启推理时请求 `display: "summarized"`（Opus 4.7 起服务端默认不返回推理文字），可用 `options["thinking_display"]="omitted"` 改回；推理关闭且模型允许时发送 `thinking: {"type": "disabled"}`；预算模式附带 interleaved-thinking beta。输出上限按 Pi 的字符估算扣除已用上下文和 4096 个安全 token，最少为 1。
 
-支持会话中途调整推理强度的 Claude 模型（模型表中 `supportsMidConvoEffort`，目前为 Opus 5、Opus 5.5、Sonnet 5.5、Fable 5.1）始终使用自适应推理，并把强度写成历史中的标记：每条历史回答前保留它当时的强度，末尾追加本次强度（未指定推理等级时为 high）。这样改变强度不会改写已缓存的前缀。只有这类模型的回答记录 `provider_thinking_level`，用于重建标记；其他模型该字段为空。`thinking_level` 仍记录应用请求的等级。
+Claude 模型若支持 `supportsMidConvoEffort`，在开启推理时使用历史强度标记；模型允许时，显式 `off` 会关闭推理。历史标记保留此前强度，末尾追加本次强度（未指定时为 high）。支持此能力的 OpenAI API 模型使用 `configuration_update`，在历史回答前及输入末尾记录强度，顶层 effort 保持 medium。OpenAI 此路径要求显式启用推理，不用于 Codex 或直接 ChatGPT 登录。`provider_thinking_level` 记录原生强度；`thinking_level` 记录请求等级。
 
 OpenAI 将 `thinking_level` 映射到 reasoning effort。`options` 支持 `max_tokens`、`reasoning_summary`、`temperature`、`top_p`、`tool_choice`、`parallel_tool_calls`、`metadata`、`service_tier`、`text`、`headers`；Claude 另支持 `thinking_budgets`、`thinking_display`、`interleaved_thinking`、`top_k`、`stop_sequences`，以及直接覆盖的 `thinking` 和 `output_config`。与上游一致，Claude 只转发 `metadata.user_id`，字符串形式的 `tool_choice` 写成 `{"type": ...}`；推理开启、模型不支持或使用强度标记时不发送 `temperature`。具体模型允许哪些参数由服务端决定。
 
@@ -110,7 +110,7 @@ Responses、Messages 和 Chat Completions 的流内错误会在 `ProviderProtoco
 
 Codex 复用连接时采用上游的增量请求：如果本次请求除输入外完全相同，且输入以上次输入加上次回答开头，只发送新增部分和 `previous_response_id`。任何其他情况都发送完整上下文。服务端回复找不到上一回答（`previous_response_not_found`）或连接数已满（`websocket_connection_limit_reached`）且尚未输出内容时，换新连接以完整上下文重试一次；此时服务端尚未生成内容，不会重复计费。`auto` 只在握手失败、请求尚未发出时回退 SSE；请求发出后的断线不重发，这比上游保守。Python 的 WebSocket 帧不带 `stream` 字段，上游会带；0.3 和 0.4 的实际 Codex 联调均不需要它。直接调用 OpenAI API 的 WebSocket 是本库扩展，上游没有对应路径，因此仍发送完整上下文。
 
-`HTTPTransport(max_retries=2, retry_base=0.5, max_retry_delay=30)` 只重试服务器明确返回的 429/500/502/503/504。最多额外两次；遵守 `Retry-After`，超过等待上限就返回错误，不提前重试。等待支持取消。已开始流式输出、发送后连接中断、鉴权失败及工具执行均不自动重试。OAuth 换令牌请求不采用这套重试，以免重复消费刷新令牌。
+`HTTPTransport(max_retries=2, retry_base=0.5, max_retry_delay=30)` 只重试服务器明确返回的 429/500/502/503/504。最多额外两次；遵守 `Retry-After`，超过等待上限就返回错误，不提前重试。等待支持取消。已开始流式输出、发送后连接中断、鉴权失败及工具执行均不自动重试。OAuth 换令牌请求不采用这套重试。Business 工作区用量限制即使返回 HTTP 429 也不重试。OAuth 刷新开始后，调用方取消会等待刷新和持久化完成；网络刷新单独限时 15 秒，应用的持久化回调必须能结束。写回失败保留 dirty 状态，下次调用先重试写回。
 
 `ProviderHTTPError` 提供 `status`、`category`、`retry_after`、`request_id`、`retryable`。Provider 将失败转换为模型 `error` 事件，结构化 HTTP 信息放入 `message.diagnostics`；Agent 的错误摘要仍为字符串。`transport.stats` 返回计数副本：HTTP 尝试/重试，WebSocket 建连、复用、回退、过期替换、一次性重试和增量请求。
 
@@ -156,6 +156,20 @@ core 通过可选的 Provider 能力 `supports_agent_cache_session = True` 判�
 
 这是与官方 Pi core 的有意差异：上游底层 Agent 只转发可选标识，由 coding-agent 的 `SessionManager` 提供；pi-python 在主要的 Agent 接入入口补齐该便利功能。上游参照版本不变。应用可用 `require_features(["codex-auto-cache-session-v1"])` 检查支持情况。兼容性与验证范围见 [0.11.0 发布说明](../releases/0.11.0.md)。
 
+## 请求身份
+
+`Agent(identity=...)` 接收 JSON 客户端身份，在运行开始时复制。每次请求的 `options["identity"]` 逐字段覆盖它；替换其他 options 不会清掉 Agent 的默认身份。直接调用 Provider 也可以传此选项。可用 `require_features(["client-identity-v1"])` 检查支持情况。
+
+```python
+identity = {
+    "user_agent": "detailed",  # 也可用 "short" 或 {"custom": "myapp/1"}
+    "attribution": {"name": "myapp", "url": "https://example.org", "categories": ["cli-agent"]},
+}
+agent = Agent(provider=llm, model=model, identity=identity)
+```
+
+默认 User-Agent 包含 `pi-python` 版本、Python 运行时和平台；默认不发送应用归属信息。本库是独立 Python 实现，不将请求归属于官方 Pi 应用。显式 attribution 映射到 OpenRouter、NVIDIA、OpenCode 请求头；`attribution=None` 关闭继承的归属信息。身份相关显式 headers 优先于生成值，值为 None 时移除该头，包括 HTTP 客户端默认值。Anthropic OAuth 保留必需的 Claude CLI User-Agent，除非显式 headers 覆盖。固定版本的代理协议未实现 identity 转发。迁移和精确来源见 [跟进说明](../UPSTREAM_FOLLOWUP.md)。
+
 ## 模型能力表和 DeepSeek
 
 ```python
@@ -173,9 +187,9 @@ custom = ModelInfo("my-model", "openai", "openai-responses", "Mine",
 agent = Agent(provider=provider, model=custom)
 ```
 
-随包提供 71 条记录：Claude 16、OpenAI 44、Codex 9、DeepSeek 2。记录含上下文和输出上限、输入模态、推理等级映射、缓存、基础价格和兼容信息。Provider 用它选择 Claude 推理模式、映射 effort，并提前拒绝已知模型超输出上限或不支持的图片。上下文 token 数仍由服务端检查，没有本地 tokenizer 或自动压缩。真实 Provider 遇到表中没有的模型名会报 `ConfigurationError`，不会套用默认值：可以直接 `Agent(model=ModelInfo(...))`，也可以 `catalog.register(...)` 后把 catalog 传给 Provider；读写均复制数据。
+随包提供 68 条记录：Claude 17、OpenAI 42、Codex 7、DeepSeek 2。记录含上下文和输出上限、输入模态、推理等级映射、缓存、基础价格和兼容信息。Provider 用它选择 Claude 推理模式、映射 effort，并提前拒绝已知模型超输出上限或不支持的图片。上下文 token 数仍由服务端检查，没有本地 tokenizer 或自动压缩。真实 Provider 遇到表中没有的模型名会报 `ConfigurationError`，不会套用默认值：可以直接 `Agent(model=ModelInfo(...))`，也可以 `catalog.register(...)` 后把 catalog 传给 Provider；读写均复制数据。
 
-模型表来自本地 Pi 生成目录的快照，**不是固定 Git 提交的一部分，也不保证实时可用或代表账号权限**。来源、采集日期及摘要随 JSON 保存。`estimate_cost(usage)` 只用快照基础费率估算美元，不包括阶梯、时段、服务等级或订阅计费。兼容信息是模型元数据，不表示本库实现了其中所有供应商专有功能。
+Claude/OpenAI/Codex 模型表来自 `@earendil-works/pi-ai@1.4.0` 发布包，保留两条 Python DeepSeek Responses 覆盖记录。Codex 不再内置 `gpt-5.5` 和 `gpt-5.3-codex-spark`；应用需选择受支持的模型（例如 `gpt-6.1-sol`）或自行提供核实过的 `ModelInfo`。**不是固定 Git 提交的一部分，也不保证实时可用或代表账号权限**。来源、采集日期及摘要随 JSON 保存。`estimate_cost(usage)` 只用快照基础费率估算美元，不包括阶梯、时段、服务等级或订阅计费。兼容信息是模型元数据，不表示本库实现了其中所有供应商专有功能。
 
 DeepSeek 使用官方当前文档中的无状态 Responses 接口。它把系统消息放入 `instructions`，映射 `none/low/high/max` effort，并支持 reasoning_text 流和重放。这是针对 [DeepSeek Responses 文档](https://api-docs.deepseek.com/guides/responses_api/) 的新增适配；固定 Pi 快照为 DeepSeek 配置的是 Chat Completions，不能把此适配说成与该上游路径逐项相同。
 
@@ -220,12 +234,12 @@ result = agent.prompt_sync("用一句话介绍你自己")
 
 | 模型能力（模型表字段） | 发送方式 |
 |---|---|
-| Claude：`supportsMidConvoSystemMessages` 与 `supportsMidConvoToolChanges` | 后续系统消息以 system 角色放在下一条回答之前；新增工具在请求中标为延迟加载，由 `tool_addition` 在原位置启用，删除用 `tool_removal`；请求级工具列表只增不减，并预先声明一个永不可用的占位工具，使缓存前缀从第一个请求起就稳定 |
+| Claude：`supportsMidConvoSystemMessages` 与 `supportsMidConvoToolChanges` | 后续系统消息以 system 角色放在下一条回答之前；`tool_addition` 携带完整内联定义，包括同名重定义；删除用 `tool_removal`；请求级初始工具列表固定，并预先声明一个永不可用的占位工具，使缓存前缀从第一个请求起就稳定 |
 | OpenAI / Codex：`supportsMidConvoSystemMessages` | 后续系统消息以 developer 角色原位发送 |
 | OpenAI / Codex：`supportsAdditionalTools` 或 `supportsToolSearch` | 新增工具通过 `additional_tools`，或客户端执行的 tool search 记录，在原位置加载 |
 | 以上均不支持 | 合并为开头一条系统消息，发送当前完整工具列表 |
 
-原位加载只能表达"只增不减"的历史。Claude 的原生方式还要求开头至少有一个工具，且同名工具没有被重新定义。出现删除（OpenAI）、同名重定义或开头没有工具（Claude）时，退回发送当前完整工具列表；系统指令仍按模型能力原位发送。后续系统消息里的段落变化写成 `Updated system prompt section "名称": ...` 或 `Removed system prompt section "名称".`，函数 `render_system_update` 返回同样的文本。
+支持 `supportsAdditionalTools` 时，初始和后续工具都通过 `additional_tools` 发送，developer 消息解释增量添加、替换和删除。仅支持 tool search 时，将最后一次删除或重定义之前的工具折叠为初始列表，之后的添加仍原位发送。Claude 原生变更要求初始工具，否则发送当前完整列表。后续系统段落仍写成 `Updated system prompt section "名称": ...` 或 `Removed system prompt section "名称".`。
 
 ## streamProxy
 
@@ -246,7 +260,7 @@ agent = Agent(provider=provider, model=server_model_descriptor["id"])
 
 ## 验证边界
 
-[协议差分](../../compat/results/provider-conformance.json) 包含 50 组共享输入（其中 16 组是 Chat Completions，覆盖 Ollama、vLLM、llama.cpp、OpenRouter、DeepSeek 等兼容配置和全部 11 种推理参数格式），对照实际固定上游的内容、签名、停止原因、事件顺序和载荷，以及完整请求体和选定语义请求头。其中 12 组使用模型表中的真实模型记录（Claude Opus 5.5、Opus 4.8、Sonnet 4.5、Fable 5，GPT-5.5、GPT-4.1、GPT-5.6，Codex GPT-5.5），走 pi-agent-core 实际调用的 `streamSimple` 入口，覆盖会话中途的系统、工具和推理强度变化。[WebSocket 差分](../../compat/results/websocket-conformance.json) 用脚本化连接对照多轮请求的每一帧和连接使用。SDK 标识头、动态请求 ID 和请求压缩不在差分声明中；代理的请求体另由 Python 单测覆盖。
+[协议差分](../../compat/results/provider-conformance.json) 包含 58 组共享输入（其中 17 组是 Chat Completions，覆盖 Ollama、vLLM、llama.cpp、OpenRouter、DeepSeek 等兼容配置和全部 11 种推理参数格式），对照实际固定上游的内容、签名、停止原因、事件顺序和载荷，以及完整请求体和选定语义请求头。原有 12 组会话样例保留当时的模型描述（Claude Opus 5.5、Opus 4.8、Sonnet 4.5、Fable 5，GPT-5.5、GPT-4.1、GPT-5.6，Codex GPT-5.5），走 pi-agent-core 实际调用的 `streamSimple` 入口，覆盖会话中途的系统、工具和推理强度变化。[WebSocket 差分](../../compat/results/websocket-conformance.json) 用脚本化连接对照多轮请求的每一帧和连接使用。SDK 标识头、动态请求 ID 和请求压缩不在差分声明中；代理的请求体另由 Python 单测覆盖。
 
 真实联调使用本地已有 Claude/Codex 订阅授权和 DeepSeek API key，只读取、不刷新其他客户端的凭据，不保存令牌或模型正文。0.4 的[会话变更联调](../../compat/results/live-session-claude.json)与 [Codex 增量联调](../../compat/results/live-session-codex.json)验证：中途加入的工具被模型调用、中途指令被遵守、推理强度标记被接受、Codex 后续请求只发送增量。0.3 的文本、工具、推理及签名重放矩阵已在 0.4 重跑。Claude 与 Codex 的新登录和令牌刷新已用本库自己登录得到的凭据文件实测（[记录](../../compat/results/live-refresh.json)，命令 `scripts/live_refresh.py`）：三个并发调用者只触发一次网络刷新并拿到同一新令牌；刷新令牌轮换后原子写回、权限保持 0600；会话中途过期时 Provider 先刷新再发请求；从文件再次刷新成功，例子 CLI 不加 `--login` 即可复用。刷新令牌会轮换，所以这项测试只能用本库登录得到的文件，不能用其他客户端的文件。刷新成功但写文件失败、等待中取消等故障由本地测试覆盖。OpenAI API key、ChatGPT 直接 OAuth、多进程共享同一凭据文件、真实限流和断网恢复仍未做账号侧验证。
 

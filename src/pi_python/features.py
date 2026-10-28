@@ -21,6 +21,10 @@ FEATURES = MCP_FEATURES | frozenset(
         "nested-agent-ownership-v1",
         "application-tool-batches-v1",
         "codex-auto-cache-session-v1",
+        "default-duration-ms-v1",
+        "client-identity-v1",
+        "pi-core-contracts-v1",
+        "model-request-settings-v1",
         "plugin-requires-v1",
     }
 )
