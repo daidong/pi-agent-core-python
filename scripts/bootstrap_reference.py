@@ -24,7 +24,8 @@ def main():
     (ROOT / "reference/tag.json").write_text(json.dumps(tag_data, indent=2) + "\n")
     target = ROOT / "reference/pi"
     if not target.exists():
-        with tempfile.TemporaryDirectory() as tmp:
+        # Keep extraction beside the target: CI's /tmp can be on another filesystem.
+        with tempfile.TemporaryDirectory(dir=target.parent) as tmp:
             archive = Path(tmp) / "pi.tar.gz"
             archive.write_bytes(
                 urlopen(f"https://codeload.github.com/earendil-works/pi/tar.gz/{commit}").read()
