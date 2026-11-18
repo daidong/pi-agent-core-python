@@ -1,6 +1,7 @@
 """Differential tests against actual pinned pi-ai/agent parsers; no external service."""
 
 import asyncio
+from copy import deepcopy
 import json
 from pathlib import Path
 import subprocess
@@ -100,6 +101,7 @@ def catalog_for(provider, descriptor):
 
 async def main():
     verify_sources()
+    overlay = json.loads((ROOT / "compat/provider-1.5-fields.json").read_text())
     results = []
     for path in sorted((ROOT / "compat/provider-fixtures").glob("*.json")):
         fixture = json.loads(path.read_text())
@@ -252,12 +254,22 @@ async def main():
         expected = (
             json.loads(upstream.stdout) if upstream.returncode == 0 else {"error": upstream.stderr}
         )
+        # Preserve the raw v1.4 observation. Only these two named fields use the
+        # observed v1.5.2 request value; all other fields still compare exactly.
+        comparison = expected
+        newer_fields = {}
+        if upstream.returncode == 0 and path.name in overlay["effort"]:
+            comparison = deepcopy(expected)
+            effort = overlay["effort"][path.name]
+            comparison["request"]["body"]["output_config"]["effort"] = effort
+            newer_fields = {"/request/body/output_config/effort": effort}
         # Signatures are opaque JSON; compare exact serialized strings too.
         result = {
             "fixture": path.name,
             "python": actual,
             "upstream": expected,
-            "passed": actual == expected,
+            **({"v1.5.2_fields": newer_fields} if newer_fields else {}),
+            "passed": actual == comparison,
             "upstream_exit_code": upstream.returncode,
         }
         results.append(result)

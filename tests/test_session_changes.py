@@ -1,8 +1,10 @@
 """Native mid-conversation changes, request parity helpers and estimates."""
 
 import json
+from pathlib import Path
 
 import httpx
+import pytest
 from pi_python import *
 from pi_python.estimate import clamp_max_tokens_to_context, estimate_context_tokens, short_hash
 from pi_python.providers import AnthropicProvider, DeepSeekProvider, HTTPTransport, OpenAIProvider
@@ -80,7 +82,41 @@ async def test_claude_agent_tool_and_effort_changes_use_native_blocks():
     beta = requests[1].headers["anthropic-beta"].split(",")
     assert "inline-tools-2026-09-15" in beta
     assert "mid-conversation-output-config-2026-07-01" in beta
-    assert two["output_config"] == {"effort": "high"}
+    assert two["output_config"] == {"effort": "low"}
+    assert one["output_config"] == {"effort": "low"}
+
+
+@pytest.mark.parametrize("keyword", ["$defs", "definitions"])
+async def test_claude_initial_and_added_tools_keep_referenced_definitions(keyword):
+    schema = {
+        "type": "object",
+        "properties": {"size": {"$ref": f"#/{keyword}/Size"}},
+        keyword: {"Size": {"type": "integer"}},
+        "allOf": [{"type": "object"}],
+    }
+    provider, requests, _, client = remote(
+        "anthropic", [events("anthropic-text"), events("anthropic-text")]
+    )
+    first = Tool("first", "first", schema, noop)
+    async with client:
+        agent = Agent(provider=provider, model="claude-opus-5-5", tools=[first])
+        await agent.prompt("one")
+        agent.update_config(
+            AgentConfigUpdate(tools=[first, Tool("second", "second", schema, noop)])
+        )
+        await agent.prompt("two")
+    body = json.loads(requests[1].content)
+    added = next(
+        block["tool"]["definition"]
+        for msg in body["messages"]
+        if isinstance(msg["content"], list)
+        for block in msg["content"]
+        if block["type"] == "tool_addition"
+    )
+    reference = Path(__file__).resolve().parents[1] / "compat/provider-1.5-fields.json"
+    expected = json.loads(reference.read_text())["schemas"][keyword]
+    for decl in (body["tools"][0], added):
+        assert decl["input_schema"] == expected
 
 
 async def test_claude_without_native_support_folds_changes_into_system():

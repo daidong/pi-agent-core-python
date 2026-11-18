@@ -2,17 +2,20 @@
 cover (keyless servers, endpoint handling, failures, configuration errors)."""
 
 import json
+from pathlib import Path
 
 import httpx
 import pytest
 
 from pi_python import (
     Agent,
+    AssistantMessage,
     CancelToken,
     ConfigurationError,
     ModelCatalog,
     ModelInfo,
     ModelRequest,
+    ToolCall,
     UserMessage,
     tool,
 )
@@ -64,6 +67,27 @@ async def run(provider, model, prompt="hi", **request):
         )
     ]
     return events, events[-1].message
+
+
+@pytest.mark.parametrize("flag", [None, False, True])
+def test_no_tools_with_tool_history(flag):
+    provider = OpenAICompletionsProvider(base_url=LOCAL)
+    model = provider.model("test-model")
+    if flag is not None:
+        model.compat["requiresToolsWithToolHistory"] = flag
+    messages = [UserMessage("go"), AssistantMessage([ToolCall("id", "lookup", {})], "tool_use")]
+    body = provider.build_request(ModelRequest(messages, model=model.id, model_info=model))
+    reference = Path(__file__).resolve().parents[1] / "compat/provider-1.5-fields.json"
+    expected = json.loads(reference.read_text())["chatTools"][
+        str(flag).lower() if flag is not None else "undefined"
+    ]
+    if expected is None:
+        assert "tools" not in body
+    else:
+        assert body["tools"] == expected
+    assert "tools" not in provider.build_request(
+        ModelRequest(messages[:1], model=model.id, model_info=model)
+    )
 
 
 async def test_keyless_local_server_needs_no_credentials():
@@ -314,6 +338,7 @@ def test_compat_values_are_validated_and_detected():
     for compat, field in [
         ({"thinkingFormat": "bogus"}, "thinkingFormat"),
         ({"supportsStore": "false"}, "supportsStore"),
+        ({"requiresToolsWithToolHistory": "false"}, "requiresToolsWithToolHistory"),
         ({"maxTokensField": "max_output_tokens"}, "maxTokensField"),
     ]:
         model = provider.model("m", compat=compat)

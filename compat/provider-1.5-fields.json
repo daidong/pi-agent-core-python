@@ -1,0 +1,42 @@
+{
+  "source": "@earendil-works/pi-ai@1.5.2",
+  "effort": {
+    "session-anthropic-native-tools.json": "low",
+    "session-anthropic-oauth-effort.json": "low"
+  },
+  "schemas": {
+    "$defs": {
+      "type": "object",
+      "properties": {
+        "size": {
+          "$ref": "#/$defs/Size"
+        }
+      },
+      "required": [],
+      "$defs": {
+        "Size": {
+          "type": "integer"
+        }
+      }
+    },
+    "definitions": {
+      "type": "object",
+      "properties": {
+        "size": {
+          "$ref": "#/definitions/Size"
+        }
+      },
+      "required": [],
+      "definitions": {
+        "Size": {
+          "type": "integer"
+        }
+      }
+    }
+  },
+  "chatTools": {
+    "undefined": null,
+    "false": null,
+    "true": []
+  }
+}

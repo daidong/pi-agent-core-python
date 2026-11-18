@@ -74,6 +74,7 @@ _BOOL_FLAGS = (
     "supportsUsageInStreaming",
     "supportsFinishReason",
     "requiresToolResultName",
+    "requiresToolsWithToolHistory",
     "requiresAssistantAfterToolResult",
     "requiresThinkingAsText",
     "requiresReasoningContentOnAssistantMessages",
@@ -184,6 +185,7 @@ def detect_compat(provider: str, base_url: str, model_id: str) -> dict[str, Any]
         "supportsFinishReason": True,
         "maxTokensField": "max_tokens" if use_max_tokens else "max_completion_tokens",
         "requiresToolResultName": False,
+        "requiresToolsWithToolHistory": False,
         "requiresAssistantAfterToolResult": False,
         "requiresThinkingAsText": False,
         "requiresReasoningContentOnAssistantMessages": is_deepseek,
@@ -741,7 +743,7 @@ class OpenAICompletionsProvider(RemoteProvider):
             body["tools"] = self._tools(tools, compat)
             if compat["zaiToolStream"]:
                 body["tool_stream"] = True
-        elif any(
+        elif compat["requiresToolsWithToolHistory"] and any(
             isinstance(m, ToolResultMessage) or (isinstance(m, AssistantMessage) and m.tool_calls)
             for m in transcript
         ):

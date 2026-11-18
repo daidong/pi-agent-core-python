@@ -2,6 +2,8 @@
 
 **English** | [中文](zh/PROVIDERS.md)
 
+**Migration for selected Pi v1.5.2 request changes:** Chat Completions now omits `tools` when there are no current tools. For gateways that require `tools: []` after earlier tool use, set `model.compat["requiresToolsWithToolHistory"] = True` before passing the model to the agent. This does not force an empty array on a conversation without tool history. Anthropic tool declarations now preserve root `$defs` and `definitions` (including inline additions). Models using per-message effort send `low` as the top-level default; the message marker still carries the requested level. Update request snapshots accordingly.
+
 Real model connectors live in `pi_python.providers`, and the run loop keeps using the same `Agent`. Claude uses the Messages API, GPT uses the Responses API, and local models and other OpenAI-compatible services use Chat Completions. Subscription sign-in implements Claude OAuth, direct ChatGPT authorization and Codex authorization. The core loop retains its Pi `v1.0.0` baseline; provider protocol comparisons now use separately pinned `v1.4.0` sources; it is not a complete port of the `pi-mono` applications.
 
 ## Installation and API keys

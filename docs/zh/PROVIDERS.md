@@ -4,6 +4,8 @@
 
 这次扩展将真实模型接入放在 `pi_python.providers`，执行循环继续使用同一个 `Agent`。Claude 使用 Messages API，GPT 使用 Responses API，本地模型和其他 OpenAI 兼容服务使用 Chat Completions；订阅登录分别实现 Claude OAuth、ChatGPT 直接授权和 Codex 授权。核心循环保留 Pi `v1.0.0` 基线；模型协议差分使用单独固定的 `v1.4.0` 源码，不代表完整移植 `pi-mono` 应用。
 
+**本地跟进 Pi v1.5.2 的请求迁移**：Chat Completions 在当前无工具时默认省略 `tools`。若旧网关要求工具历史后附 `tools: []`，请在向 Agent 传入模型前设置 `model.compat["requiresToolsWithToolHistory"] = True`。无工具历史时不会因此发送空数组。Anthropic 的初始和动态工具声明保留根 `$defs`、`definitions`；使用逐消息 effort 的模型将顶层默认值改为 `low`，消息级仍使用实际请求的强度。相应更新代理白名单和请求快照。
+
 ## 安装和 API key
 
 ```bash

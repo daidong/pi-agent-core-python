@@ -164,6 +164,11 @@ class AnthropicProvider(RemoteProvider):
                         "type": "object",
                         "properties": deepcopy(t.input_schema.get("properties", {})),
                         "required": deepcopy(t.input_schema.get("required", [])),
+                        **{
+                            key: deepcopy(t.input_schema[key])
+                            for key in ("$defs", "definitions")
+                            if key in t.input_schema
+                        },
                     },
                 }
                 for t in tools
@@ -430,7 +435,8 @@ class AnthropicProvider(RemoteProvider):
                 "display": display,
                 "block_binding": {"prefix_mismatch_behavior": "drop_block"},
             }
-            body["output_config"] = {"effort": "high"}
+            # The message-level marker carries the requested effort, not this default.
+            body["output_config"] = {"effort": "low"}
         elif model.reasoning:
             if reasoning is not None:
                 thinking_enabled = True

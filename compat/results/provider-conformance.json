@@ -9233,7 +9233,7 @@
               }
             },
             "output_config": {
-              "effort": "high"
+              "effort": "low"
             }
           },
           "headers": {
@@ -9427,6 +9427,9 @@
           }
         }
       },
+      "v1.5.2_fields": {
+        "/request/body/output_config/effort": "low"
+      },
       "passed": true,
       "upstream_exit_code": 0
     },
@@ -9599,7 +9602,7 @@
               }
             },
             "output_config": {
-              "effort": "high"
+              "effort": "low"
             }
           },
           "headers": {
@@ -9791,6 +9794,9 @@
             "anthropic-dangerous-direct-browser-access": "true"
           }
         }
+      },
+      "v1.5.2_fields": {
+        "/request/body/output_config/effort": "low"
       },
       "passed": true,
       "upstream_exit_code": 0
